@@ -1,5 +1,5 @@
 {
-  description = "Full Flake Panic";
+  description = "Full Flake Panic!";
 
   inputs = {
     nixpkgs = { url = "github:nixos/nixpkgs/nixos-20.09"; };
