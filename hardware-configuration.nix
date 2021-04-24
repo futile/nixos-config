@@ -31,9 +31,4 @@
     ];
 
   virtualisation.virtualbox.guest.enable = true;
-  systemd.services.virtualbox.unitConfig.ConditionVirtualization = "oracle";
-  systemd.units."dev-vboxguest.device".text = ''
-  [Unit]
-  ConditionVirtualization=oracle
-  '';
 }
