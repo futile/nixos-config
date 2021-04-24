@@ -127,7 +127,10 @@
     nordic-polar
     # ccache # not sure if I want this as a system package, maybe for convenient `ccache -s`?
     nix-index
+
+    # monitoring
     lm_sensors
+    nvtop
   ];
 
   programs.fish.enable = true;
