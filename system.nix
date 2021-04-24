@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   # Enable flakes
@@ -66,18 +66,32 @@
   };
 
   # Enable the X11 windowing system.
-  services.xserver.enable = true;
+  services.xserver = {
+    enable = true;
 
+    # I have an nvidia card. virtualbox-guest runs mkOverride 50, so we do too.
+    videoDrivers = lib.mkOverride 50 [ "nvidia" ];
 
-  # Enable the GNOME 3 Desktop Environment.
-  services.xserver.displayManager.gdm.enable = true;
-  services.xserver.desktopManager.gnome3.enable = true;
-  
+    # Enable gdm & GNOME 3 Desktop Environment.
+    displayManager.gdm = {
+      enable = true;
+      # We don't want wayland for now; e.g. screensharing doesn't work (well)
+      wayland = false;
+      # When we want wayland, we also want to run with nvidia.
+      # This requires some other options (`nixos-rebuild` will tell us which),
+      # so disable for now.
+      # nvidiaWayland = true;
+    };
+    desktopManager.gnome3.enable = true;
 
-  # Configure keymap in X11
-  services.xserver.layout = "de,de";
-  services.xserver.xkbVariant = "neo,basic";
-  # services.xserver.xkbOptions = "grp:menu_toggle"; # 'menu_toggle' -> context-menu key
+    # Configure keymap in X11
+    layout = "de,de";
+    xkbVariant = "neo,basic";
+    # xkbOptions = "grp:menu_toggle"; # 'menu_toggle' -> context-menu key
+
+    # Enable touchpad support (enabled default in most desktopManager).
+    # libinput.enable = true;
+  };
 
   # Enable CUPS to print documents.
   # services.printing.enable = true;
@@ -85,9 +99,6 @@
   # Enable sound.
   sound.enable = true;
   hardware.pulseaudio.enable = true;
-
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.felix = {
@@ -116,6 +127,7 @@
     nordic-polar
     # ccache # not sure if I want this as a system package, maybe for convenient `ccache -s`?
     nix-index
+    lm_sensors
   ];
 
   programs.fish.enable = true;

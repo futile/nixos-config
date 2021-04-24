@@ -6,9 +6,12 @@
 {
   imports = [ ];
 
+  # generated through `nixos-generate-config` from virtualbox-boot and native boot
   boot.initrd.availableKernelModules = [ "ata_piix" "ohci_pci" "xhci_pci" "ahci" "nvme" "usbhid" "usb_storage" "sd_mod" "sr_mod" ];
   boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-intel" ];
+  boot.kernelModules = [ "kvm-intel" ]
+    ++ # from `sudo sensors-detect`
+    [ "coretemp" "nct6775" ];
   boot.extraModulePackages = [ ];
 
   fileSystems."/" =
@@ -31,7 +34,8 @@
     ];
 
   virtualisation.virtualbox.guest.enable = true;
-  systemd.services.virtualbox.unitConfig.ConditionVirtualization = "oracle";
+
+  # not required to circumvent the timeout at boot, but when running `nixos-rebuild switch`
   systemd.units."dev-vboxguest.device".text = ''
   [Unit]
   ConditionVirtualization=oracle
