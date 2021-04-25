@@ -15,10 +15,12 @@
         bat
         python39
         element-desktop # temp stable, until bug resolved
+        file
       ] ++ 
       # packages from unstable
       (with pkgs.unstable; [
         spotify
+        discord
         vivaldi
         vivaldi-ffmpeg-codecs
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
