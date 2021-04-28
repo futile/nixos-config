@@ -29,8 +29,12 @@
   networking.hostName = "nixos-home"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
-  # Set your time zone.
-  time.timeZone = "Europe/Berlin";
+  time = {
+    # Set your time zone.
+    timeZone = "Europe/Berlin";
+    # For dualbooting with Windows
+    hardwareClockInLocalTime = true;
+  };
 
   # Allow unfree packages.
   nixpkgs.config.allowUnfree = true;
