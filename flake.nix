@@ -26,9 +26,29 @@
       };
     };
   in
-  {
+  rec {
+    system = "x86_64-linux";
+
+    lib = {
+      mkWrappedWithDeps = { pkg, deps, pathsToWrap, otherArgs ? {} }: let
+        binPath = nixpkgs.lib.makeBinPath deps;
+        pkgs = nixpkgs.legacyPackages.${system};
+      in pkgs.symlinkJoin ({
+        name = pkg.name + "-wrapped";
+        paths = [ pkg ];
+        buildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          cd "$out"
+          for p in ${builtins.toString pathsToWrap}
+          do
+            wrapProgram "$out/$p" --prefix PATH : "${binPath}"
+          done
+        '';
+      } // otherArgs);
+    };
+
     nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
+      inherit system;
 
       modules = [ 
         # add unstable overlay
@@ -60,7 +80,7 @@
         home-manager.nixosModules.home-manager {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.felix = import ./home.nix { inherit inputs; };
+          home-manager.users.felix = import ./home.nix { inherit inputs lib; };
         }
     ];
   };

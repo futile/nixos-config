@@ -1,12 +1,12 @@
 # first set of args is passed by us
-{ inputs }: 
+{ inputs, lib, ... }@outer_args:
 # second set of args is passed by home-manager
 { config, pkgs, ... }:
 {
   programs.home-manager.enable = true;
 
   imports = let 
-    mkHomeModule = path: (import path { inherit inputs; });
+    mkHomeModule = path: (import path outer_args);
   in map mkHomeModule [
     ./home-modules/emacs.nix
     ./home-modules/git.nix
