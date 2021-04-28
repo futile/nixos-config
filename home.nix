@@ -37,6 +37,8 @@
         dtrx
         vscode
         zoom-us
+        rustup
+        rust-analyzer
       ]);
 
     file = {
