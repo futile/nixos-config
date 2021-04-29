@@ -13,6 +13,9 @@
       pull = {
         ff = "only";
       };
+      rebase = {
+        autoStash = "true";
+      };
     };
 
     delta = {
