@@ -1,8 +1,12 @@
 { inputs, lib, ... }:
 { config, pkgs, ... }:
 let
+  base-emacs = pkgs.emacs;
+  emacs-with-pkgs = (pkgs.emacsPackagesGen base-emacs).emacsWithPackages (epkgs: (with epkgs; [
+    vterm
+  ]));
   emacs-wrapped-for-doom = lib.mkWrappedWithDeps {
-    pkg = pkgs.emacs;
+    pkg = emacs-with-pkgs;
     pathsToWrap = [ "bin/emacs" "bin/emacs-*" ];
     deps = with pkgs; [
       ripgrep
@@ -13,6 +17,10 @@ let
       nixfmt
       jq
       editorconfig-core-c
+
+      # for vterm compile module
+      cmake
+      gnumake
     ];
   };
 in {
