@@ -7,7 +7,12 @@ let
   emacs-wrapped-for-doom = lib.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
     pathsToWrap = [ "bin/emacs" "bin/emacs-*" ];
-    prefix-deps = with pkgs; [ ripgrep findutils fd ];
+    prefix-deps = with pkgs; [
+      ripgrep
+      findutils
+      fd
+      python38 # until python-language-server can handle 3.9 by default
+    ];
     suffix-deps = with pkgs; [
       shellcheck
       multimarkdown
@@ -15,7 +20,6 @@ let
       jq
       editorconfig-core-c
       unstable.python-language-server
-      python38
 
       # for pyls installation
       # unzip
