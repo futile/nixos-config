@@ -1,8 +1,8 @@
 { inputs, lib, ... }:
 { config, pkgs, ... }:
 let
-  base-emacs = pkgs.emacs;
-  emacs-with-pkgs = (pkgs.emacsPackagesGen base-emacs).emacsWithPackages
+  base-emacs = pkgs.unstable.emacs;
+  emacs-with-pkgs = (pkgs.unstable.emacsPackagesNgGen base-emacs).emacsWithPackages
     (epkgs: (with epkgs; [ vterm ]));
   emacs-wrapped-for-doom = lib.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
@@ -19,10 +19,6 @@ let
 
       # for pyls installation
       # unzip
-
-      # for vterm compile module
-      # cmake
-      # gnumake
     ];
   };
 in {
