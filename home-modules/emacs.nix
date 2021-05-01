@@ -8,19 +8,22 @@ let
   emacs-wrapped-for-doom = lib.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
     pathsToWrap = [ "bin/emacs" "bin/emacs-*" ];
-    deps = with pkgs; [
-      ripgrep
-      findutils
-      fd
+    prefix-deps = with pkgs; [ ripgrep findutils fd ];
+    suffix-deps = with pkgs; [
       shellcheck
       multimarkdown
       nixfmt
       jq
       editorconfig-core-c
+      unstable.python-language-server
+      python38
+
+      # for pyls installation
+      # unzip
 
       # for vterm compile module
-      cmake
-      gnumake
+      # cmake
+      # gnumake
     ];
   };
 in {

@@ -29,23 +29,26 @@
   rec {
     system = "x86_64-linux";
 
-    lib = {
-      mkWrappedWithDeps = { pkg, deps, pathsToWrap, otherArgs ? {} }: let
-        binPath = nixpkgs.lib.makeBinPath deps;
-        pkgs = nixpkgs.legacyPackages.${system};
-      in pkgs.symlinkJoin ({
-        name = pkg.name + "-wrapped";
-        paths = [ pkg ];
-        buildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          cd "$out"
-          for p in ${builtins.toString pathsToWrap}
-          do
-            wrapProgram "$out/$p" --prefix PATH : "${binPath}"
-          done
-        '';
-      } // otherArgs);
-    };
+      lib = {
+        mkWrappedWithDeps =
+          { pkg, prefix-deps, suffix-deps, pathsToWrap, otherArgs ? { } }:
+          let
+            prefixBinPath = nixpkgs.lib.makeBinPath prefix-deps;
+            suffixBinPath = nixpkgs.lib.makeBinPath suffix-deps;
+            pkgs = nixpkgs.legacyPackages.${system};
+          in pkgs.symlinkJoin ({
+            name = pkg.name + "-wrapped";
+            paths = [ pkg ];
+            buildInputs = [ pkgs.makeWrapper ];
+            postBuild = ''
+              cd "$out"
+              for p in ${builtins.toString pathsToWrap}
+              do
+                wrapProgram "$out/$p" --prefix PATH : "${prefixBinPath}" --suffix PATH : "${suffixBinPath}"
+              done
+            '';
+          } // otherArgs);
+      };
 
     nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
       inherit system;
