@@ -7,37 +7,46 @@
   imports = [ ];
 
   # generated through `nixos-generate-config` from virtualbox-boot and native boot
-  boot.initrd.availableKernelModules = [ "ata_piix" "ohci_pci" "xhci_pci" "ahci" "nvme" "usbhid" "usb_storage" "sd_mod" "sr_mod" ];
+  boot.initrd.availableKernelModules = [
+    "ata_piix"
+    "ohci_pci"
+    "xhci_pci"
+    "ahci"
+    "nvme"
+    "usbhid"
+    "usb_storage"
+    "sd_mod"
+    "sr_mod"
+  ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-intel" ]
     ++ # from `sudo sensors-detect`
     [ "coretemp" "nct6775" ];
   boot.extraModulePackages = [ ];
 
-  fileSystems."/" =
-    { device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
+  fileSystems."/" = {
+    device = "rpool/root/nixos";
+    fsType = "zfs";
+  };
 
-  fileSystems."/home" =
-    { device = "rpool/home";
-      fsType = "zfs";
-    };
+  fileSystems."/home" = {
+    device = "rpool/home";
+    fsType = "zfs";
+  };
 
-  fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/C0AE-C552";
-      fsType = "vfat";
-    };
+  fileSystems."/boot" = {
+    device = "/dev/disk/by-uuid/C0AE-C552";
+    fsType = "vfat";
+  };
 
   swapDevices =
-    [ { device = "/dev/disk/by-uuid/3d2fa5e1-f9f8-468e-a5e1-0bd0942a3c04"; }
-    ];
+    [{ device = "/dev/disk/by-uuid/3d2fa5e1-f9f8-468e-a5e1-0bd0942a3c04"; }];
 
   virtualisation.virtualbox.guest.enable = true;
 
   # not required to circumvent the timeout at boot, but when running `nixos-rebuild switch`
   systemd.units."dev-vboxguest.device".text = ''
-  [Unit]
-  ConditionVirtualization=oracle
+    [Unit]
+    ConditionVirtualization=oracle
   '';
 }

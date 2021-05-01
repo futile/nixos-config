@@ -13,16 +13,15 @@
     '';
   };
 
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [ # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+  ];
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   # ZFS support
-  boot.supportedFilesystems = ["zfs"];
+  boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.requestEncryptionCredentials = true;
 
   networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
@@ -117,11 +116,11 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    wget 
+    wget
     bash
     vimHugeX
     coreutils
-    git 
+    git
     rsync
     google-drive-ocamlfuse
     gnome3.dconf-editor
@@ -143,11 +142,13 @@
   virtualisation.docker = {
     enable = true;
     storageDriver = "zfs";
-    extraOptions = "--config-file=${pkgs.writeText "daemon.json" ''{
-      "ipv6": true, 
-      "fixed-cidr-v6":"fd00::/80"
-      }''}";
-    };
+    extraOptions = "--config-file=${
+        pkgs.writeText "daemon.json" ''{
+            "ipv6": true,
+            "fixed-cidr-v6":"fd00::/80"
+          }''
+      }";
+  };
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.

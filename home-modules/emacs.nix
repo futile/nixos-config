@@ -2,9 +2,8 @@
 { config, pkgs, ... }:
 let
   base-emacs = pkgs.emacs;
-  emacs-with-pkgs = (pkgs.emacsPackagesGen base-emacs).emacsWithPackages (epkgs: (with epkgs; [
-    vterm
-  ]));
+  emacs-with-pkgs = (pkgs.emacsPackagesGen base-emacs).emacsWithPackages
+    (epkgs: (with epkgs; [ vterm ]));
   emacs-wrapped-for-doom = lib.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
     pathsToWrap = [ "bin/emacs" "bin/emacs-*" ];

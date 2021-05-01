@@ -1,8 +1,7 @@
 # first set of args is passed by us
 { inputs, lib, ... }@outer_args:
 # second set of args is passed by home-manager
-{ config, pkgs, ... }:
-{
+{ config, pkgs, ... }: {
   programs.home-manager.enable = true;
 
   imports = let 
@@ -14,9 +13,10 @@
   ];
 
   home = {
-    packages = 
+    packages =
       # packages from stable
-      with pkgs; [
+      with pkgs;
+      [
         htop
         ripgrep
         fd
@@ -24,7 +24,7 @@
         python39
         element-desktop # temp stable, until bug resolved
         file
-      ] ++ 
+      ] ++
       # packages from unstable
       (with pkgs.unstable; [
         spotify
