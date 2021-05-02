@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs = { url = "github:nixos/nixpkgs/nixos-20.09"; };
     nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
+
+    # for python-language-server with Python 3.9 support
+    nixpkgs-pyls-39 = { url = "github:nixos/nixpkgs/pull/121522/head"; };
+
     home-manager = { 
       url = "github:nix-community/home-manager/release-20.09"; 
       inputs = {
@@ -17,17 +21,21 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-pyls-39, home-manager, ... }@inputs:
     let
+      system = "x86_64-linux";
       nixos-unstable-overlay = final: prev: {
         unstable = import nixpkgs-unstable {
-          system = prev.system;
+          system = final.system;
           config.allowUnfree = true;
         };
       };
-    in rec {
-      system = "x86_64-linux";
-
+      nixpkgs-pyls-39-overlay = final: prev: {
+        pyls-39 = import nixpkgs-pyls-39 {
+          system = final.system;
+          config.allowUnfree = true;
+        };
+      };
       lib = {
         mkWrappedWithDeps =
           { pkg, prefix-deps, suffix-deps, pathsToWrap, otherArgs ? { } }:
@@ -48,13 +56,13 @@
             '';
           } // otherArgs);
       };
-
+    in rec {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
         inherit system;
 
         modules = [
           # add unstable overlay
-          ({ nixpkgs.overlays = [ nixos-unstable-overlay ]; })
+          ({ nixpkgs.overlays = [ nixos-unstable-overlay nixpkgs-pyls-39-overlay ]; })
 
           # load system config
           ./system.nix

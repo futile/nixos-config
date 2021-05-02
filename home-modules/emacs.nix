@@ -11,7 +11,7 @@ let
       ripgrep
       findutils
       fd
-      python38 # until python-language-server can handle 3.9 by default
+      # python38 # until python-language-server can handle 3.9 by default
     ];
     suffix-deps = with pkgs; [
       shellcheck
@@ -19,7 +19,13 @@ let
       nixfmt
       jq
       editorconfig-core-c
-      unstable.python-language-server
+      # unstable.python-language-server
+      pyls-39.python-language-server
+
+      # python
+      black
+      python38Packages.pyflakes
+      python38Packages.isort
 
       # for pyls installation
       # unzip
