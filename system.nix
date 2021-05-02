@@ -24,6 +24,11 @@
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.requestEncryptionCredentials = true;
 
+  # enable REISUB etc.: https://www.kernel.org/doc/html/latest/admin-guide/sysrq.html
+  boot.kernel.sysctl = {
+    "kernel.sysrq" = 1;
+  };
+
   networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
   networking.hostName = "nixos-home"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.

@@ -49,4 +49,6 @@
     [Unit]
     ConditionVirtualization=oracle
   '';
+
+  hardware.cpu.intel.updateMicrocode = true;
 }
