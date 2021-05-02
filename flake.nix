@@ -37,6 +37,7 @@
         };
       };
       lib = {
+        # reference: https://discourse.nixos.org/t/wrapping-packages/4431
         mkWrappedWithDeps =
           { pkg, prefix-deps, suffix-deps, pathsToWrap, otherArgs ? { } }:
           let
