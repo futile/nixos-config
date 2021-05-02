@@ -67,23 +67,6 @@
           # load system config
           ./system.nix
 
-          # {{{
-          # prepare arguments to our home-manager config.
-          # we use an option to pass them.
-          # from: https://discourse.nixos.org/t/variables-for-a-system/2342
-          # ({ lib, ... }: {
-          #   options.hm-inputs = lib.mkOption {
-          #     type = lib.types.attrs;
-          #     default = {
-          #       inherit (inputs) fish-foreign-env;
-          #     };
-          #   };
-          # })
-          # we now simply pass 'inputs' via specialArgs.
-          # -> nope, this didn't work, because it's not a module, just home-manager
-          #    stuff. we just make home.nix a curried function and pass an argument.
-          # }}}
-
           # user config
           home-manager.nixosModules.home-manager
           {
