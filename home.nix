@@ -12,6 +12,10 @@
     ./home-modules/fish.nix
   ];
 
+  # direnv & nix-direnv
+  programs.direnv.enable = true;
+  programs.direnv.enableNixDirenvIntegration = true;
+
   home = {
     packages =
       # packages from stable
