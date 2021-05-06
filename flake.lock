@@ -55,11 +55,11 @@
     },
     "nixpkgs-pyls-39": {
       "locked": {
-        "lastModified": 1619971644,
-        "narHash": "sha256-sY07FnKa+wEjALJt7jO0tWS6fTT95kpD3hB7RyF6M0A=",
+        "lastModified": 1620062220,
+        "narHash": "sha256-iQtDfnVhoToJ1UO/zDll8Sm3MkdMuFhGKjapKZtY6oQ=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "f68ecfc7307d889312990d191568016a3dfdfbb3",
+        "rev": "4e27705c03a86f4f603cd9ba43162c2e368db40d",
         "type": "github"
       },
       "original": {
