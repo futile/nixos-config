@@ -14,13 +14,17 @@ let
       # python38 # until python-language-server can handle 3.9 by default
     ];
     suffix-deps = with pkgs; [
-      shellcheck
       multimarkdown
       nixfmt
       jq
       editorconfig-core-c
+
       # unstable.python-language-server
       pyls-39.python-language-server
+
+      # shell
+      shfmt
+      shellcheck
 
       # python
       black
