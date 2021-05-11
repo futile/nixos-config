@@ -42,6 +42,7 @@
         vscode
         zoom-us
         rustup
+        cargo-edit
         rust-analyzer
       ]);
 
