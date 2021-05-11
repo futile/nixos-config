@@ -44,6 +44,7 @@
         rustup
         cargo-edit
         rust-analyzer
+        protonvpn-cli
       ]);
 
     file = {
