@@ -45,6 +45,8 @@
         cargo-edit
         rust-analyzer
         protonvpn-cli
+        lxappearance
+        nitrogen
       ]);
 
     file = {

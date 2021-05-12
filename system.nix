@@ -91,6 +91,7 @@
       # nvidiaWayland = true;
     };
     desktopManager.gnome3.enable = true;
+    windowManager.qtile.enable = true;
 
     # Configure keymap in X11
     layout = "de,de";
