@@ -1,7 +1,12 @@
 # first set of args is passed by us
 { inputs, lib, ... }@outer_args:
 # second set of args is passed by home-manager
-{ config, pkgs, ... }: {
+{ config, pkgs, ... }:
+let
+  my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
+  my-keepassxc = pkgs.unstable.keepassxc;
+in
+{
   programs.home-manager.enable = true;
 
   imports = let 
@@ -18,8 +23,13 @@
 
   home = {
     packages =
+      # bound packages
+      [
+        my-google-drive-ocamlfuse
+        my-keepassxc
+      ] ++
       # packages from stable
-      with pkgs;
+      (with pkgs;
       [
         htop
         ripgrep
@@ -28,7 +38,7 @@
         python39
         element-desktop # temp stable, until bug resolved
         file
-      ] ++
+      ]) ++
       # packages from unstable
       (with pkgs.unstable; [
         spotify
@@ -37,7 +47,6 @@
         vivaldi-ffmpeg-codecs
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
         tdesktop
-        keepassxc
         dtrx
         vscode
         zoom-us
@@ -59,6 +68,40 @@
 
     sessionVariables = {
       EDITOR = "vim";
+    };
+  };
+
+  systemd.user.services = {
+    google-drive-ocamlfuse = {
+      Unit = {
+        Description = "Automount google drive";
+      };
+
+      Service = {
+        Type = "simple";
+        ExecStart = "${my-google-drive-ocamlfuse}/bin/google-drive-ocamlfuse -f %h/GoogleDrive";
+      };
+
+      Install = {
+        WantedBy = [ "default.target" ];
+      };
+    };
+
+    keepassxc = {
+      Unit = {
+        Description = "Autostart Keepassxc";
+        After = [ "graphical-session-pre.target" "google-drive-ocamlfuse.service" ];
+        Wants = [ "google-drive-ocamlfuse.service" ];
+      };
+
+      Service = {
+        Type = "simple";
+        ExecStart = "${my-keepassxc}/bin/keepassxc";
+      };
+
+      Install = {
+        WantedBy = [ "graphical-session.target" ];
+      };
     };
   };
 }

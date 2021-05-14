@@ -128,7 +128,6 @@
     coreutils
     git
     rsync
-    google-drive-ocamlfuse
     gnome3.dconf-editor
     gnome3.adwaita-icon-theme
     gnomeExtensions.appindicator
