@@ -56,6 +56,8 @@ in
         protonvpn-cli
         lxappearance
         nitrogen
+        nix-prefetch-git
+        nixpkgs-review
       ]);
 
     file = {
