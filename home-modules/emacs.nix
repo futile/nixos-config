@@ -11,7 +11,6 @@ let
       ripgrep
       findutils
       fd
-      # python38 # until python-language-server can handle 3.9 by default
     ];
     suffix-deps = with pkgs; [
       multimarkdown
@@ -20,7 +19,7 @@ let
       editorconfig-core-c
 
       # unstable.python-language-server
-      pyls-39.python-language-server
+      master.python-language-server
 
       # shell
       shfmt
@@ -30,9 +29,6 @@ let
       black
       python38Packages.pyflakes
       python38Packages.isort
-
-      # for pyls installation
-      # unzip
     ];
   };
 in {

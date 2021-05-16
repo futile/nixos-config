@@ -53,18 +53,18 @@
         "type": "github"
       }
     },
-    "nixpkgs-pyls-39": {
+    "nixpkgs-master": {
       "locked": {
-        "lastModified": 1620062220,
-        "narHash": "sha256-iQtDfnVhoToJ1UO/zDll8Sm3MkdMuFhGKjapKZtY6oQ=",
+        "lastModified": 1621165930,
+        "narHash": "sha256-llqY1DscZwHEhHoruxbCYKU2NNsfP0/hoTSxXmCmgew=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "4e27705c03a86f4f603cd9ba43162c2e368db40d",
+        "rev": "9b92a817238eae3e2f3dfbc8d205a5a1c0d1461c",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
-        "ref": "pull/121522/head",
+        "ref": "master",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -90,7 +90,7 @@
         "fish-foreign-env": "fish-foreign-env",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs",
-        "nixpkgs-pyls-39": "nixpkgs-pyls-39",
+        "nixpkgs-master": "nixpkgs-master",
         "nixpkgs-unstable": "nixpkgs-unstable"
       }
     }

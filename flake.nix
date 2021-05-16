@@ -4,15 +4,11 @@
   inputs = {
     nixpkgs = { url = "github:nixos/nixpkgs/nixos-20.09"; };
     nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
+    nixpkgs-master = { url = "github:nixos/nixpkgs/master"; };
 
-    # for python-language-server with Python 3.9 support
-    nixpkgs-pyls-39 = { url = "github:nixos/nixpkgs/pull/121522/head"; };
-
-    home-manager = { 
-      url = "github:nix-community/home-manager/release-20.09"; 
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-      };
+    home-manager = {
+      url = "github:nix-community/home-manager/release-20.09";
+      inputs = { nixpkgs.follows = "nixpkgs"; };
     };
 
     fish-foreign-env = {
@@ -21,20 +17,24 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-pyls-39, home-manager, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager, ...
+    }@inputs:
     let
       system = "x86_64-linux";
-      nixos-unstable-overlay = final: prev: {
-        unstable = import nixpkgs-unstable {
-          system = final.system;
-          config.allowUnfree = true;
+      mkNixpkgsOverlay = { attrName, over }:
+        final: prev: {
+          ${attrName} = import over {
+            system = final.system;
+            config.allowUnfree = true;
+          };
         };
+      nixos-unstable-overlay = mkNixpkgsOverlay {
+        attrName = "unstable";
+        over = nixpkgs-unstable;
       };
-      nixpkgs-pyls-39-overlay = final: prev: {
-        pyls-39 = import nixpkgs-pyls-39 {
-          system = final.system;
-          config.allowUnfree = true;
-        };
+      nixpkgs-master-overlay = mkNixpkgsOverlay {
+        attrName = "master";
+        over = nixpkgs-master;
       };
       lib = {
         # reference: https://discourse.nixos.org/t/wrapping-packages/4431
@@ -63,7 +63,10 @@
 
         modules = [
           # add unstable overlay
-          ({ nixpkgs.overlays = [ nixos-unstable-overlay nixpkgs-pyls-39-overlay ]; })
+          ({
+            nixpkgs.overlays =
+              [ nixos-unstable-overlay nixpkgs-master-overlay ];
+          })
 
           # load system config
           ./system.nix
