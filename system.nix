@@ -29,6 +29,9 @@
     "kernel.sysrq" = 1;
   };
 
+  # enable booting into a crashDump kernel when my system panics/hangs
+  boot.crashDump.enable = true;
+
   networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
   networking.hostName = "nixos-home"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
