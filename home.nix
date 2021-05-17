@@ -58,6 +58,7 @@ in
         nitrogen
         nix-prefetch-git
         nixpkgs-review
+        xsettingsd
       ]);
 
     file = {
