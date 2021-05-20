@@ -57,6 +57,7 @@ in
         lxappearance
         nitrogen
         nix-prefetch-git
+        nix-prefetch-github
         nixpkgs-review
         xsettingsd
       ]);
