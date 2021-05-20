@@ -110,7 +110,22 @@
 
   # Enable sound.
   sound.enable = true;
-  hardware.pulseaudio.enable = true;
+  hardware.pulseaudio = {
+    enable = true;
+
+    # Troubleshooting some repeating sound glitches
+    # from https://wiki.archlinux.org/title/PulseAudio/Troubleshooting#Glitches,_skips_or_crackling
+    # extraConfig = "tsched=0";
+
+    # from https://nixos.wiki/wiki/PulseAudio
+    # configFile = pkgs.runCommand "default.pa" {} ''
+    # sed 's/module-udev-detect$/module-udev-detect tsched=0/' \
+      # ${pkgs.pulseaudio}/etc/pulse/default.pa > $out
+  # '';
+
+    # from https://nixos.wiki/wiki/PulseAudio
+    package = pkgs.pulseaudioFull;
+  };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.felix = {
