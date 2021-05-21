@@ -60,6 +60,7 @@ in
         nix-prefetch-github
         nixpkgs-review
         xsettingsd
+        texlive.combined.scheme-full
       ]);
 
     file = {

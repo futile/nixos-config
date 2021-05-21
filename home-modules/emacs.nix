@@ -29,6 +29,8 @@ let
       black
       python38Packages.pyflakes
       python38Packages.isort
+
+      texlab
     ];
   };
 in {
