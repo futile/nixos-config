@@ -21,6 +21,10 @@ in
   programs.direnv.enable = true;
   programs.direnv.enableNixDirenvIntegration = true;
 
+  # nix-index
+  # not available for 20.09 :()
+  # programs.nix-index.enable = true;
+
   home = {
     packages =
       # bound packages

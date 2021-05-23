@@ -152,6 +152,8 @@
     # gnomeExtensions.topicons-plus # package broken
     nordic-polar
     # ccache # not sure if I want this as a system package, maybe for convenient `ccache -s`?
+
+    # Would like this to be in home.nix, but not in home-manager/20.09 :(
     nix-index
 
     # monitoring
