@@ -46,6 +46,7 @@ in
       # packages from unstable
       (with pkgs.unstable; [
         spotify
+        pavucontrol
         discord
         vivaldi
         vivaldi-ffmpeg-codecs
