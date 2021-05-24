@@ -51,6 +51,7 @@ in
         vivaldi-ffmpeg-codecs
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
         tdesktop
+        signal-desktop
         dtrx
         vscode
         zoom-us
