@@ -12,7 +12,7 @@ in
   imports = let 
     mkHomeModule = path: (import path outer_args);
   in map mkHomeModule [
-    ./home-modules/emacs.nix
+    ./home-modules/doom-emacs.nix
     ./home-modules/git.nix
     ./home-modules/fish.nix
   ];
@@ -47,7 +47,6 @@ in
       (with pkgs.unstable; [
         spotify
         pavucontrol
-        discord
         vivaldi
         vivaldi-ffmpeg-codecs
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
@@ -67,7 +66,14 @@ in
         nixpkgs-review
         xsettingsd
         texlive.combined.scheme-full
-      ]);
+        inkscape
+        spectacle
+      ]) ++
+      # packages from master
+      (with pkgs.master; [
+        discord # https://nixpk.gs/pr-tracker.html?pr=124336
+      ])
+    ;
 
     file = {
       # from https://github.com/NixOS/nixpkgs/issues/107233#issuecomment-757424877

@@ -119,9 +119,17 @@
 
     # from https://nixos.wiki/wiki/PulseAudio
     # configFile = pkgs.runCommand "default.pa" {} ''
-    # sed 's/module-udev-detect$/module-udev-detect tsched=0/' \
-      # ${pkgs.pulseaudio}/etc/pulse/default.pa > $out
-  # '';
+    #   sed 's/module-udev-detect$/module-udev-detect tsched=0/' \
+    #     ${pkgs.pulseaudio}/etc/pulse/default.pa > $out
+    # '';
+
+    # from https://unix.stackexchange.com/questions/560545/problem-with-audio-stuttering-choppy-in-every-single-distribution-ive-used
+    # sadly this only changed the problem, didn't stop it :/
+    # daemon.config = {
+    #   # realtime-scheduling = "yes";
+    #   default-fragments = "8";
+    #   default-fragment-size-msec = "5";
+    # };
 
     # from https://nixos.wiki/wiki/PulseAudio
     package = pkgs.pulseaudioFull;

@@ -13,23 +13,25 @@ let
       fd
     ];
     suffix-deps = with pkgs; [
+      # misc
       multimarkdown
-      nixfmt
       jq
       editorconfig-core-c
-
-      # unstable.python-language-server
-      master.python-language-server
 
       # shell
       shfmt
       shellcheck
 
       # python
+      unstable.python-language-server
       black
       python38Packages.pyflakes
       python38Packages.isort
 
+      # nix
+      nixfmt
+
+      # tex
       texlab
     ];
   };
