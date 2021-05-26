@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "doom-emacs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1621996769,
+        "narHash": "sha256-zGbq6n9V14lg4nPLZSz5dMEDKeY86+4XOviyqyTAdNM=",
+        "owner": "hlissner",
+        "repo": "doom-emacs",
+        "rev": "6c2ff3791a7475e1145b63461c5dc392b71fdb44",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hlissner",
+        "repo": "doom-emacs",
+        "type": "github"
+      }
+    },
     "fish-foreign-env": {
       "flake": false,
       "locked": {
@@ -87,6 +103,7 @@
     },
     "root": {
       "inputs": {
+        "doom-emacs": "doom-emacs",
         "fish-foreign-env": "fish-foreign-env",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs",

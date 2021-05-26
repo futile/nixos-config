@@ -15,6 +15,11 @@
       url = "github:oh-my-fish/plugin-foreign-env";
       flake = false;
     };
+
+    doom-emacs = {
+      url = "github:hlissner/doom-emacs";
+      flake = false;
+    };
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager, ...

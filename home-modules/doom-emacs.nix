@@ -35,6 +35,20 @@ let
       texlab
     ];
   };
+
+  # path to the emacs directory from $HOME
+  emacs-path = ".emacs.d";
+
+  # based on https://discourse.nixos.org/t/advice-needed-installing-doom-emacs/8806/8
+  onChangeScript = "${pkgs.writeShellScript "doom-change" ''
+        export DOOMDIR="${config.home.sessionVariables.DOOMDIR}"
+        export DOOMLOCALDIR="${config.home.sessionVariables.DOOMLOCALDIR}"
+        if [ ! -d "$DOOMLOCALDIR" ]; then
+          "$HOME/${emacs-path}/bin/doom" -y install --no-env
+        else
+          "$HOME/${emacs-path}/bin/doom" -y sync -u
+        fi
+     ''}";
 in {
   home = {
     packages = with pkgs; [
@@ -44,6 +58,23 @@ in {
       emacs-all-the-icons-fonts
     ];
 
-    sessionPath = [ "$HOME/.emacs.d/bin" ];
+    file.${emacs-path} = {
+      source = inputs.doom-emacs;
+      onChange = onChangeScript;
+    };
+
+    sessionPath = [ "$HOME/${emacs-path}/bin" ];
+    sessionVariables = {
+      DOOMDIR = "${config.xdg.configHome}/doom-emacs";
+      DOOMLOCALDIR = "${config.xdg.cacheHome}/doom-emacs";
+    };
+  };
+
+  xdg = {
+    enable = true;
+    configFile."doom-emacs" = {
+      source = ../dotfiles/doom-emacs;
+      onChange = onChangeScript;
+    };
   };
 }
