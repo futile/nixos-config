@@ -74,6 +74,7 @@ in {
     enable = true;
     configFile."doom-emacs" = {
       source = ../dotfiles/doom-emacs;
+      recursive = true;
       onChange = onChangeScript;
     };
   };
