@@ -43,8 +43,8 @@
       };
       lib = {
         # reference: https://discourse.nixos.org/t/wrapping-packages/4431
-        mkWrappedWithDeps =
-          { pkg, prefix-deps, suffix-deps, pathsToWrap, otherArgs ? { } }:
+        mkWrappedWithDeps = { pkg, prefix-deps, suffix-deps, pathsToWrap
+          , extraWrapProgramArgs ? [ ], otherArgs ? { } }:
           let
             prefixBinPath = nixpkgs.lib.makeBinPath prefix-deps;
             suffixBinPath = nixpkgs.lib.makeBinPath suffix-deps;
@@ -57,7 +57,10 @@
               cd "$out"
               for p in ${builtins.toString pathsToWrap}
               do
-                wrapProgram "$out/$p" --prefix PATH : "${prefixBinPath}" --suffix PATH : "${suffixBinPath}"
+                wrapProgram "$out/$p" \
+                  --prefix PATH : "${prefixBinPath}" \
+                  --suffix PATH : "${suffixBinPath}" \
+                  ${builtins.toString extraWrapProgramArgs}
               done
             '';
           } // otherArgs);

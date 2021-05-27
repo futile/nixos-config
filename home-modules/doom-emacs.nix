@@ -7,6 +7,10 @@ let
   emacs-wrapped-for-doom = lib.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
     pathsToWrap = [ "bin/emacs" "bin/emacs-*" ];
+    extraWrapProgramArgs = [
+      "--set" "DOOMDIR" ''"${config.home.sessionVariables.DOOMDIR}"''
+      "--set" "DOOMLOCALDIR" ''"${config.home.sessionVariables.DOOMLOCALDIR}"''
+    ];
     prefix-deps = with pkgs; [
       ripgrep
       findutils
