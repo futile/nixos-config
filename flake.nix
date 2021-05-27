@@ -4,6 +4,7 @@
   inputs = {
     nixpkgs = { url = "github:nixos/nixpkgs/nixos-20.09"; };
     nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
+    nixpkgs-pkgs-unstable = { url = "github:nixos/nixpkgs/nixpkgs-unstable"; };
     nixpkgs-master = { url = "github:nixos/nixpkgs/master"; };
 
     home-manager = {
@@ -74,6 +75,16 @@
           ({
             nixpkgs.overlays =
               [ nixos-unstable-overlay nixpkgs-master-overlay ];
+          })
+
+          # registry entries
+          ({
+            nix.registry = {
+              stable.flake = inputs.nixpkgs;
+              osUnstable.flake = inputs.nixpkgs-unstable;
+              unstable.flake = inputs.nixpkgs-pkgs-unstable;
+              master.flake = inputs.nixpkgs-master;
+            };
           })
 
           # load system config
