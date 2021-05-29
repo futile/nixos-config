@@ -113,24 +113,6 @@
   hardware.pulseaudio = {
     enable = true;
 
-    # Troubleshooting some repeating sound glitches
-    # from https://wiki.archlinux.org/title/PulseAudio/Troubleshooting#Glitches,_skips_or_crackling
-    # extraConfig = "tsched=0";
-
-    # from https://nixos.wiki/wiki/PulseAudio
-    # configFile = pkgs.runCommand "default.pa" {} ''
-    #   sed 's/module-udev-detect$/module-udev-detect tsched=0/' \
-    #     ${pkgs.pulseaudio}/etc/pulse/default.pa > $out
-    # '';
-
-    # from https://unix.stackexchange.com/questions/560545/problem-with-audio-stuttering-choppy-in-every-single-distribution-ive-used
-    # sadly this only changed the problem, didn't stop it :/
-    # daemon.config = {
-    #   # realtime-scheduling = "yes";
-    #   default-fragments = "8";
-    #   default-fragment-size-msec = "5";
-    # };
-
     # from https://nixos.wiki/wiki/PulseAudio
     package = pkgs.pulseaudioFull;
   };
