@@ -21,6 +21,8 @@ in
   programs.direnv.enable = true;
   programs.direnv.enableNixDirenvIntegration = true;
 
+  programs.fzf.enable = true;
+
   # nix-index
   # not available for 20.09 :()
   # programs.nix-index.enable = true;
@@ -68,10 +70,10 @@ in
         texlive.combined.scheme-full
         inkscape
         spectacle
+        discord
       ]) ++
       # packages from master
       (with pkgs.master; [
-        discord # https://nixpk.gs/pr-tracker.html?pr=124336
       ])
     ;
 
