@@ -92,7 +92,8 @@
 
                ('(+magit--display-buffer-in-direction))))))
 
-  (setq magit-display-buffer-function #'magit-display-buffer-fn-mine))
+  ;;(setq magit-display-buffer-function #'magit-display-buffer-fn-mine)
+  )
 
 ;; I use nix's python-language-server package, so adjust for the correct binary name
 ;; From https://github.com/emacs-lsp/lsp-python-ms#nixos
