@@ -69,6 +69,7 @@ in
         xsettingsd
         texlive.combined.scheme-full
         inkscape
+        gimp
         spectacle
         discord
       ]) ++
