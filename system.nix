@@ -93,7 +93,7 @@
       # so disable for now.
       # nvidiaWayland = true;
     };
-    desktopManager.gnome3.enable = true;
+    desktopManager.gnome.enable = true;
     windowManager.qtile.enable = true;
 
     # Configure keymap in X11
