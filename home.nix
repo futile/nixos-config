@@ -44,6 +44,7 @@ in
         python39
         element-desktop # temp stable, until bug resolved
         file
+        procs # TODO move config from `~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
