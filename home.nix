@@ -22,6 +22,7 @@ in
   programs.direnv.enableNixDirenvIntegration = true;
 
   programs.fzf.enable = true;
+  programs.zoxide.enable = true;
 
   # nix-index
   # not available for 20.09 :()
