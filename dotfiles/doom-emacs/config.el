@@ -95,6 +95,10 @@
   ;;(setq magit-display-buffer-function #'magit-display-buffer-fn-mine)
   )
 
+(after! lsp-mode
+  (setq lsp-rust-analyzer-server-display-inlay-hints t)
+  )
+
 ;; I use nix's python-language-server package, so adjust for the correct binary name
 ;; From https://github.com/emacs-lsp/lsp-python-ms#nixos
 (after! lsp-python-ms
