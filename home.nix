@@ -19,14 +19,13 @@ in
 
   # direnv & nix-direnv
   programs.direnv.enable = true;
-  programs.direnv.enableNixDirenvIntegration = true;
+  programs.direnv.nix-direnv.enable = true;
 
   programs.fzf.enable = true;
   programs.zoxide.enable = true;
 
   # nix-index
-  # not available for 20.09 :()
-  # programs.nix-index.enable = true;
+  programs.nix-index.enable = true;
 
   home = {
     packages =
@@ -46,6 +45,7 @@ in
         element-desktop # temp stable, until bug resolved
         file
         procs # TODO move config from `~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
+        sshuttle
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [

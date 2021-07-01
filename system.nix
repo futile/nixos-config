@@ -143,15 +143,10 @@
     nordic-polar
     # ccache # not sure if I want this as a system package, maybe for convenient `ccache -s`?
 
-    # Would like this to be in home.nix, but not in home-manager/20.09 :(
-    nix-index
-
     # monitoring
     lm_sensors
     nvtop
   ];
-
-  programs.fish.enable = true;
 
   services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
   virtualisation.docker = {
@@ -172,6 +167,16 @@
   #   enable = true;
   #   enableSSHSupport = true;
   # };
+
+  programs.fish.enable = true;
+  programs.ccache = {
+    enable = true;
+    packageNames = [
+      "linux" # build our kernel with ccache, as we have crashdump enabled, which requires compiling it ourselves
+    ];
+  };
+
+  nix.sandboxPaths = [ config.programs.ccache.cacheDir ];
 
   # List services that you want to enable:
 
