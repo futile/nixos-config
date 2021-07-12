@@ -46,6 +46,7 @@ in
         file
         procs # TODO move config from `~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
         sshuttle
+        ccache
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
