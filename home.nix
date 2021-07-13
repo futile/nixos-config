@@ -47,6 +47,7 @@ in
         procs # TODO move config from `~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
         sshuttle
         ccache
+        tdesktop # bug, fonts broken -> stable
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
@@ -55,7 +56,6 @@ in
         vivaldi
         vivaldi-ffmpeg-codecs
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
-        tdesktop
         signal-desktop
         dtrx
         vscode
