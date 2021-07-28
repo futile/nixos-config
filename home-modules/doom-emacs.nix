@@ -1,7 +1,7 @@
 { inputs, lib, ... }:
 { config, pkgs, ... }:
 let
-  base-emacs = pkgs.unstable.emacs;
+  base-emacs = pkgs.unstable.emacsGcc;
   emacs-with-pkgs = (pkgs.unstable.emacsPackagesNgGen base-emacs).emacsWithPackages
     (epkgs: (with epkgs; [ vterm ]));
   emacs-wrapped-for-doom = lib.mkWrappedWithDeps {

@@ -7,6 +7,9 @@
     nixpkgs-pkgs-unstable = { url = "github:nixos/nixpkgs/nixpkgs-unstable"; };
     nixpkgs-master = { url = "github:nixos/nixpkgs/master"; };
 
+    # for emacsGcc; see https://gist.github.com/mjlbach/179cf58e1b6f5afcb9a99d4aaf54f549
+    emacs-overlay = { url = "github:nix-community/emacs-overlay"; };
+
     home-manager = {
       url = "github:nix-community/home-manager/release-21.05";
       inputs = { nixpkgs.follows = "nixpkgs"; };
@@ -23,20 +26,21 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager, ...
-    }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager
+    , emacs-overlay, ... }@inputs:
     let
       system = "x86_64-linux";
-      mkNixpkgsOverlay = { attrName, over }:
+      mkNixpkgsOverlay = { attrName, over, extraImportArgs ? { } }:
         final: prev: {
-          ${attrName} = import over {
+          ${attrName} = import over ({
             system = final.system;
             config.allowUnfree = true;
-          };
+          } // extraImportArgs);
         };
       nixos-unstable-overlay = mkNixpkgsOverlay {
         attrName = "unstable";
         over = nixpkgs-unstable;
+        extraImportArgs = { overlays = [ emacs-overlay.overlay ]; };
       };
       nixpkgs-master-overlay = mkNixpkgsOverlay {
         attrName = "master";
