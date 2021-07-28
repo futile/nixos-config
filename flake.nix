@@ -87,6 +87,9 @@
             };
           })
 
+          # load cachix caches; generated through `cachix use -m nixos <cache-name>`
+          ./cachix.nix
+
           # load system config
           ./system.nix
 
