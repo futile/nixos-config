@@ -7,6 +7,9 @@
     userName = "Felix Rath";
 
     extraConfig = {
+      init = {
+        defaultBranch = "main";
+      };
       core = {
         editor = "vim";
       };
