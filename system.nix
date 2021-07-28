@@ -11,6 +11,7 @@
     extraOptions = ''
       experimental-features = nix-command flakes ca-references
     '';
+    trustedUsers = [ "felix" ];
   };
 
   imports = [ # Include the results of the hardware scan.
@@ -149,6 +150,7 @@
     # monitoring
     lm_sensors
     nvtop
+    cachix # just use cachix system-wide
   ];
 
   services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
