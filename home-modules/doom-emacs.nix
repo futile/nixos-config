@@ -27,7 +27,7 @@ let
       shellcheck
 
       # python
-      unstable.python-language-server
+      python-language-server
       black
       python38Packages.pyflakes
       python38Packages.isort
