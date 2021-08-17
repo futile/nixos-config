@@ -97,6 +97,7 @@
 
 (after! lsp-mode
   (setq lsp-rust-analyzer-server-display-inlay-hints t)
+  (setq lsp-rust-analyzer-max-inlay-hint-length 40)
   )
 
 ;; I use nix's python-language-server package, so adjust for the correct binary name
