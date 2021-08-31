@@ -6,6 +6,7 @@
     nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
     nixpkgs-pkgs-unstable = { url = "github:nixos/nixpkgs/nixpkgs-unstable"; };
     nixpkgs-master = { url = "github:nixos/nixpkgs/master"; };
+    nixpkgs-zellij-v16 = { url = "github:nixos/nixpkgs/pull/136281/head"; };
 
     # for emacsGcc; see https://gist.github.com/mjlbach/179cf58e1b6f5afcb9a99d4aaf54f549
     emacs-overlay = { url = "github:nix-community/emacs-overlay"; };
@@ -27,7 +28,7 @@
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager
-    , emacs-overlay, ... }@inputs:
+    , emacs-overlay, nixpkgs-zellij-v16, ... }@inputs:
     let
       system = "x86_64-linux";
       mkNixpkgsOverlay = { attrName, over, extraImportArgs ? { } }:
@@ -45,6 +46,10 @@
       nixpkgs-master-overlay = mkNixpkgsOverlay {
         attrName = "master";
         over = nixpkgs-master;
+      };
+      nixpkgs-zellij-v16-overlay = mkNixpkgsOverlay {
+        attrName = "zellij-v16";
+        over = nixpkgs-zellij-v16;
       };
       lib = {
         # reference: https://discourse.nixos.org/t/wrapping-packages/4431
@@ -77,8 +82,11 @@
         modules = [
           # add unstable overlay
           ({
-            nixpkgs.overlays =
-              [ nixos-unstable-overlay nixpkgs-master-overlay ];
+            nixpkgs.overlays = [
+              nixos-unstable-overlay
+              nixpkgs-master-overlay
+              nixpkgs-zellij-v16-overlay
+            ];
           })
 
           # registry entries
