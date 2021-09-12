@@ -78,13 +78,13 @@ in
         gimp
         spectacle
         discord
+        zellij
       ]) ++
       # packages from master
       (with pkgs.master; [
       ]) ++
       # packages from other nixpkgs branches
       [
-        pkgs.zellij-v16.zellij
       ]
     ;
 
