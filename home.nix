@@ -78,11 +78,11 @@ in
         inkscape
         gimp
         spectacle
-        discord
         zellij
       ]) ++
       # packages from master
       (with pkgs.master; [
+        discord # until 0.0.16 is out; https://nixpk.gs/pr-tracker.html?pr=138987
       ]) ++
       # packages from other nixpkgs branches
       [
