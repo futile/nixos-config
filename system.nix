@@ -151,6 +151,10 @@
     lm_sensors
     nvtop
     cachix # just use cachix system-wide
+
+    # vpn stuff
+    openvpn
+    gnome.networkmanager-openvpn
   ];
 
   services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
