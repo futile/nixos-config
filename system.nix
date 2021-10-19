@@ -158,6 +158,7 @@
   ];
 
   services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
+
   virtualisation.docker = {
     enable = true;
     storageDriver = "zfs";
@@ -167,6 +168,11 @@
             "fixed-cidr-v6":"fd00::/80"
           }''
       }";
+  };
+
+  virtualisation.virtualbox = {
+    host.enable = true;
+    host.enableExtensionPack = true;
   };
 
   # Some programs need SUID wrappers, can be configured further or are
