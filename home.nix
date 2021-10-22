@@ -5,6 +5,9 @@
 let
   my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
   my-keepassxc = pkgs.unstable.keepassxc;
+  my-vivaldi = pkgs.unstable.vivaldi.overrideAttrs (_: {
+    proprietaryCodecs = true;
+  });
 in
 {
   programs.home-manager.enable = true;
@@ -36,6 +39,7 @@ in
       [
         my-google-drive-ocamlfuse
         my-keepassxc
+        my-vivaldi
       ] ++
       # packages from stable
       (with pkgs;
@@ -57,8 +61,7 @@ in
       (with pkgs.unstable; [
         spotify
         pavucontrol
-        vivaldi
-        vivaldi-ffmpeg-codecs
+        # vivaldi-ffmpeg-codecs
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
         signal-desktop
         dtrx
