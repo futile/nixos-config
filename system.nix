@@ -191,7 +191,11 @@
     ];
   };
 
-  nix.sandboxPaths = [ config.programs.ccache.cacheDir ];
+  # add paths to the nix sandbox
+  nix.sandboxPaths = [
+    # ccache needs to be available in the sandbox
+    config.programs.ccache.cacheDir
+  ];
 
   # List services that you want to enable:
 
