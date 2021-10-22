@@ -42,7 +42,8 @@
   swapDevices =
     [{ device = "/dev/disk/by-uuid/3d2fa5e1-f9f8-468e-a5e1-0bd0942a3c04"; }];
 
-  virtualisation.virtualbox.guest.enable = true;
+  # Does (currently) not work with _latest-kernel
+  # virtualisation.virtualbox.guest.enable = true;
 
   # not required to circumvent the timeout at boot, but when running `nixos-rebuild switch`
   systemd.units."dev-vboxguest.device".text = ''

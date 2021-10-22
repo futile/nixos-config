@@ -31,7 +31,11 @@
   };
 
   # enable booting into a crashDump kernel when my system panics/hangs
-  boot.crashDump.enable = true;
+  # this causes recompilation, don't want/need it currently
+  # boot.crashDump.enable = true;
+
+  # more up-to-date kernel; for testing ccf/env_isolation
+  # boot.kernelPackages = pkgs.linuxPackages_latest;
 
   networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
   networking.hostName = "nixos-home"; # Define your hostname.
@@ -174,6 +178,10 @@
     host.enable = true;
     host.enableExtensionPack = true;
   };
+
+  # enable unprivileged user namespaces (for ccf/env_isolation)
+  # probably not necessary, as this should only be relevant for a hardened kernel (otherwise enabled by default)
+  security.unprivilegedUsernsClone = true;
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
