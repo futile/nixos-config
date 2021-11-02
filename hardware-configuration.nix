@@ -22,6 +22,10 @@
   boot.kernelModules = [ "kvm-intel" ]
     ++ # from `sudo sensors-detect`
     [ "coretemp" "nct6775" ];
+
+  # care; this might need something like:
+  # `with config.boot.kernelPackages;`
+  # see https://nixos.wiki/wiki/Linux_kernel#Custom_kernel_modules
   boot.extraModulePackages = [ ];
 
   fileSystems."/" = {

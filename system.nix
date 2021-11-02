@@ -35,7 +35,9 @@
   # boot.crashDump.enable = true;
 
   # more up-to-date kernel; for testing ccf/env_isolation
-  # boot.kernelPackages = pkgs.linuxPackages_latest;
+  # want at least 5.11 for overlayfs in user namespaces;
+  # this gives me 5.14 (at the time of writing)
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
   networking.hostName = "nixos-home"; # Define your hostname.
