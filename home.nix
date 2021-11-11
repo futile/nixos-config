@@ -54,8 +54,12 @@ in
         procs # TODO move config from `~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
         sshuttle
         ccache
-        tdesktop # bug, fonts broken -> stable # seems to be https://github.com/NixOS/nixpkgs/issues/129733, PR that is tracking the fix: https://nixpk.gs/pr-tracker.html?pr=129675 # hopefully the fix just makes it into my (stable) system
         libreoffice
+        gcc
+        gdb
+        tree
+        lsof
+        valgrind
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
@@ -70,6 +74,7 @@ in
         rustup
         cargo-edit
         rust-analyzer
+        tdesktop # bug, fonts broken -> stable # seems to be https://github.com/NixOS/nixpkgs/issues/129733, PR that is tracking the fix: https://nixpk.gs/pr-tracker.html?pr=129675 # hopefully the fix just makes it into my (stable) system
         protonvpn-cli
         lxappearance
         nitrogen
@@ -83,6 +88,7 @@ in
         spectacle
         zellij
         discord
+        just
       ]) ++
       # packages from master
       (with pkgs.master; [
