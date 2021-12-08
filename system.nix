@@ -193,6 +193,8 @@
   #   enableSSHSupport = true;
   # };
 
+  # programs.fuse.userAllowOther = true;
+
   programs.fish.enable = true;
   programs.ccache = {
     enable = true;
