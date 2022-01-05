@@ -24,3 +24,7 @@ update-input input:
 # Sync doom, sometimes necessary to do manually after updates
 sync-doom:
     doom -y sync -u
+
+# Build and show what changes would be activated (i.e., services)
+build:
+    sudo nixos-rebuild dry-activate
