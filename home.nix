@@ -7,6 +7,10 @@ let
   my-keepassxc = pkgs.unstable.keepassxc;
   my-vivaldi = pkgs.unstable.vivaldi.overrideAttrs (_: {
     proprietaryCodecs = true;
+    vivaldi-ffmpeg-codes = pkgs.unstable.vivaldi-ffmpeg-codecs;
+    enableWidevine = true;
+    vivaldi-widevine = pkgs.unstable.vivaldi-widevine;
+
   });
 in
 {
@@ -68,7 +72,7 @@ in
         # vivaldi-ffmpeg-codecs
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
         signal-desktop
-        dtrx
+        # dtrx # removed from upstream because abandoned, but this looks good: https://pypi.org/project/dtrx/#description
         vscode
         zoom-us
         rustup

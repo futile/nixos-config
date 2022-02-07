@@ -112,4 +112,5 @@
   (add-to-list 'browse-at-remote-remote-type-domains '("laboratory.comsys.rwth-aachen.de" . "gitlab")))
 
 ;; for `parent-dir/mod.rs' instead of `mod.rs<2>' etc. buffer names
-(setq uniquify-buffer-name-style 'forward)
+(after! uniquify
+  (setq uniquify-buffer-name-style 'forward))

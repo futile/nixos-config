@@ -42,7 +42,10 @@
   # available.  From NixOS 21.11 onwards I can use
   # `config.boot.zfs.package.latestCompatibleLinuxPackages` it seems.
   # https://discourse.nixos.org/t/package-zfs-kernel-2-0-6-5-15-2-in-is-marked-as-broken-refusing-to-evaluate/16168/3
-  boot.kernelPackages = pkgs.linuxPackages_5_14;
+  boot.kernelPackages = pkgs.linuxPackages_5_15;
+
+  # A ZFS version compatible with my kernel version.
+  # boot.zfs.enableUnstable = true;
 
   networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
   networking.hostName = "nixos-home"; # Define your hostname.
@@ -155,7 +158,7 @@
     gnome3.adwaita-icon-theme
     gnomeExtensions.appindicator
     # gnomeExtensions.topicons-plus # package broken
-    nordic-polar
+    nordic
     # ccache # not sure if I want this as a system package, maybe for convenient `ccache -s`?
 
     # monitoring
