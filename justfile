@@ -23,7 +23,11 @@ update-input input:
 
 # Sync doom, sometimes necessary to do manually after updates
 sync-doom:
-    doom -y sync -u
+    doom sync
+
+# Update all doom packages and sync
+update-doom-packages:
+    doom sync -u
 
 # Build and show what changes would be activated (i.e., services)
 build:
