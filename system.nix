@@ -21,6 +21,10 @@
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+
+  # Keep a maximum of 10 generations, so our /boot partition doesn't run full
+  boot.loader.systemd-boot.configurationLimit = 10;
+
   # ZFS support
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.requestEncryptionCredentials = true;
@@ -125,7 +129,7 @@
 
   # Enable sound.
   # Mostly from https://discourse.nixos.org/t/headphone-volume-resets-itself-to-100/13866/2
-  sound.enable = true;
+  # sound.enable = true;
   hardware.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {

@@ -5,12 +5,12 @@
 let
   my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
   my-keepassxc = pkgs.unstable.keepassxc;
-  my-vivaldi = pkgs.unstable.vivaldi.overrideAttrs (_: {
+  vivaldi-pkgs = pkgs.unstable;
+  my-vivaldi = vivaldi-pkgs.vivaldi.overrideAttrs (_: {
     proprietaryCodecs = true;
-    vivaldi-ffmpeg-codes = pkgs.unstable.vivaldi-ffmpeg-codecs;
+    vivaldi-ffmpeg-codes = vivaldi-pkgs.vivaldi-ffmpeg-codecs;
     enableWidevine = true;
-    vivaldi-widevine = pkgs.unstable.vivaldi-widevine;
-
+    vivaldi-widevine = vivaldi-pkgs.vivaldi-widevine;
   });
 in
 {
