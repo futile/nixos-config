@@ -69,16 +69,15 @@ in
       (with pkgs.unstable; [
         spotify
         pavucontrol
-        # vivaldi-ffmpeg-codecs
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
         signal-desktop
-        # dtrx # removed from upstream because abandoned, but this looks good: https://pypi.org/project/dtrx/#description
+        dtrx # removed from upstream because abandoned, but this looks good: https://pypi.org/project/dtrx/#description; should be back in
         vscode
         zoom-us
         rustup
         cargo-edit
         rust-analyzer
-        tdesktop # bug, fonts broken -> stable # seems to be https://github.com/NixOS/nixpkgs/issues/129733, PR that is tracking the fix: https://nixpk.gs/pr-tracker.html?pr=129675 # hopefully the fix just makes it into my (stable) system
+        tdesktop
         protonvpn-cli
         lxappearance
         nitrogen
