@@ -51,7 +51,7 @@ let
         if [ ! -d "$DOOMLOCALDIR" ]; then
           "$HOME/${emacs-path}/bin/doom" -y install --no-env
         else
-          "$HOME/${emacs-path}/bin/doom" -y sync -u
+          "$HOME/${emacs-path}/bin/doom" -y sync
         fi
      ''}";
 in {
