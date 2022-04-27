@@ -44,7 +44,8 @@
   # available.  From NixOS 21.11 onwards I can use
   # `config.boot.zfs.package.latestCompatibleLinuxPackages` it seems.
   # https://discourse.nixos.org/t/package-zfs-kernel-2-0-6-5-15-2-in-is-marked-as-broken-refusing-to-evaluate/16168/3
-  boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages; # pkgs.linuxPackages_5_15;
+  # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages; # pkgs.linuxPackages_5_15;
+  boot.kernelPackages = pkgs.linuxPackages_5_15; # virtualbox broken on current kernel >=5.17 :( https://github.com/NixOS/nixpkgs/commit/69af0d17174ee60f75e6e9f4d74c2152f4e7968e
 
   # A ZFS version compatible with my kernel version.
   # boot.zfs.enableUnstable = true;
@@ -97,10 +98,8 @@
   services.xserver = {
     enable = true;
 
-    # I have an nvidia card. virtualbox-guest adds without mkOverride, so we
-    # don't need it either.
-    # For now disable nvidia, so I can launch via virtualbox as well
-    # videoDrivers = [ "nvidia" ];
+    # try virtualbox driver first, then fall back to nvidia.
+    videoDrivers = [ "virtualbox" "nvidia" "nouveau" ];
 
     # Enable gdm & GNOME 3 Desktop Environment.
     displayManager.gdm = {

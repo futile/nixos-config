@@ -1,7 +1,7 @@
 { inputs, lib, ... }:
 { config, pkgs, ... }:
 let
-  base-emacs = pkgs.unstable.emacsGcc;
+  base-emacs = pkgs.unstable.emacsNativeComp;
   # base-emacs = pkgs.unstable.emacsUnstableGcc;
   emacs-with-pkgs = (pkgs.unstable.emacsPackagesFor base-emacs).emacsWithPackages
     (epkgs: (with epkgs; [ vterm ]));
