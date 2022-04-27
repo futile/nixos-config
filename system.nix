@@ -30,9 +30,7 @@
   boot.zfs.requestEncryptionCredentials = true;
 
   # enable REISUB etc.: https://www.kernel.org/doc/html/latest/admin-guide/sysrq.html
-  boot.kernel.sysctl = {
-    "kernel.sysrq" = 1;
-  };
+  boot.kernel.sysctl = { "kernel.sysrq" = 1; };
 
   # enable booting into a crashDump kernel when my system panics/hangs
   # this causes recompilation, don't want/need it currently
@@ -46,7 +44,7 @@
   # available.  From NixOS 21.11 onwards I can use
   # `config.boot.zfs.package.latestCompatibleLinuxPackages` it seems.
   # https://discourse.nixos.org/t/package-zfs-kernel-2-0-6-5-15-2-in-is-marked-as-broken-refusing-to-evaluate/16168/3
-  boot.kernelPackages = pkgs.linuxPackages_5_15;
+  boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages; # pkgs.linuxPackages_5_15;
 
   # A ZFS version compatible with my kernel version.
   # boot.zfs.enableUnstable = true;
@@ -99,8 +97,10 @@
   services.xserver = {
     enable = true;
 
-    # I have an nvidia card. virtualbox-guest runs mkOverride 50, so we do too.
-    videoDrivers = lib.mkOverride 50 [ "nvidia" ];
+    # I have an nvidia card. virtualbox-guest adds without mkOverride, so we
+    # don't need it either.
+    # For now disable nvidia, so I can launch via virtualbox as well
+    # videoDrivers = [ "nvidia" ];
 
     # Enable gdm & GNOME 3 Desktop Environment.
     displayManager.gdm = {
