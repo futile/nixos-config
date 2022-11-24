@@ -61,6 +61,7 @@ in
         tree
         lsof
         valgrind
+        tilix
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
