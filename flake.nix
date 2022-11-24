@@ -93,6 +93,11 @@
             };
           })
 
+          # nix path to correspond to my flakes
+          ({
+            nix.nixPath = [ "nixpkgs=${inputs.nixpkgs}" "unstable=${inputs.nixpkgs-unstable}" ];
+          })
+
           # load cachix caches; generated through `cachix use -m nixos <cache-name>`
           ./cachix.nix
 
