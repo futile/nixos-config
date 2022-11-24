@@ -90,6 +90,7 @@ in
         zellij
         discord
         just
+        obsidian
       ]) ++
       # packages from master
       (with pkgs.master; [
