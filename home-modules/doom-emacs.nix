@@ -48,10 +48,11 @@ let
   onChangeScript = "${pkgs.writeShellScript "doom-change" ''
         export DOOMDIR="${config.home.sessionVariables.DOOMDIR}"
         export DOOMLOCALDIR="${config.home.sessionVariables.DOOMLOCALDIR}"
+        export DOOMPROFILELOADFILE="${config.home.sessionVariables.DOOMPROFILELOADFILE}"
         if [ ! -d "$DOOMLOCALDIR" ]; then
           "$HOME/${emacs-path}/bin/doom" -y install --no-env
         else
-          "$HOME/${emacs-path}/bin/doom" -y sync
+          "$HOME/${emacs-path}/bin/doom" sync
         fi
      ''}";
 in {
@@ -71,6 +72,7 @@ in {
     sessionPath = [ "$HOME/${emacs-path}/bin" ];
     sessionVariables = {
       DOOMDIR = "${config.xdg.configHome}/doom-emacs";
+      DOOMPROFILELOADFILE="${config.xdg.configHome}/doom-emacs/profiles/load.el";
       DOOMLOCALDIR = "${config.xdg.cacheHome}/doom-emacs";
     };
   };
