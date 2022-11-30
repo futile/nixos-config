@@ -38,6 +38,9 @@ let
 
       # tex
       texlab
+
+      # scala
+      metals
     ];
   };
 
@@ -66,7 +69,7 @@ in {
 
     file.${emacs-path} = {
       source = inputs.doom-emacs;
-      onChange = onChangeScript;
+      # onChange = onChangeScript;
     };
 
     sessionPath = [ "$HOME/${emacs-path}/bin" ];
@@ -82,7 +85,7 @@ in {
     configFile."doom-emacs" = {
       source = ../dotfiles/doom-emacs;
       recursive = true;
-      onChange = onChangeScript;
+      # onChange = onChangeScript;
     };
   };
 }
