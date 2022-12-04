@@ -40,7 +40,7 @@ let
       texlab
 
       # scala
-      metals
+      unstable.metals
     ];
   };
 
