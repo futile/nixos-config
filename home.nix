@@ -62,6 +62,7 @@ in
         lsof
         valgrind
         tilix
+        killall
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
@@ -91,6 +92,9 @@ in
         discord
         just
         obsidian
+        tokei
+        v4l_utils # webcam utils
+        zotero
       ]) ++
       # packages from master
       (with pkgs.master; [
