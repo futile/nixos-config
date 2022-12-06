@@ -35,6 +35,8 @@ in
   programs.nix-index.enable = true;
 
   home = {
+    stateVersion = "22.05";
+
     packages =
       # bound packages
       [
@@ -49,7 +51,7 @@ in
         ripgrep
         fd
         bat
-        python39
+        python3
         element-desktop # temp stable, until bug resolved
         file
         procs # TODO move config from `~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken

@@ -11,7 +11,16 @@
     extraOptions = ''
       experimental-features = nix-command flakes ca-derivations
     '';
-    trustedUsers = [ "felix" ];
+
+    settings = {
+      trusted-users = [ "felix" ];
+
+      # add paths to the nix sandbox
+      extra-sandbox-paths = [
+        # ccache needs to be available in the sandbox
+        config.programs.ccache.cacheDir
+      ];
+    };
   };
 
   imports = [ # Include the results of the hardware scan.
@@ -213,12 +222,6 @@
       "linux" # build our kernel with ccache, as we have crashdump enabled, which requires compiling it ourselves
     ];
   };
-
-  # add paths to the nix sandbox
-  nix.sandboxPaths = [
-    # ccache needs to be available in the sandbox
-    config.programs.ccache.cacheDir
-  ];
 
   # List services that you want to enable:
 

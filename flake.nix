@@ -2,7 +2,7 @@
   description = "Full Flake Panic!";
 
   inputs = {
-    nixpkgs = { url = "github:nixos/nixpkgs/nixos-22.05"; };
+    nixpkgs = { url = "github:nixos/nixpkgs/nixos-22.11"; };
     nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
     nixpkgs-pkgs-unstable = { url = "github:nixos/nixpkgs/nixpkgs-unstable"; };
     nixpkgs-master = { url = "github:nixos/nixpkgs/master"; };
@@ -11,7 +11,7 @@
     emacs-overlay = { url = "github:nix-community/emacs-overlay"; };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-22.05";
+      url = "github:nix-community/home-manager/release-22.11";
       inputs = { nixpkgs.follows = "nixpkgs"; };
     };
 

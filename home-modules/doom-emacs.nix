@@ -30,8 +30,8 @@ let
       # python
       python-language-server
       black
-      python38Packages.pyflakes
-      python38Packages.isort
+      python3Packages.pyflakes
+      python3Packages.isort
 
       # nix
       nixfmt
