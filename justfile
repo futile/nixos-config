@@ -15,7 +15,7 @@ update:
 
 # Show available inputs (can be used for `update-input`)
 show-inputs:
-    nix flake info
+    nix flake metadata
 
 # Update a single input (see `show-inputs` for available inputs)
 update-input input:
