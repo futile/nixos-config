@@ -170,6 +170,9 @@
     gnome3.dconf-editor
     gnome3.adwaita-icon-theme
     gnomeExtensions.appindicator
+    gnomeExtensions.pop-shell
+    gnomeExtensions.pop-launcher-super-key
+    gnomeExtensions.vitals
     # gnomeExtensions.topicons-plus # package broken
     nordic
     # ccache # not sure if I want this as a system package, maybe for convenient `ccache -s`?

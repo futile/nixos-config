@@ -97,6 +97,7 @@ in
         tokei
         v4l_utils # webcam utils
         zotero
+        helix
       ]) ++
       # packages from master
       (with pkgs.master; [
