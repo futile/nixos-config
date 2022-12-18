@@ -119,6 +119,11 @@ in
     sessionVariables = {
       EDITOR = "vim";
     };
+
+  xdg = {
+    enable = true;
+    configFile."wezterm".source = config.lib.file.mkOutOfStoreSymlink
+      "${config.home.homeDirectory}/nixos/dotfiles/wezterm";
   };
 
   systemd.user.services = {

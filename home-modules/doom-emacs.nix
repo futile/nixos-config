@@ -3,7 +3,8 @@
 let
   base-emacs = pkgs.unstable.emacsUnstable;
   # base-emacs = pkgs.unstable.emacsUnstableGcc;
-  emacs-with-pkgs = (pkgs.unstable.emacsPackagesFor base-emacs).emacsWithPackages
+  emacs-with-pkgs =
+    (pkgs.unstable.emacsPackagesFor base-emacs).emacsWithPackages
     (epkgs: (with epkgs; [ vterm ]));
   emacs-wrapped-for-doom = lib.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
@@ -46,18 +47,6 @@ let
 
   # path to the emacs directory from $HOME
   emacs-path = ".emacs.d";
-
-  # based on https://discourse.nixos.org/t/advice-needed-installing-doom-emacs/8806/8
-  onChangeScript = "${pkgs.writeShellScript "doom-change" ''
-        export DOOMDIR="${config.home.sessionVariables.DOOMDIR}"
-        export DOOMLOCALDIR="${config.home.sessionVariables.DOOMLOCALDIR}"
-        export DOOMPROFILELOADFILE="${config.home.sessionVariables.DOOMPROFILELOADFILE}"
-        if [ ! -d "$DOOMLOCALDIR" ]; then
-          "$HOME/${emacs-path}/bin/doom" -y install --no-env
-        else
-          "$HOME/${emacs-path}/bin/doom" sync
-        fi
-     ''}";
 in {
   home = {
     packages = with pkgs; [
@@ -67,37 +56,28 @@ in {
       emacs-all-the-icons-fonts
     ];
 
-    file.${emacs-path} = {
-      source = inputs.doom-emacs;
-      # onChange = onChangeScript;
-    };
+    file.${emacs-path}.source = inputs.doom-emacs;
 
     sessionPath = [ "$HOME/${emacs-path}/bin" ];
     sessionVariables = {
       DOOMDIR = "${config.xdg.configHome}/doom-emacs";
-      DOOMPROFILELOADFILE="${config.xdg.configHome}/doom-emacs/profiles/load.el";
+      DOOMPROFILELOADFILE =
+        "${config.xdg.configHome}/doom-emacs/profiles/load.el";
       DOOMLOCALDIR = "${config.xdg.cacheHome}/doom-emacs";
     };
   };
 
   xdg = {
     enable = true;
-    # configFile."doom-emacs" = {
-      # source = ../dotfiles/doom-emacs;
-      # recursive = true;
-      # onChange = onChangeScript;
-    # };
+    configFile =
+      let dotdir = "${config.home.homeDirectory}/nixos/dotfiles/doom-emacs";
+      in {
+        "doom-emacs/config.el".source =
+          config.lib.file.mkOutOfStoreSymlink "${dotdir}/config.el";
+        "doom-emacs/init.el".source =
+          config.lib.file.mkOutOfStoreSymlink "${dotdir}/init.el";
+        "doom-emacs/packages.el".source =
+          config.lib.file.mkOutOfStoreSymlink "${dotdir}/packages.el";
+      };
   };
-
-  # use out-of-store symlinks for easier changes to config files.
-  # see home-manager docs or 'man tmpfiles.d' for more info
-  systemd.user.tmpfiles.rules =
-    let
-      dotdir = "%h/nixos/dotfiles/doom-emacs";
-    in
-      [
-        "L ${config.home.sessionVariables.DOOMDIR}/config.el - - - - ${dotdir}/config.el"
-        "L ${config.home.sessionVariables.DOOMDIR}/init.el - - - - ${dotdir}/init.el"
-        "L ${config.home.sessionVariables.DOOMDIR}/packages.el - - - - ${dotdir}/packages.el"
-      ];
 }
