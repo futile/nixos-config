@@ -175,7 +175,8 @@
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-master": "nixpkgs-master",
         "nixpkgs-pkgs-unstable": "nixpkgs-pkgs-unstable",
-        "nixpkgs-unstable": "nixpkgs-unstable"
+        "nixpkgs-unstable": "nixpkgs-unstable",
+        "wezterm-everforest": "wezterm-everforest"
       }
     },
     "utils": {
@@ -191,6 +192,22 @@
         "owner": "numtide",
         "repo": "flake-utils",
         "type": "github"
+      }
+    },
+    "wezterm-everforest": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1663069400,
+        "narHash": "sha256-YtZU01A/qznim658Vn3KoDoOjBra688fPs2sl8RHEu0=",
+        "ref": "refs/heads/master",
+        "rev": "b603b9c198e4947b3f278cdf06701b4c6ceb7590",
+        "revCount": 1,
+        "type": "git",
+        "url": "https://git.sr.ht/~maksim/wezterm-everforest"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://git.sr.ht/~maksim/wezterm-everforest"
       }
     }
   },

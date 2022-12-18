@@ -24,6 +24,11 @@
       url = "github:hlissner/doom-emacs";
       flake = false;
     };
+
+    wezterm-everforest = {
+      url = "git+https://git.sr.ht/~maksim/wezterm-everforest";
+      flake = false;
+    };
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager

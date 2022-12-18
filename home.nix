@@ -119,11 +119,13 @@ in
     sessionVariables = {
       EDITOR = "vim";
     };
+  };
 
   xdg = {
     enable = true;
-    configFile."wezterm".source = config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/nixos/dotfiles/wezterm";
+    configFile."wezterm/wezterm.lua".source = config.lib.file.mkOutOfStoreSymlink
+      "${config.home.homeDirectory}/nixos/dotfiles/wezterm/wezterm.lua";
+    configFile."wezterm/colors/everforest.toml".source = inputs.wezterm-everforest + "/everforest.toml";
   };
 
   systemd.user.services = {
