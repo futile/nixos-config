@@ -109,8 +109,8 @@
 (after! pipenv
   (setq pipenv-with-projectile t))
 
-(after! browse-at-remote
-  (add-to-list 'browse-at-remote-remote-type-domains '("laboratory.comsys.rwth-aachen.de" . "gitlab")))
+;; (after! browse-at-remote
+;;   (add-to-list 'browse-at-remote-remote-type-domains '("laboratory.comsys.rwth-aachen.de" . "gitlab")))
 
 ;; for `parent-dir/mod.rs' instead of `mod.rs<2>' etc. buffer names
 (after! uniquify

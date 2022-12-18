@@ -82,10 +82,22 @@ in {
 
   xdg = {
     enable = true;
-    configFile."doom-emacs" = {
-      source = ../dotfiles/doom-emacs;
-      recursive = true;
+    # configFile."doom-emacs" = {
+      # source = ../dotfiles/doom-emacs;
+      # recursive = true;
       # onChange = onChangeScript;
-    };
+    # };
   };
+
+  # use out-of-store symlinks for easier changes to config files.
+  # see home-manager docs or 'man tmpfiles.d' for more info
+  systemd.user.tmpfiles.rules =
+    let
+      dotdir = "%h/nixos/dotfiles/doom-emacs";
+    in
+      [
+        "L ${config.home.sessionVariables.DOOMDIR}/config.el - - - - ${dotdir}/config.el"
+        "L ${config.home.sessionVariables.DOOMDIR}/init.el - - - - ${dotdir}/init.el"
+        "L ${config.home.sessionVariables.DOOMDIR}/packages.el - - - - ${dotdir}/packages.el"
+      ];
 }
