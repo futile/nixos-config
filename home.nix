@@ -98,6 +98,7 @@ in
         v4l_utils # webcam utils
         zotero
         helix
+        wezterm
       ]) ++
       # packages from master
       (with pkgs.master; [
