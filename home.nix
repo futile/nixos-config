@@ -123,10 +123,15 @@ in
 
   xdg = {
     enable = true;
+
+    # wezterm
     configFile."wezterm/wezterm.lua".source = config.lib.file.mkOutOfStoreSymlink
       "${config.home.homeDirectory}/nixos/dotfiles/wezterm/wezterm.lua";
     configFile."wezterm/colors/everforest.toml".source = inputs.wezterm-everforest + "/everforest.toml";
-  };
+
+    # helix
+    configFile."helix/config.toml".source = config.lib.file.mkOutOfStoreSymlink
+      "${config.home.homeDirectory}/nixos/dotfiles/helix/config.toml";  };
 
   systemd.user.services = {
     google-drive-ocamlfuse = {
