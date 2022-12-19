@@ -106,6 +106,7 @@ in
         zotero
         helix
         wezterm
+        firefox
       ]) ++
       # packages from master
       (with pkgs.master; [
