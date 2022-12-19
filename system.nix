@@ -120,6 +120,12 @@
       # This requires some other options (`nixos-rebuild` will tell us which),
       # so disable for now.
       # nvidiaWayland = true;
+
+      # because we have encrypted ZFS, and thus already enter a password during boot
+      autoLogin = {
+        enable = true;
+        user = "felix";
+      };
     };
     desktopManager.gnome.enable = true;
     windowManager.qtile.enable = true;
@@ -192,8 +198,8 @@
   virtualisation.docker = {
     enable = true;
     storageDriver = "zfs";
-    # enable ipv6 support inside docker
     daemon.settings = {
+      # enable ipv6 support inside docker
       ipv6 = true;
       fixed-cidr-v6 = "fd00::/80";
     };
@@ -204,10 +210,6 @@
     host.enableExtensionPack = true;
   };
 
-  # enable unprivileged user namespaces (for ccf/env_isolation)
-  # probably not necessary, as this should only be relevant for a hardened kernel (otherwise enabled by default)
-  security.unprivilegedUsernsClone = true;
-
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
@@ -216,6 +218,7 @@
   #   enableSSHSupport = true;
   # };
 
+  # Keeping this for reference
   # programs.fuse.userAllowOther = true;
 
   programs.fish.enable = true;
