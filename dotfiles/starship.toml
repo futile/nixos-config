@@ -15,10 +15,10 @@ symbol = '' # don't show a symbol when failed
 disabled = false # show error code (the number) if a command fails
 
 [git_status]
-format = '([\[$ahead_behind\]](dimmed black) )' # don't display modified etc. symbols
+format = '([\[$ahead_behind\]](black dimmed) )' # don't display modified etc. symbols
 up_to_date = '✓'
-ahead = '⇡${count}'
-behind = '⇣${count}'
+ahead = '[⇡${count}](bold cyan)'
+behind = '[⇣${count}](bold yellow)'
 diverged = '[⇕](bold red)[⇡${ahead_count}](bold cyan)[⇣${behind_count}](bold yellow)'
 
 # generally change the default 'via' string to something else, as I don't like it.
