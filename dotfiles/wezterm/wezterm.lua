@@ -10,6 +10,14 @@ return {
   -- color_scheme = 'onedark',
   color_scheme = 'everforest',
 
+  font = wezterm.font_with_fallback {
+    'JetBrainsMono Nerd Font',
+    'Symbols Nerd Font Mono',
+    'Symbols Nerd Font',
+    'FiraCode Nerd Font Mono',
+    'FiraCode Nerd Font',
+  },
+
   hide_tab_bar_if_only_one_tab = true,
 
   colors = {

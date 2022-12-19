@@ -34,6 +34,12 @@ in
   # nix-index
   programs.nix-index.enable = true;
 
+  # starship prompt: https://starship.rs
+  programs.starship = {
+    enable = true;
+    package = pkgs.unstable.starship;
+  };
+
   home = {
     stateVersion = "22.05";
 
@@ -132,7 +138,12 @@ in
 
     # helix
     configFile."helix/config.toml".source = config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/nixos/dotfiles/helix/config.toml";  };
+      "${config.home.homeDirectory}/nixos/dotfiles/helix/config.toml";
+
+    # starship
+    configFile."starship.toml".source = config.lib.file.mkOutOfStoreSymlink
+      "${config.home.homeDirectory}/nixos/dotfiles/starship.toml";
+  };
 
   systemd.user.services = {
     google-drive-ocamlfuse = {

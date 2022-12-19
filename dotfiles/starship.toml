@@ -1,0 +1,38 @@
+# See https://starship.rs/config/#prompt
+
+# Get editor completions based on the config schema
+"$schema" = 'https://starship.rs/config-schema.json'
+
+[directory]
+# specify these two so the different prompt styles in a git repo take effect
+before_repo_root_style = 'black bold dimmed'
+repo_root_style = 'bold cyan'
+truncate_to_repo = false # don't truncate to repo by default
+fish_style_pwd_dir_length = 1 # show truncated dirs with 1 letter
+
+[status]
+symbol = '' # don't show a symbol when failed
+disabled = false # show error code (the number) if a command fails
+
+[git_status]
+format = '([\[$ahead_behind\]](dimmed black) )' # don't display modified etc. symbols
+up_to_date = '✓'
+ahead = '⇡${count}'
+behind = '⇣${count}'
+diverged = '[⇕](bold red)[⇡${ahead_count}](bold cyan)[⇣${behind_count}](bold yellow)'
+
+# generally change the default 'via' string to something else, as I don't like it.
+
+[scala]
+format = ' [${symbol}(${version} )]($style)'
+symbol = " " # default symbol is broken somehow
+
+[nodejs]
+format = ' [$symbol($version )]($style)'
+symbol = " " # default symbol doesn't look good
+
+[java]
+format = ' [${symbol}(${version} )]($style)'
+
+[nix_shell]
+format = ' [$symbol$state( \($name\))]($style) '

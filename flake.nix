@@ -100,7 +100,10 @@
 
           # nix path to correspond to my flakes
           ({
-            nix.nixPath = [ "nixpkgs=${inputs.nixpkgs}" "unstable=${inputs.nixpkgs-unstable}" ];
+            nix.nixPath = [
+              "nixpkgs=${inputs.nixpkgs}"
+              "unstable=${inputs.nixpkgs-unstable}"
+            ];
           })
 
           # load cachix caches; generated through `cachix use -m nixos <cache-name>`
@@ -108,6 +111,22 @@
 
           # load system config
           ./system.nix
+
+          # fonts, mainly for starship-prompt at the time of writing
+          ({ pkgs, ... }: {
+            fonts.fonts = with pkgs.unstable;
+              [
+                (nerdfonts.override {
+                  fonts = [
+                    "JetBrainsMono" # wezterm default font
+                    "LiberationMono" # I just like this font :)
+                    "FiraCode"
+                    "DroidSansMono"
+                    "NerdFontsSymbolsOnly"
+                  ];
+                })
+              ];
+          })
 
           # user config
           home-manager.nixosModules.home-manager
