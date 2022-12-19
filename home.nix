@@ -65,6 +65,7 @@ in
         valgrind
         tilix
         killall
+        xsel # for system clipboard with helix and terminal emulators that ignore clipboard escape codes (for security reasons), such as wezterm
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
