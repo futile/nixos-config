@@ -112,19 +112,21 @@
     videoDrivers = [ "virtualbox" "nvidia" "nouveau" ];
 
     # Enable gdm & GNOME 3 Desktop Environment.
-    displayManager.gdm = {
-      enable = true;
-      # We don't want wayland for now; e.g. screensharing doesn't work (well)
-      wayland = false;
-      # When we want wayland, we also want to run with nvidia.
-      # This requires some other options (`nixos-rebuild` will tell us which),
-      # so disable for now.
-      # nvidiaWayland = true;
-
+    displayManager = {
       # because we have encrypted ZFS, and thus already enter a password during boot
       autoLogin = {
         enable = true;
         user = "felix";
+      };
+
+      gdm = {
+        enable = true;
+        # We don't want wayland for now; e.g. screensharing doesn't work (well)
+        wayland = false;
+        # When we want wayland, we also want to run with nvidia.
+        # This requires some other options (`nixos-rebuild` will tell us which),
+        # so disable for now.
+        # nvidiaWayland = true;
       };
     };
     desktopManager.gnome.enable = true;
