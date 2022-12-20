@@ -11,7 +11,7 @@
         defaultBranch = "main";
       };
       core = {
-        editor = "vim";
+        editor = "hx";
       };
       pull = {
         ff = "only";
@@ -23,13 +23,15 @@
 
     delta = {
       enable = true;
-      options = {
-        syntax-theme = "GitHub";
-      };
+      # options = {
+      #   syntax-theme = "GitHub";
+      # };
     };
 
     lfs.enable = true;
   };
 
-  home.packages = [pkgs.git-absorb];
+  home.packages = [
+    pkgs.git-absorb # nifty git tool that automatically folds staged changes into their corresponding commits: https://github.com/tummychow/git-absorb
+  ];
 }
