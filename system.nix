@@ -115,7 +115,7 @@
     displayManager = {
       # because we have encrypted ZFS, and thus already enter a password during boot
       autoLogin = {
-        enable = true;
+        enable = false; # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
         user = "felix";
       };
 
