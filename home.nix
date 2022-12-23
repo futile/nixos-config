@@ -31,6 +31,12 @@ in
   programs.fzf.enable = true;
   programs.zoxide.enable = true;
 
+  programs.exa = {
+    enable = true;
+    # enableAliases = true;
+    package = pkgs.unstable.exa;
+  };
+  
   # nix-index
   programs.nix-index.enable = true;
 

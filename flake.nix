@@ -106,6 +106,12 @@
             ];
           })
 
+          # get rid of default shell aliases;
+          # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
+          ({ lib, ...}: {
+            environment.shellAliases = lib.mkForce {};
+          })
+
           # load cachix caches; generated through `cachix use -m nixos <cache-name>`
           ./cachix.nix
 
