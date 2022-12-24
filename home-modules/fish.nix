@@ -3,10 +3,21 @@
   programs.fish = {
     enable = true;
 
-    plugins = [{
-      name = "foreign-env";
-      src = inputs.fish-foreign-env;
-    }];
+    plugins = [
+      # Automatically sync environment variables set by sub-shells that are not fish.
+      # https://github.com/oh-my-fish/plugin-foreign-env
+      {
+        name = "foreign-env";
+        src = inputs.fish-foreign-env;
+      }
+
+      # Automatically rewrite `...` to `../../` while typing, also `!!` and `!$`.
+      # https://github.com/nickeb96/puffer-fish
+      {
+        name = "puffer-fish";
+        src = inputs.fish-puffer-fish;
+      }
+    ];
 
     shellAliases = {
       # don't need this anymore, just keeping it around for reference

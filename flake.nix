@@ -20,6 +20,11 @@
       flake = false;
     };
 
+    fish-puffer-fish = {
+      url = "github:nickeb96/puffer-fish";
+      flake = false;
+    };
+
     doom-emacs = {
       url = "github:hlissner/doom-emacs";
       flake = false;

@@ -51,6 +51,22 @@
         "type": "github"
       }
     },
+    "fish-puffer-fish": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1665156549,
+        "narHash": "sha256-aij48yQHeAKCoAD43rGhqW8X/qmEGGkg8B4jSeqjVU0=",
+        "owner": "nickeb96",
+        "repo": "puffer-fish",
+        "rev": "fd0a9c95da59512beffddb3df95e64221f894631",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nickeb96",
+        "repo": "puffer-fish",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "locked": {
         "lastModified": 1667395993,
@@ -171,6 +187,7 @@
         "doom-emacs": "doom-emacs",
         "emacs-overlay": "emacs-overlay",
         "fish-foreign-env": "fish-foreign-env",
+        "fish-puffer-fish": "fish-puffer-fish",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-master": "nixpkgs-master",
