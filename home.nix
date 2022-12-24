@@ -86,7 +86,7 @@ in
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
         signal-desktop
         dtrx # removed from upstream because abandoned, but this looks good: https://pypi.org/project/dtrx/#description; should be back in
-        vscode
+        # vscode # don't need this atm, so why install it?
         zoom-us
         rustup
         cargo-edit
