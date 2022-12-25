@@ -32,3 +32,7 @@ update-doom-packages:
 # Build and show what changes would be activated (i.e., services)
 build:
     sudo nixos-rebuild dry-activate
+
+# Check the flacke using `nix flake check`
+check:
+    nix flake check
