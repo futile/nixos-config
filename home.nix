@@ -32,7 +32,14 @@ in
   programs.direnv.enable = true;
   programs.direnv.nix-direnv.enable = true;
 
-  programs.fzf.enable = true;
+  programs.fzf = {
+    enable = true;
+
+    # use this custom command to ignore hidden and ignored files by default.
+    # also follow symlinks, and '$dir' in fish allows prefixes such as `/var/<ctrl-t>` to work.
+    fileWidgetCommand = "fd --type f --follow . \\\$dir";
+  };
+
   programs.zoxide.enable = true;
 
   programs.exa = {
