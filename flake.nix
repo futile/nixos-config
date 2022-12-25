@@ -58,7 +58,7 @@
       };
       lib = {
         # reference: https://discourse.nixos.org/t/wrapping-packages/4431
-        mkWrappedWithDeps = { pkg, prefix-deps, suffix-deps, pathsToWrap
+        mkWrappedWithDeps = { pkg, pathsToWrap, prefix-deps ? [ ], suffix-deps ? [ ]
           , extraWrapProgramArgs ? [ ], otherArgs ? { } }:
           let
             prefixBinPath = nixpkgs.lib.makeBinPath prefix-deps;
@@ -97,6 +97,7 @@
             python3Packages.isort
 
             # nix
+            unstable.nil # nix lsp
             nixfmt
 
             # tex
@@ -106,7 +107,7 @@
             unstable.metals
           ];
       };
-    in rec {
+    in {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
         inherit system;
 

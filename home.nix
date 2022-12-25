@@ -20,6 +20,7 @@ in
     mkHomeModule = path: (import path outer_args);
   in map mkHomeModule [
     ./home-modules/doom-emacs.nix
+    ./home-modules/helix.nix
     ./home-modules/git.nix
     ./home-modules/fish.nix
   ];
@@ -77,7 +78,7 @@ in
         valgrind
         tilix
         killall
-        xsel # for system clipboard with helix and terminal emulators that ignore clipboard escape codes (for security reasons), such as wezterm
+        xsel # for system clipboard with terminal emulators that ignore clipboard escape codes (for security reasons), such as wezterm
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
@@ -110,7 +111,6 @@ in
         tokei
         v4l_utils # webcam utils
         zotero
-        helix
         wezterm
         firefox
       ]) ++
@@ -142,10 +142,6 @@ in
     configFile."wezterm/wezterm.lua".source = config.lib.file.mkOutOfStoreSymlink
       "${config.home.homeDirectory}/nixos/dotfiles/wezterm/wezterm.lua";
     configFile."wezterm/colors/everforest.toml".source = inputs.wezterm-everforest + "/everforest.toml";
-
-    # helix
-    configFile."helix/config.toml".source = config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/nixos/dotfiles/helix/config.toml";
 
     # starship
     configFile."starship.toml".source = config.lib.file.mkOutOfStoreSymlink
