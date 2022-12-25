@@ -42,3 +42,8 @@ check:
 format:
     nixpkgs-fmt .
     just --unstable --fmt
+
+# Check if everything is formatted correctly.
+format-check:
+    nixpkgs-fmt . --check
+    just --unstable --fmt --check
