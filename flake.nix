@@ -79,6 +79,32 @@
               done
             '';
           } // otherArgs);
+
+          mkEditorTools = { pkgs }: with pkgs; [
+            # misc
+            multimarkdown
+            jq
+            editorconfig-core-c
+
+            # shell
+            shfmt
+            shellcheck
+
+            # python
+            python-language-server
+            black
+            python3Packages.pyflakes
+            python3Packages.isort
+
+            # nix
+            nixfmt
+
+            # tex
+            texlab
+
+            # scala
+            unstable.metals
+          ];
       };
     in rec {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
