@@ -41,6 +41,13 @@
           echo "yes it does"
         '';
       };
+
+      fish_user_key_bindings = {
+        body = ''
+          # '\a' is ctrl+g according to `fish_key_reader`
+          bind \a 'magit'
+        '';
+      };
     };
   };
 }
