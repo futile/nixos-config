@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if ! emacsclient -a false --eval nil --quiet >/dev/null 2>&1; then
+    echo "Error: Emacs daemon not running." >&2
+    exit 1
+fi
+
+ARGS="-n"
+
+# Note: instead of just setting "-n" we could also check whether the server is graphic first
+# IS_GRAPHICAL="$(emacsclient -a false --eval "(display-graphic-p)" --quiet)"
+# if [ "$IS_GRAPHICAL" = "t" ]; then
+#     ARGS="-n"
+# fi
+
+exec emacsclient $@ $ARGS -c --suppress-output --quiet --eval "(progn (magit-status) (delete-other-windows))"

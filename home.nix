@@ -12,6 +12,7 @@ let
     enableWidevine = true;
     vivaldi-widevine = vivaldi-pkgs.vivaldi-widevine;
   });
+  thisFlakePath = config.home.homeDirectory + "/nixos";
 in
 {
   programs.home-manager.enable = true;
@@ -126,12 +127,10 @@ in
     ;
 
     file = {
-      # from https://github.com/NixOS/nixpkgs/issues/107233#issuecomment-757424877
-      # -> do this by hand instead, as the file contains a lot of entries by default. (19.4.21)
-      # ".config/zoomus.conf".text = ''
-      #   enableWaylandShare=true
-      # '';
+      "bin".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/bin";
     };
+
+    sessionPath = [ "$HOME/bin" ];
 
     sessionVariables = {
       EDITOR = "vim";
@@ -142,13 +141,17 @@ in
     enable = true;
 
     # wezterm
-    configFile."wezterm/wezterm.lua".source = config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/nixos/dotfiles/wezterm/wezterm.lua";
+    configFile."wezterm/wezterm.lua".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
     configFile."wezterm/colors/everforest.toml".source = inputs.wezterm-everforest + "/everforest.toml";
 
     # starship
-    configFile."starship.toml".source = config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/nixos/dotfiles/starship.toml";
+    configFile."starship.toml".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/starship.toml";
+
+    # from https://github.com/NixOS/nixpkgs/issues/107233#issuecomment-757424877
+    # -> do this by hand instead, as the file contains a lot of entries by default. (19.4.21)
+    # ".config/zoomus.conf".text = ''
+    #   enableWaylandShare=true
+    # '';
   };
 
   systemd.user.services = {
