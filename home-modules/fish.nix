@@ -30,6 +30,9 @@
       ltl = "exa --tree -l";
       lta = "exa --tree -a";
       ltla = "exa --tree -la";
+
+      # let's try this out :)
+      cat = "bat";
     };
 
     functions = {
