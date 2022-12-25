@@ -36,3 +36,7 @@ build:
 # Check the flacke using `nix flake check`
 check:
     nix flake check
+
+# Format everything using `nixpkgs-fmt`.
+format:
+    nixpkgs-fmt .

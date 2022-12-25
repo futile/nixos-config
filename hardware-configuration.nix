@@ -58,5 +58,5 @@
   hardware.cpu.intel.updateMicrocode = true;
 
   # for rtl8192ee (wifi) firmware
-  hardware.enableRedistributableFirmware  = true;
+  hardware.enableRedistributableFirmware = true;
 }

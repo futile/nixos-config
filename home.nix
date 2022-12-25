@@ -16,14 +16,16 @@ in
 {
   programs.home-manager.enable = true;
 
-  imports = let 
-    mkHomeModule = path: (import path outer_args);
-  in map mkHomeModule [
-    ./home-modules/doom-emacs.nix
-    ./home-modules/helix.nix
-    ./home-modules/git.nix
-    ./home-modules/fish.nix
-  ];
+  imports =
+    let
+      mkHomeModule = path: (import path outer_args);
+    in
+    map mkHomeModule [
+      ./home-modules/doom-emacs.nix
+      ./home-modules/helix.nix
+      ./home-modules/git.nix
+      ./home-modules/fish.nix
+    ];
 
   # direnv & nix-direnv
   programs.direnv.enable = true;
@@ -37,7 +39,7 @@ in
     # enableAliases = true;
     package = pkgs.unstable.exa;
   };
-  
+
   # nix-index
   programs.nix-index.enable = true;
 
@@ -79,6 +81,7 @@ in
         tilix
         killall
         xsel # for system clipboard with terminal emulators that ignore clipboard escape codes (for security reasons), such as wezterm
+        nixpkgs-fmt
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [

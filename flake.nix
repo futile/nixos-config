@@ -36,8 +36,15 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager
-    , emacs-overlay, ... }@inputs:
+  outputs =
+    { self
+    , nixpkgs
+    , nixpkgs-unstable
+    , nixpkgs-master
+    , home-manager
+    , emacs-overlay
+    , ...
+    }@inputs:
     let
       system = "x86_64-linux";
       mkNixpkgsOverlay = { attrName, over, extraImportArgs ? { } }:
@@ -58,13 +65,20 @@
       };
       lib = {
         # reference: https://discourse.nixos.org/t/wrapping-packages/4431
-        mkWrappedWithDeps = { pkg, pathsToWrap, prefix-deps ? [ ], suffix-deps ? [ ]
-          , extraWrapProgramArgs ? [ ], otherArgs ? { } }:
+        mkWrappedWithDeps =
+          { pkg
+          , pathsToWrap
+          , prefix-deps ? [ ]
+          , suffix-deps ? [ ]
+          , extraWrapProgramArgs ? [ ]
+          , otherArgs ? { }
+          }:
           let
             prefixBinPath = nixpkgs.lib.makeBinPath prefix-deps;
             suffixBinPath = nixpkgs.lib.makeBinPath suffix-deps;
             pkgs = nixpkgs.legacyPackages.${system};
-          in pkgs.symlinkJoin ({
+          in
+          pkgs.symlinkJoin ({
             name = pkg.name + "-wrapped";
             paths = [ pkg ];
             buildInputs = [ pkgs.makeWrapper ];
@@ -80,34 +94,36 @@
             '';
           } // otherArgs);
 
-          mkEditorTools = { pkgs }: with pkgs; [
-            # misc
-            multimarkdown
-            jq
-            editorconfig-core-c
+        mkEditorTools = { pkgs }: with pkgs; [
+          # misc
+          multimarkdown
+          jq
+          editorconfig-core-c
 
-            # shell
-            shfmt
-            shellcheck
+          # shell
+          shfmt
+          shellcheck
 
-            # python
-            python-language-server
-            black
-            python3Packages.pyflakes
-            python3Packages.isort
+          # python
+          python-language-server
+          black
+          python3Packages.pyflakes
+          python3Packages.isort
 
-            # nix
-            unstable.nil # nix lsp
-            nixfmt
+          # nix
+          unstable.nil # nix lsp
+          nixfmt
+          nixpkgs-fmt
 
-            # tex
-            texlab
+          # tex
+          texlab
 
-            # scala
-            unstable.metals
-          ];
+          # scala
+          unstable.metals
+        ];
       };
-    in {
+    in
+    {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
         inherit system;
 
@@ -140,8 +156,8 @@
 
           # get rid of default shell aliases;
           # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
-          ({ lib, ...}: {
-            environment.shellAliases = lib.mkForce {};
+          ({ lib, ... }: {
+            environment.shellAliases = lib.mkForce { };
           })
 
           # load cachix caches; generated through `cachix use -m nixos <cache-name>`
