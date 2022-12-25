@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# References:
+# https://sgeb.io/posts/magit-cli/
+# https://www.reddit.com/r/emacs/comments/9b1bhs/emacsshell_protip_alias_magit/
+
 if ! emacsclient -a false --eval nil --quiet >/dev/null 2>&1; then
     echo "Error: Emacs daemon not running." >&2
     exit 1
