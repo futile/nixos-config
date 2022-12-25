@@ -61,4 +61,10 @@ in
           config.lib.file.mkOutOfStoreSymlink "${dotdir}/packages.el";
       };
   };
+
+  # auto start emacs server
+  services.emacs = {
+    enable = true;
+    package = emacs-wrapped-for-doom;
+  };
 }
