@@ -1,5 +1,6 @@
 # allow positional arguments to commands
-set positional-arguments
+
+set positional-arguments := true
 
 # List available recipes
 _default:
@@ -19,7 +20,7 @@ show-inputs:
 
 # Update a single input (see `show-inputs` for available inputs)
 update-input input:
-    nix flake lock --update-input '{{input}}'
+    nix flake lock --update-input '{{ input }}'
 
 # Sync doom, sometimes necessary to do manually after updates
 sync-doom:
@@ -37,6 +38,7 @@ build:
 check:
     nix flake check
 
-# Format everything using `nixpkgs-fmt`.
+# Format everything (using `nixpkgs-fmt` and `just --fmt`).
 format:
     nixpkgs-fmt .
+    just --unstable --fmt
