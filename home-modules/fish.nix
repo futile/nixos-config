@@ -50,4 +50,9 @@
       };
     };
   };
+
+  # make sure these are enabled, without forcing a specific package
+  # (so the specific package can be set somewhere else).
+  programs.exa.enable = true;
+  programs.bat.enable = true;
 }
