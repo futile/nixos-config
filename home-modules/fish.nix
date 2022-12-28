@@ -17,6 +17,13 @@
         name = "puffer-fish";
         src = inputs.fish-puffer-fish;
       }
+
+      # Tide-prompt.
+      # https://github.com/IlanCosman/tide
+      {
+        name = "tide";
+        src = inputs.fish-tide;
+      }
     ];
 
     shellAliases = {

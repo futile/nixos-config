@@ -25,6 +25,11 @@
       flake = false;
     };
 
+    fish-tide = {
+      url = "github:IlanCosman/tide";
+      flake = false;
+    };
+
     doom-emacs = {
       url = "github:hlissner/doom-emacs";
       flake = false;
@@ -167,6 +172,7 @@
           ./system.nix
 
           # fonts, mainly for starship-prompt at the time of writing
+          # also for "tide" prompt (fish)
           ({ pkgs, ... }: {
             fonts.fonts = with pkgs.unstable;
               [

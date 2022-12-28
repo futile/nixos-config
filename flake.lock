@@ -67,6 +67,22 @@
         "type": "github"
       }
     },
+    "fish-tide": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1665781827,
+        "narHash": "sha256-x0wwXjKCDwtoUUJaiixeRRt5J6+EFD4Qev6kuOhd9Zw=",
+        "owner": "IlanCosman",
+        "repo": "tide",
+        "rev": "0cf2993d37e317a405114b78df6a5440eeb88bbb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IlanCosman",
+        "repo": "tide",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "locked": {
         "lastModified": 1667395993,
@@ -188,6 +204,7 @@
         "emacs-overlay": "emacs-overlay",
         "fish-foreign-env": "fish-foreign-env",
         "fish-puffer-fish": "fish-puffer-fish",
+        "fish-tide": "fish-tide",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-master": "nixpkgs-master",
