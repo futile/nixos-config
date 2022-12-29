@@ -66,5 +66,11 @@ in
   services.emacs = {
     enable = true;
     package = emacs-wrapped-for-doom;
+
+    # Starting with user session gives me a "DISPLAY:1 not found"
+    # until I restart the service, so trying this instead.
+    # -- Result: I don't really understand how to use this/how to
+    # start emacs/the service with this, so have to disable it.
+    # socketActivation.enable = true;
   };
 }
