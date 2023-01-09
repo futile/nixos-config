@@ -134,6 +134,18 @@
         "type": "indirect"
       }
     },
+    "nixpkgs-local": {
+      "locked": {
+        "lastModified": 1672702173,
+        "narHash": "sha256-b4AQJdgHimxIVsbtJ3wvrbE0wTbqbjNOQN4HgyMNfBs=",
+        "type": "git",
+        "url": "file:///home/felix/gits/nixpkgs"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///home/felix/gits/nixpkgs"
+      }
+    },
     "nixpkgs-master": {
       "locked": {
         "lastModified": 1671893134,
@@ -207,6 +219,7 @@
         "fish-tide": "fish-tide",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_2",
+        "nixpkgs-local": "nixpkgs-local",
         "nixpkgs-master": "nixpkgs-master",
         "nixpkgs-pkgs-unstable": "nixpkgs-pkgs-unstable",
         "nixpkgs-unstable": "nixpkgs-unstable",
