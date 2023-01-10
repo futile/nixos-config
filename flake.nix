@@ -43,8 +43,15 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager
-    , emacs-overlay, ... }@inputs:
+  outputs =
+    { self
+    , nixpkgs
+    , nixpkgs-unstable
+    , nixpkgs-master
+    , home-manager
+    , emacs-overlay
+    , ...
+    }@inputs:
     let
       system = "x86_64-linux";
       mkNixpkgsOverlay = { attrName, over, extraImportArgs ? { } }:
@@ -69,13 +76,20 @@
       };
       lib = {
         # reference: https://discourse.nixos.org/t/wrapping-packages/4431
-        mkWrappedWithDeps = { pkg, pathsToWrap, prefix-deps ? [ ]
-          , suffix-deps ? [ ], extraWrapProgramArgs ? [ ], otherArgs ? { } }:
+        mkWrappedWithDeps =
+          { pkg
+          , pathsToWrap
+          , prefix-deps ? [ ]
+          , suffix-deps ? [ ]
+          , extraWrapProgramArgs ? [ ]
+          , otherArgs ? { }
+          }:
           let
             prefixBinPath = nixpkgs.lib.makeBinPath prefix-deps;
             suffixBinPath = nixpkgs.lib.makeBinPath suffix-deps;
             pkgs = nixpkgs.legacyPackages.${system};
-          in pkgs.symlinkJoin ({
+          in
+          pkgs.symlinkJoin ({
             name = pkg.name + "-wrapped";
             paths = [ pkg ];
             buildInputs = [ pkgs.makeWrapper ];
@@ -120,7 +134,8 @@
             unstable.metals
           ];
       };
-    in {
+    in
+    {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
         inherit system;
 
