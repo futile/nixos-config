@@ -116,7 +116,8 @@
     displayManager = {
       # because we have encrypted ZFS, and thus already enter a password during boot
       autoLogin = {
-        enable = false; # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
+        enable =
+          false; # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
         user = "felix";
       };
 
@@ -137,6 +138,11 @@
     layout = "de,de";
     xkbVariant = "neo,basic";
     # xkbOptions = "grp:menu_toggle"; # 'menu_toggle' -> context-menu key
+
+    # fast(er) key repeat
+    # seem not to work!
+    autoRepeatDelay = 190;
+    autoRepeatInterval = 30;
 
     # Enable touchpad support (enabled default in most desktopManager).
     # libinput.enable = true;
