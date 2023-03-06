@@ -10,7 +10,7 @@ let
     proprietaryCodecs = true;
     vivaldi-ffmpeg-codes = vivaldi-pkgs.vivaldi-ffmpeg-codecs;
     enableWidevine = true;
-    vivaldi-widevine = vivaldi-pkgs.vivaldi-widevine;
+    vivaldi-widevine = vivaldi-pkgs.widevine-cdm;
   });
   thisFlakePath = config.home.homeDirectory + "/nixos";
 in
