@@ -32,6 +32,8 @@ update-doom-packages:
 
 # Build and show what changes would be activated (i.e., services)
 build:
+    # TODO: maybe use `--download-speed` for throttling?
+    # TODO: maybe also limit CPU-usage somewhat, maybe with a switch?
     sudo nixos-rebuild dry-activate
 
 # Check the flacke using `nix flake check`
