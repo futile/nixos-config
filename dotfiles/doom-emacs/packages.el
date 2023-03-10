@@ -12,6 +12,7 @@
 (package! meson-mode) ; for `meson.build` files
 (package! just-mode) ; for `justfile`s
 (package! prisma-mode :recipe (:host github :repo "pimeys/emacs-prisma-mode" :branch "main")) ; for prisma files
+(package! inheritenv) ; to inherit environment variables in temporary buffers
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
