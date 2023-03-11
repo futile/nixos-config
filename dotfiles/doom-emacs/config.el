@@ -115,3 +115,7 @@
 ;; for `parent-dir/mod.rs' instead of `mod.rs<2>' etc. buffer names
 (after! uniquify
   (setq uniquify-buffer-name-style 'forward))
+
+;; ".gltf"-files are json
+(after! json-mode
+  (add-to-list 'auto-mode-alist '("\\.gltf\\'" . json-mode)))
