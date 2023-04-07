@@ -33,12 +33,12 @@
       ls = "exa";
       l = "ls";
       la = "ls -la";
-      lt = "exa --tree";
-      ltl = "exa --tree -l";
-      lta = "exa --tree -a";
-      ltla = "exa --tree -la";
+      lt = "exa --tree --git-ignore";
+      ltl = "lt -l";
+      lta = "lt -a";
+      ltla = "lt -la";
 
-      # let's try this out :)
+      # let's try this out :) -- works great!
       cat = "bat";
     };
 
