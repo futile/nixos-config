@@ -11,6 +11,7 @@
 
 (package! meson-mode) ; for `meson.build` files
 (package! just-mode) ; for `justfile`s
+(package! dhall-mode) ; for `dhall` files
 (package! prisma-mode :recipe (:host github :repo "pimeys/emacs-prisma-mode" :branch "main")) ; for prisma files
 (package! inheritenv) ; to inherit environment variables in temporary buffers
 

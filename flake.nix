@@ -132,10 +132,12 @@
 
             # scala
             unstable.metals
+
+            # dhall
+            unstable.dhall-lsp-server
           ];
       };
-    in
-    {
+    in {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
         inherit system;
 

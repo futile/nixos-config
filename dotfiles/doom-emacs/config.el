@@ -95,6 +95,9 @@
   ;;(setq magit-display-buffer-function #'magit-display-buffer-fn-mine)
   )
 
+(use-package! lsp-mode
+  :hook ((dhall-mode . lsp)))
+
 (after! lsp-mode
   (setq lsp-rust-analyzer-server-display-inlay-hints t)
   (setq lsp-rust-analyzer-max-inlay-hint-length 40)
@@ -119,3 +122,16 @@
 ;; ".gltf"-files are json
 (after! json-mode
   (add-to-list 'auto-mode-alist '("\\.gltf\\'" . json-mode)))
+
+;; configuration for dhall-mode
+(use-package! dhall-mode
+  :config
+  (setq
+    ;; uncomment the next line to disable automatic format
+    ;; dhall-format-at-save nil
+
+    ;; comment the next line to use unicode syntax
+    ;; dhall-format-arguments (\` ("--ascii"))
+
+    ;; header-line is obsoleted by lsp-mode
+    dhall-use-header-line nil))
