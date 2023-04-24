@@ -167,8 +167,11 @@
   users.users.felix = {
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" ];
-    shell = pkgs.fish;
+    shell = pkgs.unstable.fish;
   };
+
+  # Shell must also be in `/etc/shells` or it might not work
+  environment.shells = [ "${pkgs.unstable.fish}/bin/fish" ];
 
   # ZFS services
   services.zfs.autoScrub.enable = true;
@@ -176,6 +179,8 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
+    pkgs.unstable.fish # for the same reason it's also in `environment.shells`
+
     wget
     bash
     vimHugeX
