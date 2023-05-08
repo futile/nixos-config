@@ -101,8 +101,12 @@
 (after! lsp-mode
   (setq lsp-rust-analyzer-server-display-inlay-hints t)
   (setq lsp-rust-analyzer-max-inlay-hint-length 40)
-  (setq lsp-headerline-breadcrumb-enable t)
-  )
+  (setq lsp-headerline-breadcrumb-enable t))
+
+(use-package! lsp-ui
+  :config
+  (setq lsp-ui-sideline-show-code-actions t)
+  (setq lsp-ui-imenu-auto-refresh t))
 
 ;; I use nix's python-language-server package, so adjust for the correct binary name
 ;; From https://github.com/emacs-lsp/lsp-python-ms#nixos
@@ -116,7 +120,8 @@
 ;;   (add-to-list 'browse-at-remote-remote-type-domains '("laboratory.comsys.rwth-aachen.de" . "gitlab")))
 
 ;; for `parent-dir/mod.rs' instead of `mod.rs<2>' etc. buffer names
-(after! uniquify
+(use-package! uniquify
+  :config
   (setq uniquify-buffer-name-style 'forward))
 
 ;; ".gltf"-files are json
