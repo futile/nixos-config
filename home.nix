@@ -102,7 +102,7 @@ in
         zoom-us
         rustup
         cargo-edit
-        rust-analyzer
+        # rust-analyzer # conflicts with rustup, probably provided by rustup now?
         tdesktop
         protonvpn-cli
         lxappearance
