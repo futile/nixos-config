@@ -57,6 +57,11 @@ in
   #   package = pkgs.unstable.starship;
   # };
 
+  programs.nnn = {
+    enable = true;
+    package = pkgs.unstable.nnn.override ({ withNerdIcons = true; });
+  };
+
   home = {
     stateVersion = "22.05";
 
@@ -124,6 +129,9 @@ in
         zotero
         wezterm
         firefox
+        trippy
+        slack
+        magic-wormhole
       ]) ++
       # packages from master
       (with pkgs.master; [
