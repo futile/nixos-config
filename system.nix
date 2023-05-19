@@ -35,8 +35,8 @@
   # Keep a maximum of 10 generations, so our /boot partition doesn't run full
   boot.loader.systemd-boot.configurationLimit = 10;
 
-  # ZFS support
-  boot.supportedFilesystems = [ "zfs" ];
+  # ZFS support (& NTFS)
+  boot.supportedFilesystems = [ "zfs" "ntfs" ];
   boot.zfs.requestEncryptionCredentials = true;
 
   # enable REISUB etc.: https://www.kernel.org/doc/html/latest/admin-guide/sysrq.html
@@ -57,6 +57,8 @@
   # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages; # pkgs.linuxPackages_5_15;
   # boot.kernelPackages = pkgs.linuxPackages_5_15; # virtualbox broken on current kernel >=5.17 :( https://github.com/NixOS/nixpkgs/commit/69af0d17174ee60f75e6e9f4d74c2152f4e7968e
   # TODO 22.05: Do I still want another kernel version?
+  # Yeah let's, also need it for lenovo-p14s laptop, so why not? :)
+  boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
 
   # A ZFS version compatible with my kernel version.
   # boot.zfs.enableUnstable = true;
@@ -109,8 +111,8 @@
   services.xserver = {
     enable = true;
 
-    # try virtualbox driver first, then fall back to nvidia.
-    videoDrivers = [ "virtualbox" "nvidia" "nouveau" ];
+    # nvidia let's go
+    videoDrivers = [ "nvidia" "nouveau" ];
 
     # Enable gdm & GNOME 3 Desktop Environment.
     displayManager = {
@@ -219,10 +221,11 @@
     };
   };
 
-  virtualisation.virtualbox = {
-    host.enable = true;
-    host.enableExtensionPack = true;
-  };
+  # virtualisation.virtualbox = {
+  #   host.enable = true;
+  # cause too much rebuilding, also prevent using a newer kernel I think
+  # host.enableExtensionPack = true;
+  # };
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
