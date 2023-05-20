@@ -13,20 +13,16 @@ let
     vivaldi-widevine = vivaldi-pkgs.widevine-cdm;
   });
   thisFlakePath = config.home.homeDirectory + "/nixos";
-in
-{
+in {
   programs.home-manager.enable = true;
 
-  imports =
-    let
-      mkHomeModule = path: (import path outer_args);
-    in
-    map mkHomeModule [
-      ./home-modules/doom-emacs.nix
-      ./home-modules/helix.nix
-      ./home-modules/git.nix
-      ./home-modules/fish.nix
-    ];
+  imports = let mkHomeModule = path: (import path outer_args);
+  in map mkHomeModule [
+    ./home-modules/doom-emacs.nix
+    ./home-modules/helix.nix
+    ./home-modules/git.nix
+    ./home-modules/fish.nix
+  ];
 
   # direnv & nix-direnv
   programs.direnv.enable = true;
@@ -37,7 +33,7 @@ in
 
     # use this custom command to ignore hidden and ignored files by default.
     # also follow symlinks, and '$dir' in fish allows prefixes such as `/var/<ctrl-t>` to work.
-    fileWidgetCommand = "fd --type f --follow . \\\$dir";
+    fileWidgetCommand = "fd --type f --follow . \\$dir";
   };
 
   programs.zoxide.enable = true;
@@ -67,14 +63,9 @@ in
 
     packages =
       # bound packages
-      [
-        my-google-drive-ocamlfuse
-        my-keepassxc
-        my-vivaldi
-      ] ++
+      [ my-google-drive-ocamlfuse my-keepassxc my-vivaldi ] ++
       # packages from stable
-      (with pkgs;
-      [
+      (with pkgs; [
         htop
         ripgrep
         fd
@@ -82,19 +73,21 @@ in
         python3
         element-desktop # temp stable, until bug resolved
         file
-        procs # TODO move config from `~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
-        sshuttle
         ccache
         libreoffice
         gcc
         gdb
-        tree
         lsof
-        valgrind
-        tilix
         killall
         xsel # for system clipboard with terminal emulators that ignore clipboard escape codes (for security reasons), such as wezterm
         nixpkgs-fmt
+
+        # stuff I don't use atm
+        # procs # TODO move config from `~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
+        # sshuttle
+        # tree
+        # valgrind
+        # tilix
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
@@ -102,25 +95,20 @@ in
         pavucontrol
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
         signal-desktop
-        dtrx # removed from upstream because abandoned, but this looks good: https://pypi.org/project/dtrx/#description; should be back in
-        # vscode # don't need this atm, so why install it?
+        dtrx
         zoom-us
         rustup
         cargo-edit
         # rust-analyzer # conflicts with rustup, probably provided by rustup now?
         tdesktop
         protonvpn-cli
-        lxappearance
-        nitrogen
         nix-prefetch-git
         nix-prefetch-github
         nixpkgs-review
-        xsettingsd
         texlive.combined.scheme-full
         inkscape
         gimp
         spectacle
-        zellij
         discord
         just
         obsidian
@@ -132,14 +120,18 @@ in
         trippy
         slack
         magic-wormhole
+
+        # stuff I don't use atm
+        # vscode
+        # zellij
+        # xsettingsd
+        # lxappearance
+        # nitrogen
       ]) ++
       # packages from master
-      (with pkgs.master; [
-      ]) ++
+      (with pkgs.master; [ ]) ++
       # packages from other nixpkgs branches
-      [
-      ]
-    ;
+      [ ];
 
     file = {
       "bin".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/bin";
@@ -147,20 +139,22 @@ in
 
     sessionPath = [ "$HOME/bin" ];
 
-    sessionVariables = {
-      EDITOR = "vim";
-    };
+    sessionVariables = { EDITOR = "vim"; };
   };
 
   xdg = {
     enable = true;
 
     # wezterm
-    configFile."wezterm/wezterm.lua".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
-    configFile."wezterm/colors/everforest.toml".source = inputs.wezterm-everforest + "/everforest.toml";
+    configFile."wezterm/wezterm.lua".source =
+      config.lib.file.mkOutOfStoreSymlink
+      "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
+    configFile."wezterm/colors/everforest.toml".source =
+      inputs.wezterm-everforest + "/everforest.toml";
 
     # starship
-    configFile."starship.toml".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/starship.toml";
+    configFile."starship.toml".source = config.lib.file.mkOutOfStoreSymlink
+      "${thisFlakePath}/dotfiles/starship.toml";
 
     # from https://github.com/NixOS/nixpkgs/issues/107233#issuecomment-757424877
     # -> do this by hand instead, as the file contains a lot of entries by default. (19.4.21)
@@ -171,24 +165,22 @@ in
 
   systemd.user.services = {
     google-drive-ocamlfuse = {
-      Unit = {
-        Description = "Automount google drive";
-      };
+      Unit = { Description = "Automount google drive"; };
 
       Service = {
         Type = "simple";
-        ExecStart = "${my-google-drive-ocamlfuse}/bin/google-drive-ocamlfuse -f %h/GoogleDrive";
+        ExecStart =
+          "${my-google-drive-ocamlfuse}/bin/google-drive-ocamlfuse -f %h/GoogleDrive";
       };
 
-      Install = {
-        WantedBy = [ "default.target" ];
-      };
+      Install = { WantedBy = [ "default.target" ]; };
     };
 
     keepassxc = {
       Unit = {
         Description = "Autostart Keepassxc";
-        After = [ "graphical-session-pre.target" "google-drive-ocamlfuse.service" ];
+        After =
+          [ "graphical-session-pre.target" "google-drive-ocamlfuse.service" ];
         Wants = [ "google-drive-ocamlfuse.service" ];
       };
 
@@ -197,9 +189,7 @@ in
         ExecStart = "${my-keepassxc}/bin/keepassxc";
       };
 
-      Install = {
-        WantedBy = [ "graphical-session.target" ];
-      };
+      Install = { WantedBy = [ "graphical-session.target" ]; };
     };
   };
 }

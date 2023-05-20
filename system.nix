@@ -134,7 +134,9 @@
       };
     };
     desktopManager.gnome.enable = true;
-    windowManager.qtile.enable = true;
+
+    # disabling this for now, not using it anyway.
+    # windowManager.qtile.enable = true;
 
     # Configure keymap in X11
     layout = "de,de";
@@ -155,7 +157,7 @@
 
   # Enable sound.
   # Mostly from https://discourse.nixos.org/t/headphone-volume-resets-itself-to-100/13866/2
-  sound.enable = false;
+  sound.enable = true;
   hardware.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {
