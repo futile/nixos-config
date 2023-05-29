@@ -20,7 +20,7 @@ The general layout of this repository is as follows:
 
 Instructions for setting up a new host can be found [here](new-system-installation.md).
 
-### Shoutouts
+## Shoutouts
 
 Thanks and shoutouts to good resources:
 
@@ -30,11 +30,11 @@ Thanks and shoutouts to good resources:
 * https://github.com/nix-community/home-manager for extending NixOS with lots of more things, and for providing a great way to manage program configurations and dotfiles.
   * https://mipmip.github.io/home-manager-option-search/ for providing a searchable version of home-manager options.
 
-### License
+## License
 
-Everything in this repo is licensed as CC0, see [LICENSE](LICENSE) for further information.
+Everything in this repo is licensed under CC0, see [LICENSE](LICENSE) for further information.
 Please let me know if you find anything that can't be licensed under CC0 in this repo.
 
-### Contributing
+## Contributing
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, shall be licensed under CC0, without any additional terms or conditions.
