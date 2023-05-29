@@ -15,12 +15,6 @@ in {
     "${home-modules}/fish.nix"
   ];
 
-  # starship prompt: https://starship.rs
-  # programs.starship = {
-  #   enable = true;
-  #   package = pkgs.unstable.starship;
-  # };
-
   home = {
     stateVersion = "22.05";
 
@@ -101,10 +95,6 @@ in {
       "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
     configFile."wezterm/colors/everforest.toml".source =
       flake-inputs.wezterm-everforest + "/everforest.toml";
-
-    # starship
-    configFile."starship.toml".source = config.lib.file.mkOutOfStoreSymlink
-      "${thisFlakePath}/dotfiles/starship.toml";
 
     # from https://github.com/NixOS/nixpkgs/issues/107233#issuecomment-757424877
     # -> do this by hand instead, as the file contains a lot of entries by default. (19.4.21)
