@@ -43,101 +43,55 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager
-    , emacs-overlay, ... }@inputs:
-    let
+  outputs = { self, nixpkgs, home-manager, ... }@inputs: {
+    nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      mkNixpkgsOverlay = { attrName, over, extraImportArgs ? { } }:
-        final: prev: {
-          ${attrName} = import over ({
-            system = final.system;
-            config.allowUnfree = true;
-          } // extraImportArgs);
-        };
-      nixos-unstable-overlay = mkNixpkgsOverlay {
-        attrName = "unstable";
-        over = nixpkgs-unstable;
-        extraImportArgs = { overlays = [ emacs-overlay.overlay ]; };
-      };
-      nixpkgs-master-overlay = mkNixpkgsOverlay {
-        attrName = "master";
-        over = nixpkgs-master;
-      };
-      nixpkgs-local-overlay = mkNixpkgsOverlay {
-        attrName = "local";
-        over = inputs.nixpkgs-local;
-      };
-    in {
-      nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
-        inherit system;
 
-        modules = [
-          # add unstable overlay
-          ({
-            nixpkgs.overlays = [
-              nixos-unstable-overlay
-              nixpkgs-master-overlay
-              nixpkgs-local-overlay
+      # forward flake-inputs to module arguments
+      specialArgs = { flake-inputs = inputs; };
+
+      modules = [
+        # core stuff (overlays, flake registry, nix path, etc.)
+        (import ./modules/core.nix)
+
+        # `lib.my`
+        (import ./modules/lib-my.nix)
+
+        # get rid of default shell aliases;
+        # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
+        ({ lib, ... }: { environment.shellAliases = lib.mkForce { }; })
+
+        # load cachix caches; generated through `cachix use -m nixos <cache-name>`
+        ./cachix.nix
+
+        # load system config
+        ./system.nix
+
+        # fonts, mainly for starship-prompt at the time of writing
+        # also for "tide" prompt (fish)
+        ({ pkgs, ... }: {
+          fonts.fonts = with pkgs.unstable;
+            [
+              (nerdfonts.override {
+                fonts = [
+                  "JetBrainsMono" # wezterm default font
+                  "LiberationMono" # I just like this font :)
+                  "FiraCode"
+                  "DroidSansMono"
+                  "NerdFontsSymbolsOnly"
+                ];
+              })
             ];
-          })
+        })
 
-          # registry entries
-          ({
-            nix.registry = {
-              stable.flake = inputs.nixpkgs;
-              osUnstable.flake = inputs.nixpkgs-unstable;
-              unstable.flake = inputs.nixpkgs-pkgs-unstable;
-              master.flake = inputs.nixpkgs-master;
-              local.flake = inputs.nixpkgs-local;
-            };
-          })
-
-          # nix path to correspond to my flakes
-          ({
-            nix.nixPath = [
-              "nixpkgs=${inputs.nixpkgs}"
-              "unstable=${inputs.nixpkgs-unstable}"
-            ];
-          })
-
-          # `lib.my`
-          (import ./modules/lib-my.nix)
-
-          # get rid of default shell aliases;
-          # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
-          ({ lib, ... }: { environment.shellAliases = lib.mkForce { }; })
-
-          # load cachix caches; generated through `cachix use -m nixos <cache-name>`
-          ./cachix.nix
-
-          # load system config
-          ./system.nix
-
-          # fonts, mainly for starship-prompt at the time of writing
-          # also for "tide" prompt (fish)
-          ({ pkgs, ... }: {
-            fonts.fonts = with pkgs.unstable;
-              [
-                (nerdfonts.override {
-                  fonts = [
-                    "JetBrainsMono" # wezterm default font
-                    "LiberationMono" # I just like this font :)
-                    "FiraCode"
-                    "DroidSansMono"
-                    "NerdFontsSymbolsOnly"
-                  ];
-                })
-              ];
-          })
-
-          # user config
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.felix = import ./home.nix { inherit inputs; };
-          }
-        ];
-      };
+        # user config
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.users.felix = import ./home.nix { inherit inputs; };
+        }
+      ];
     };
+  };
 }
