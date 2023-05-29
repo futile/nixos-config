@@ -90,10 +90,6 @@
     ConditionVirtualization=none
   '';
 
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-
   # Enable the X11 windowing system.
   services.xserver = {
     enable = true;
@@ -134,9 +130,6 @@
     # libinput.enable = true;
   };
 
-  # Enable CUPS to print documents.
-  # services.printing.enable = true;
-
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
@@ -172,6 +165,22 @@
   # Since we run docker on an zfs partition
   virtualisation.docker.storageDriver = "zfs";
 
+  programs.ccache = {
+    enable = true;
+    packageNames = [
+      "linux" # build our kernel with ccache, as we have crashdump enabled, which requires compiling it ourselves
+    ];
+  };
+
+  # Top-level stuff I keep around for reference:
+
+  # Configure network proxy if necessary
+  # networking.proxy.default = "http://user:password@proxy:port/";
+  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+
+  # Enable CUPS to print documents.
+  # services.printing.enable = true;
+
   # virtualisation.virtualbox = {
   #   host.enable = true;
   # cause too much rebuilding, also prevent using a newer kernel I think
@@ -188,13 +197,6 @@
 
   # Keeping this for reference
   # programs.fuse.userAllowOther = true;
-
-  programs.ccache = {
-    enable = true;
-    packageNames = [
-      "linux" # build our kernel with ccache, as we have crashdump enabled, which requires compiling it ourselves
-    ];
-  };
 
   # List services that you want to enable:
 
