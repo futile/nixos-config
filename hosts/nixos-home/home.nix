@@ -1,8 +1,5 @@
 { config, pkgs, flake-inputs, thisFlakePath, ... }:
-let
-  my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
-  my-keepassxc = pkgs.unstable.keepassxc;
-  flakeRoot = flake-inputs.self.outPath;
+let flakeRoot = flake-inputs.self.outPath;
 in {
   imports = let home-modules = "${flakeRoot}/home-modules";
   in [
@@ -12,6 +9,7 @@ in {
     "${home-modules}/git.nix"
     "${home-modules}/fish.nix"
     "${home-modules}/desktop-common.nix"
+    "${home-modules}/desktop-gdrive-keepassxc.nix"
     "${home-modules}/vivaldi.nix"
     "${home-modules}/zoom.nix"
     "${home-modules}/wezterm.nix"
@@ -19,11 +17,9 @@ in {
   ];
 
   home = {
-    stateVersion = "22.05";
-
     packages =
       # bound packages
-      [ my-google-drive-ocamlfuse my-keepassxc ] ++
+      [ ] ++
       # packages from stable
       (with pkgs; [
         element-desktop # temp stable, until bug resolved
@@ -61,35 +57,7 @@ in {
       [ ];
 
     sessionVariables = { EDITOR = "vim"; };
-  };
 
-  systemd.user.services = {
-    google-drive-ocamlfuse = {
-      Unit = { Description = "Automount google drive"; };
-
-      Service = {
-        Type = "simple";
-        ExecStart =
-          "${my-google-drive-ocamlfuse}/bin/google-drive-ocamlfuse -f %h/GoogleDrive";
-      };
-
-      Install = { WantedBy = [ "default.target" ]; };
-    };
-
-    keepassxc = {
-      Unit = {
-        Description = "Autostart Keepassxc";
-        After =
-          [ "graphical-session-pre.target" "google-drive-ocamlfuse.service" ];
-        Wants = [ "google-drive-ocamlfuse.service" ];
-      };
-
-      Service = {
-        Type = "simple";
-        ExecStart = "${my-keepassxc}/bin/keepassxc";
-      };
-
-      Install = { WantedBy = [ "graphical-session.target" ]; };
-    };
+    stateVersion = "22.05";
   };
 }
