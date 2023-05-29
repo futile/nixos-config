@@ -43,36 +43,40 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs: {
-    nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-
-      # forward flake-inputs to module arguments
-      specialArgs = { flake-inputs = inputs; };
-
-      modules = [
-        # core stuff (overlays, flake registry, nix path, etc.)
-        (import ./modules/core.nix)
+  outputs = { self, nixpkgs, home-manager, ... }@inputs:
+    let
+      # base modules that will commonly be used by all systems
+      baseModules = [
+        # core stuff (overlays, nix config, flake registry, nix path, etc.)
+        ./modules/core.nix
 
         # `lib.my`
-        (import ./modules/lib-my.nix)
+        ./modules/lib-my.nix
 
         # load cachix caches; generated through `cachix use -m nixos <cache-name>`
         ./cachix.nix
-
-        # load system config
-        ./system.nix
-
-        # user config
-        home-manager.nixosModules.home-manager
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          # forward flake-inputs to module arguments
-          home-manager.extraSpecialArgs = { flake-inputs = inputs; };
-          home-manager.users.felix = import ./home.nix;
-        }
       ];
+    in {
+      nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+
+        # forward flake-inputs to module arguments
+        specialArgs = { flake-inputs = inputs; };
+
+        modules = baseModules ++ [
+          # ".. draw the rest of the f'king owl"
+          ./hosts/nixos-home/system.nix
+
+          # user config
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            # forward flake-inputs to module arguments
+            home-manager.extraSpecialArgs = { flake-inputs = inputs; };
+            home-manager.users.felix = ./home.nix;
+          }
+        ];
+      };
     };
-  };
 }
