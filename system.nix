@@ -15,6 +15,9 @@
     # neo layout
     ./modules/neo-layout.nix
 
+    # my fonts
+    ./modules/fonts.nix
+
     # docker
     ./modules/docker.nix
   ];
@@ -29,11 +32,15 @@
   # Shell must also be in `/etc/shells` or it might not work
   environment.shells = [ "${pkgs.unstable.fish}/bin/fish" ];
 
-  # we like our fish-shell
-  programs.fish.enable = true;
-
   # allow our user to use `nix`
   nix.settings.trusted-users = [ "felix" ];
+
+  # get rid of default shell aliases;
+  # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
+  environment.shellAliases = lib.mkForce { };
+
+  # we like our fish-shell
+  programs.fish.enable = true;
 
   networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
   networking.hostName = "nixos-home"; # Define your hostname.

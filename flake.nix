@@ -60,29 +60,8 @@
         # load cachix caches; generated through `cachix use -m nixos <cache-name>`
         ./cachix.nix
 
-        # get rid of default shell aliases;
-        # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
-        ({ lib, ... }: { environment.shellAliases = lib.mkForce { }; })
-
         # load system config
         ./system.nix
-
-        # fonts, mainly for starship-prompt at the time of writing
-        # also for "tide" prompt (fish)
-        ({ pkgs, ... }: {
-          fonts.fonts = with pkgs.unstable;
-            [
-              (nerdfonts.override {
-                fonts = [
-                  "JetBrainsMono" # wezterm default font
-                  "LiberationMono" # I just like this font :)
-                  "FiraCode"
-                  "DroidSansMono"
-                  "NerdFontsSymbolsOnly"
-                ];
-              })
-            ];
-        })
 
         # user config
         home-manager.nixosModules.home-manager
