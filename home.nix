@@ -1,5 +1,5 @@
 # first set of args is passed by us
-{ inputs, lib, ... }@outer_args:
+{ inputs, ... }@outer_args:
 # second set of args is passed by home-manager
 { config, pkgs, ... }:
 let

@@ -1,4 +1,4 @@
-{ inputs, lib, ... }:
+{ inputs, ... }:
 { config, hlib, pkgs, ... }@ha:
 let
   base-emacs = pkgs.unstable.emacsUnstable;
@@ -6,7 +6,7 @@ let
   emacs-with-pkgs =
     (pkgs.unstable.emacsPackagesFor base-emacs).emacsWithPackages
     (epkgs: (with epkgs; [ vterm ]));
-  emacs-wrapped-for-doom = lib.mkWrappedWithDeps {
+  emacs-wrapped-for-doom = pkgs.lib.my.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
     pathsToWrap = [ "bin/emacs" "bin/emacs-*" ];
     extraWrapProgramArgs = [

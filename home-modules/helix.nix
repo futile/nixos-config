@@ -1,8 +1,8 @@
-{ inputs, lib, ... }:
+{ inputs, ... }:
 { config, pkgs, ... }:
 let
   base-helix = pkgs.unstable.helix;
-  helix-wrapped = lib.mkWrappedWithDeps {
+  helix-wrapped = pkgs.lib.my.mkWrappedWithDeps {
     pkg = base-helix;
     pathsToWrap = [ "bin/hx" ];
     suffix-deps = pkgs.lib.my.editorTools;

@@ -67,30 +67,6 @@
         attrName = "local";
         over = inputs.nixpkgs-local;
       };
-      lib = {
-        # reference: https://discourse.nixos.org/t/wrapping-packages/4431
-        mkWrappedWithDeps = { pkg, pathsToWrap, prefix-deps ? [ ]
-          , suffix-deps ? [ ], extraWrapProgramArgs ? [ ], otherArgs ? { } }:
-          let
-            prefixBinPath = nixpkgs.lib.makeBinPath prefix-deps;
-            suffixBinPath = nixpkgs.lib.makeBinPath suffix-deps;
-            pkgs = nixpkgs.legacyPackages.${system};
-          in pkgs.symlinkJoin ({
-            name = pkg.name + "-wrapped";
-            paths = [ pkg ];
-            buildInputs = [ pkgs.makeWrapper ];
-            postBuild = ''
-              cd "$out"
-              for p in ${builtins.toString pathsToWrap}
-              do
-                wrapProgram "$out/$p" \
-                  --prefix PATH : "${prefixBinPath}" \
-                  --suffix PATH : "${suffixBinPath}" \
-                  ${builtins.toString extraWrapProgramArgs}
-              done
-            '';
-          } // otherArgs);
-      };
     in {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
         inherit system;
@@ -159,8 +135,7 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.felix =
-              import ./home.nix { inherit inputs lib; };
+            home-manager.users.felix = import ./home.nix { inherit inputs; };
           }
         ];
       };
