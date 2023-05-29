@@ -49,3 +49,8 @@ format:
 format-check:
     nixpkgs-fmt . --check
     just --unstable --fmt --check
+
+# Build and show diff of changes using `nix-diff`
+build-diff:
+    sudo nixos-rebuild build
+    nix-diff /run/current-system ./result
