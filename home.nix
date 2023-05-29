@@ -1,7 +1,4 @@
-# first set of args is passed by us
-{ inputs, ... }@outer_args:
-# second set of args is passed by home-manager
-{ config, pkgs, ... }:
+{ config, pkgs, flake-inputs, ... }:
 let
   my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
   my-keepassxc = pkgs.unstable.keepassxc;
@@ -16,7 +13,7 @@ let
 in {
   programs.home-manager.enable = true;
 
-  imports = let mkHomeModule = path: (import path outer_args);
+  imports = let mkHomeModule = path: (import path);
   in map mkHomeModule [
     ./home-modules/doom-emacs.nix
     ./home-modules/helix.nix
@@ -150,7 +147,7 @@ in {
       config.lib.file.mkOutOfStoreSymlink
       "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
     configFile."wezterm/colors/everforest.toml".source =
-      inputs.wezterm-everforest + "/everforest.toml";
+      flake-inputs.wezterm-everforest + "/everforest.toml";
 
     # starship
     configFile."starship.toml".source = config.lib.file.mkOutOfStoreSymlink

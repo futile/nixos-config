@@ -1,5 +1,4 @@
-{ inputs, ... }:
-{ config, hlib, pkgs, ... }@ha:
+{ config, hlib, pkgs, flake-inputs, ... }@ha:
 let
   base-emacs = pkgs.unstable.emacsUnstable;
   # base-emacs = pkgs.unstable.emacsUnstableGcc;
@@ -32,7 +31,7 @@ in {
       emacs-all-the-icons-fonts
     ];
 
-    file.${emacs-path}.source = inputs.doom-emacs;
+    file.${emacs-path}.source = flake-inputs.doom-emacs;
 
     sessionPath = [ "$HOME/${emacs-path}/bin" ];
     sessionVariables = {

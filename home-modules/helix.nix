@@ -1,4 +1,3 @@
-{ inputs, ... }:
 { config, pkgs, ... }:
 let
   base-helix = pkgs.unstable.helix;

@@ -1,24 +1,14 @@
-{ inputs, ... }:
-{ config, pkgs, ... }:
-{
+{ config, pkgs, ... }: {
   programs.git = {
     enable = true;
     package = pkgs.gitAndTools.gitFull;
     userName = "Felix Rath";
 
     extraConfig = {
-      init = {
-        defaultBranch = "main";
-      };
-      core = {
-        editor = "hx";
-      };
-      pull = {
-        ff = "only";
-      };
-      rebase = {
-        autoStash = "true";
-      };
+      init = { defaultBranch = "main"; };
+      core = { editor = "hx"; };
+      pull = { ff = "only"; };
+      rebase = { autoStash = "true"; };
     };
 
     delta = {

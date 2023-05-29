@@ -57,12 +57,12 @@
         # `lib.my`
         (import ./modules/lib-my.nix)
 
+        # load cachix caches; generated through `cachix use -m nixos <cache-name>`
+        ./cachix.nix
+
         # get rid of default shell aliases;
         # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
         ({ lib, ... }: { environment.shellAliases = lib.mkForce { }; })
-
-        # load cachix caches; generated through `cachix use -m nixos <cache-name>`
-        ./cachix.nix
 
         # load system config
         ./system.nix
@@ -89,7 +89,9 @@
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.felix = import ./home.nix { inherit inputs; };
+          # forward flake-inputs to module arguments
+          home-manager.extraSpecialArgs = { flake-inputs = inputs; };
+          home-manager.users.felix = import ./home.nix;
         }
       ];
     };

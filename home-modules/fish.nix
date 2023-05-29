@@ -1,5 +1,4 @@
-{ inputs, ... }:
-{ config, pkgs, ... }: {
+{ config, pkgs, flake-inputs, ... }: {
   programs.fish = {
     enable = true;
     package = pkgs.unstable.fish;
@@ -9,21 +8,21 @@
       # https://github.com/oh-my-fish/plugin-foreign-env
       {
         name = "foreign-env";
-        src = inputs.fish-foreign-env;
+        src = flake-inputs.fish-foreign-env;
       }
 
       # Automatically rewrite `...` to `../../` while typing, also `!!` and `!$`.
       # https://github.com/nickeb96/puffer-fish
       {
         name = "puffer-fish";
-        src = inputs.fish-puffer-fish;
+        src = flake-inputs.fish-puffer-fish;
       }
 
       # Tide-prompt.
       # https://github.com/IlanCosman/tide
       {
         name = "tide";
-        src = inputs.fish-tide;
+        src = flake-inputs.fish-tide;
       }
     ];
 
