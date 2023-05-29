@@ -102,7 +102,7 @@ swapon /dev/...
 ```bash
 mkdir -p /mnt/home/felix
 cd /mnt/home/felix
-git clone https://github.com/futile/nix-config.git nixos # works, since repo is public :)
+git clone https://github.com/futile/nixos-config.git nixos # works, since repo is public :)
 cd
 nixos-generate-config --root /mnt
 ```
