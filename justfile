@@ -31,10 +31,14 @@ update-doom-packages:
     doom sync -u
 
 # Build and show what changes would be activated (i.e., services)
-build:
+dry-activate:
     # TODO: maybe use `--download-speed` for throttling?
     # TODO: maybe also limit CPU-usage somewhat, maybe with a switch?
     sudo nixos-rebuild dry-activate
+
+# Build the system configuration to `./result`
+build:
+    sudo nixos-rebuild build
 
 # Check the flacke using `nix flake check`
 check:
@@ -50,7 +54,6 @@ format-check:
     nixpkgs-fmt . --check
     just --unstable --fmt --check
 
-# Build and show diff of changes using `nix-diff`
-build-diff:
-    sudo nixos-rebuild build
+# Show a diff of changes using `nix-diff`
+diff:
     nix-diff /run/current-system ./result
