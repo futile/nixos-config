@@ -9,6 +9,7 @@ in {
     "${home-modules}/base.nix"
     "${home-modules}/shell-common.nix"
     "${home-modules}/vivaldi.nix"
+    "${home-modules}/zoom.nix"
     "${home-modules}/wezterm.nix"
     "${home-modules}/doom-emacs.nix"
     "${home-modules}/helix.nix"
@@ -46,7 +47,6 @@ in {
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
         signal-desktop
         dtrx
-        zoom-us
         rustup
         cargo-edit
         # rust-analyzer # conflicts with rustup, probably provided by rustup now?
@@ -83,14 +83,6 @@ in {
       [ ];
 
     sessionVariables = { EDITOR = "vim"; };
-  };
-
-  xdg = {
-    # from https://github.com/NixOS/nixpkgs/issues/107233#issuecomment-757424877
-    # -> do this by hand instead, as the file contains a lot of entries by default. (19.4.21)
-    # ".config/zoomus.conf".text = ''
-    #   enableWaylandShare=true
-    # '';
   };
 
   systemd.user.services = {
