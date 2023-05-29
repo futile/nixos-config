@@ -38,7 +38,7 @@ dry-activate:
 
 # Build the system configuration to `./result`
 build:
-    sudo nixos-rebuild build
+    nixos-rebuild build
 
 # Check the flacke using `nix flake check`
 check:
