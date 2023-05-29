@@ -43,15 +43,8 @@
     };
   };
 
-  outputs =
-    { self
-    , nixpkgs
-    , nixpkgs-unstable
-    , nixpkgs-master
-    , home-manager
-    , emacs-overlay
-    , ...
-    }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager
+    , emacs-overlay, ... }@inputs:
     let
       system = "x86_64-linux";
       mkNixpkgsOverlay = { attrName, over, extraImportArgs ? { } }:
@@ -76,20 +69,13 @@
       };
       lib = {
         # reference: https://discourse.nixos.org/t/wrapping-packages/4431
-        mkWrappedWithDeps =
-          { pkg
-          , pathsToWrap
-          , prefix-deps ? [ ]
-          , suffix-deps ? [ ]
-          , extraWrapProgramArgs ? [ ]
-          , otherArgs ? { }
-          }:
+        mkWrappedWithDeps = { pkg, pathsToWrap, prefix-deps ? [ ]
+          , suffix-deps ? [ ], extraWrapProgramArgs ? [ ], otherArgs ? { } }:
           let
             prefixBinPath = nixpkgs.lib.makeBinPath prefix-deps;
             suffixBinPath = nixpkgs.lib.makeBinPath suffix-deps;
             pkgs = nixpkgs.legacyPackages.${system};
-          in
-          pkgs.symlinkJoin ({
+          in pkgs.symlinkJoin ({
             name = pkg.name + "-wrapped";
             paths = [ pkg ];
             buildInputs = [ pkgs.makeWrapper ];
@@ -137,8 +123,7 @@
             unstable.dhall-lsp-server
           ];
       };
-    in
-    {
+    in {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
         inherit system;
 
@@ -170,6 +155,9 @@
               "unstable=${inputs.nixpkgs-unstable}"
             ];
           })
+
+          # `lib.my`
+          (import ./modules/lib-my.nix)
 
           # get rid of default shell aliases;
           # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
