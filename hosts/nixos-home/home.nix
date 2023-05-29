@@ -8,13 +8,14 @@ in {
   in [
     "${home-modules}/base.nix"
     "${home-modules}/shell-common.nix"
+    "${home-modules}/helix.nix"
+    "${home-modules}/git.nix"
+    "${home-modules}/fish.nix"
+    "${home-modules}/desktop-common.nix"
     "${home-modules}/vivaldi.nix"
     "${home-modules}/zoom.nix"
     "${home-modules}/wezterm.nix"
     "${home-modules}/doom-emacs.nix"
-    "${home-modules}/helix.nix"
-    "${home-modules}/git.nix"
-    "${home-modules}/fish.nix"
   ];
 
   home = {
@@ -25,57 +26,34 @@ in {
       [ my-google-drive-ocamlfuse my-keepassxc ] ++
       # packages from stable
       (with pkgs; [
-        python3
         element-desktop # temp stable, until bug resolved
+
+        # compile stuff, for convenience I guess; but generally want to get rid of it
         ccache
-        libreoffice
         gcc
         gdb
-        nixpkgs-fmt
-
-        # stuff I don't use atm
-        # procs # TODO move config from `nixos-home:~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
-        # sshuttle
-        # tree
-        # valgrind
-        # tilix
       ]) ++
       # packages from unstable
       (with pkgs.unstable; [
-        spotify
-        pavucontrol
-        # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
+        # messengers
         signal-desktop
-        dtrx
+        tdesktop
+        discord
+        slack
+        # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
+
+        # rust tools
         rustup
         cargo-edit
         # rust-analyzer # conflicts with rustup, probably provided by rustup now?
-        tdesktop
-        protonvpn-cli
-        nix-prefetch-git
-        nix-prefetch-github
-        nixpkgs-review
-        texlive.combined.scheme-full
-        inkscape
-        gimp
-        spectacle
-        discord
-        just
-        obsidian
-        tokei
-        v4l_utils # webcam utils
-        zotero
-        firefox
-        trippy
-        slack
-        magic-wormhole
 
-        # stuff I don't use atm
-        # vscode
-        # zellij
-        # xsettingsd
-        # lxappearance
-        # nitrogen
+        # misc
+        texlive.combined.scheme-full
+        zotero
+        protonvpn-cli
+
+        # hardware stuff
+        v4l_utils # webcam utils
       ]) ++
       # packages from master
       (with pkgs.master; [ ]) ++
