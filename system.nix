@@ -3,6 +3,9 @@
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
 
+    # ZFS with common settings
+    ./modules/zfs.nix
+
     # base/common system config
     ./modules/system-base.nix
 
@@ -19,8 +22,7 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # ZFS support (& NTFS)
-  boot.supportedFilesystems = [ "zfs" ];
+  # ZFS unlock at boot time
   boot.zfs.requestEncryptionCredentials = true;
 
   # enable booting into a crashDump kernel when my system panics/hangs
@@ -40,9 +42,6 @@
   # TODO 22.05: Do I still want another kernel version?
   # Yeah let's, also need it for lenovo-p14s laptop, so why not? :)
   boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
-
-  # A ZFS version compatible with my kernel version.
-  # boot.zfs.enableUnstable = true;
 
   networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
   networking.hostName = "nixos-home"; # Define your hostname.
@@ -143,9 +142,6 @@
   # Shell must also be in `/etc/shells` or it might not work
   environment.shells = [ "${pkgs.unstable.fish}/bin/fish" ];
 
-  # ZFS services
-  services.zfs.autoScrub.enable = true;
-
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
@@ -179,6 +175,7 @@
 
   services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
 
+  # Since we run docker on an zfs partition
   virtualisation.docker.storageDriver = "zfs";
 
   # virtualisation.virtualbox = {
