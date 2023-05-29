@@ -13,7 +13,7 @@ in {
   };
 
   # for working system clipboard
-  home.packages = with pkgs; [ xsel ];
+  home.packages = with pkgs.unstable; [ xsel ];
 
   xdg = {
     enable = true;

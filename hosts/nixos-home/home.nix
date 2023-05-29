@@ -9,6 +9,7 @@ in {
     "${home-modules}/base.nix"
     "${home-modules}/shell-common.nix"
     "${home-modules}/vivaldi.nix"
+    "${home-modules}/wezterm.nix"
     "${home-modules}/doom-emacs.nix"
     "${home-modules}/helix.nix"
     "${home-modules}/git.nix"
@@ -29,7 +30,6 @@ in {
         libreoffice
         gcc
         gdb
-        xsel # for system clipboard with terminal emulators that ignore clipboard escape codes (for security reasons), such as wezterm
         nixpkgs-fmt
 
         # stuff I don't use atm
@@ -65,7 +65,6 @@ in {
         tokei
         v4l_utils # webcam utils
         zotero
-        wezterm
         firefox
         trippy
         slack
@@ -87,15 +86,6 @@ in {
   };
 
   xdg = {
-    enable = true;
-
-    # wezterm
-    configFile."wezterm/wezterm.lua".source =
-      config.lib.file.mkOutOfStoreSymlink
-      "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
-    configFile."wezterm/colors/everforest.toml".source =
-      flake-inputs.wezterm-everforest + "/everforest.toml";
-
     # from https://github.com/NixOS/nixpkgs/issues/107233#issuecomment-757424877
     # -> do this by hand instead, as the file contains a lot of entries by default. (19.4.21)
     # ".config/zoomus.conf".text = ''
