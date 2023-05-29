@@ -18,7 +18,7 @@ The general layout of this repository is as follows:
 
 ## Setting Up a New Host
 
-Instructions for setting up a new host can be found in [new-system-installation.md].
+Instructions for setting up a new host can be found [here](new-system-installation.md).
 
 ### Shoutouts
 
@@ -32,7 +32,7 @@ Thanks and shoutouts to good resources:
 
 ### License
 
-Everything in this repo is licensed as CC0, see [LICENSE] for further information.
+Everything in this repo is licensed as CC0, see [LICENSE](LICENSE) for further information.
 Please let me know if you find anything that can't be licensed under CC0 in this repo.
 
 ### Contributing
