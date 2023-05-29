@@ -10,15 +10,16 @@ let
     vivaldi-widevine = vivaldi-pkgs.widevine-cdm;
   });
   thisFlakePath = config.home.homeDirectory + "/nixos";
+  flakeRoot = flake-inputs.self.outPath;
 in {
   programs.home-manager.enable = true;
 
-  imports = let mkHomeModule = path: (import path);
-  in map mkHomeModule [
-    ./home-modules/doom-emacs.nix
-    ./home-modules/helix.nix
-    ./home-modules/git.nix
-    ./home-modules/fish.nix
+  imports = let home-modules = "${flakeRoot}/home-modules";
+  in [
+    "${home-modules}/doom-emacs.nix"
+    "${home-modules}/helix.nix"
+    "${home-modules}/git.nix"
+    "${home-modules}/fish.nix"
   ];
 
   # direnv & nix-direnv
@@ -80,7 +81,7 @@ in {
         nixpkgs-fmt
 
         # stuff I don't use atm
-        # procs # TODO move config from `~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
+        # procs # TODO move config from `nixos-home:~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
         # sshuttle
         # tree
         # valgrind

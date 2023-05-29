@@ -64,7 +64,7 @@
         specialArgs = { flake-inputs = inputs; };
 
         modules = baseModules ++ [
-          # ".. draw the rest of the f'king owl"
+          # "draw the rest of the owl"
           ./hosts/nixos-home/system.nix
 
           # user config
@@ -74,7 +74,7 @@
             home-manager.useUserPackages = true;
             # forward flake-inputs to module arguments
             home-manager.extraSpecialArgs = { flake-inputs = inputs; };
-            home-manager.users.felix = ./home.nix;
+            home-manager.users.felix = ./hosts/nixos-home/home.nix;
           }
         ];
       };
