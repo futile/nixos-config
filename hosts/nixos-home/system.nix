@@ -5,7 +5,6 @@ in {
   imports = let modules = "${flakeRoot}/modules";
   in [
     # Include the results of the hardware scan.
-    # "${flakeRoot}/hardware-configuration.nix"
     ./hardware-configuration.nix
 
     # ZFS with common settings
