@@ -24,6 +24,9 @@ in {
 
     # docker
     "${modules}/docker.nix"
+
+    # user-configuration with home-manager
+    "${modules}/home-manager.nix"
   ];
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -38,6 +41,18 @@ in {
 
   # allow our user to use `nix`
   nix.settings.trusted-users = [ "felix" ];
+
+  # home-manager configuration
+  home-manager = {
+    # forward system-specific arguments to home-manager
+    extraSpecialArgs = {
+      # absolute path to this flake, i.e., to break nix's isolation
+      thisFlakePath = config.users.users.felix.home + "/nixos";
+    };
+
+    # my user config
+    users.felix = ./home.nix;
+  };
 
   # get rid of default shell aliases;
   # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3

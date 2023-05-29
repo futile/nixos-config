@@ -43,7 +43,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs:
+  outputs = { self, nixpkgs, ... }@inputs:
     let
       # base modules that will commonly be used by all systems
       baseModules = [
@@ -65,25 +65,7 @@
 
         modules = baseModules ++ [
           # "draw the rest of the owl"
-          ./hosts/nixos-home/system.nix
-
-          # home-manager config (owl #2)
-          ({ config, ... }: {
-            imports = [ home-manager.nixosModules.home-manager ];
-
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-
-            # forward some arguments to all home-modules
-            home-manager.extraSpecialArgs = {
-              # inputs of this flake
-              flake-inputs = inputs;
-              # absolute path to this flake, i.e., to break nix's isolation
-              thisFlakePath = config.users.users.felix.home + "/nixos";
-            };
-
-            home-manager.users.felix = ./hosts/nixos-home/home.nix;
-          })
+          ./hosts/nixos-home
         ];
       };
     };
