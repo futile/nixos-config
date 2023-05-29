@@ -1,4 +1,4 @@
-{ config, pkgs, flake-inputs, ... }:
+{ config, pkgs, flake-inputs, thisFlakePath, ... }:
 let
   my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
   my-keepassxc = pkgs.unstable.keepassxc;
@@ -9,52 +9,23 @@ let
     enableWidevine = true;
     vivaldi-widevine = vivaldi-pkgs.widevine-cdm;
   });
-  thisFlakePath = config.home.homeDirectory + "/nixos";
   flakeRoot = flake-inputs.self.outPath;
 in {
-  programs.home-manager.enable = true;
-
   imports = let home-modules = "${flakeRoot}/home-modules";
   in [
+    "${home-modules}/base.nix"
+    "${home-modules}/shell-common.nix"
     "${home-modules}/doom-emacs.nix"
     "${home-modules}/helix.nix"
     "${home-modules}/git.nix"
     "${home-modules}/fish.nix"
   ];
 
-  # direnv & nix-direnv
-  programs.direnv.enable = true;
-  programs.direnv.nix-direnv.enable = true;
-
-  programs.fzf = {
-    enable = true;
-
-    # use this custom command to ignore hidden and ignored files by default.
-    # also follow symlinks, and '$dir' in fish allows prefixes such as `/var/<ctrl-t>` to work.
-    fileWidgetCommand = "fd --type f --follow . \\$dir";
-  };
-
-  programs.zoxide.enable = true;
-
-  programs.exa = {
-    enable = true;
-    # enableAliases = true;
-    package = pkgs.unstable.exa;
-  };
-
-  # nix-index
-  programs.nix-index.enable = true;
-
   # starship prompt: https://starship.rs
   # programs.starship = {
   #   enable = true;
   #   package = pkgs.unstable.starship;
   # };
-
-  programs.nnn = {
-    enable = true;
-    package = pkgs.unstable.nnn.override ({ withNerdIcons = true; });
-  };
 
   home = {
     stateVersion = "22.05";
@@ -130,12 +101,6 @@ in {
       (with pkgs.master; [ ]) ++
       # packages from other nixpkgs branches
       [ ];
-
-    file = {
-      "bin".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/bin";
-    };
-
-    sessionPath = [ "$HOME/bin" ];
 
     sessionVariables = { EDITOR = "vim"; };
   };

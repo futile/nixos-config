@@ -67,15 +67,23 @@
           # "draw the rest of the owl"
           ./hosts/nixos-home/system.nix
 
-          # user config
-          home-manager.nixosModules.home-manager
-          {
+          # home-manager config (owl #2)
+          ({ config, ... }: {
+            imports = [ home-manager.nixosModules.home-manager ];
+
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            # forward flake-inputs to module arguments
-            home-manager.extraSpecialArgs = { flake-inputs = inputs; };
+
+            # forward some arguments to all home-modules
+            home-manager.extraSpecialArgs = {
+              # inputs of this flake
+              flake-inputs = inputs;
+              # absolute path to this flake, i.e., to break nix's isolation
+              thisFlakePath = config.users.users.felix.home + "/nixos";
+            };
+
             home-manager.users.felix = ./hosts/nixos-home/home.nix;
-          }
+          })
         ];
       };
     };
