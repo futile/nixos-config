@@ -1,4 +1,4 @@
-{ flake-inputs, ... }:
+{ flake-inputs, pkgs, config, ... }:
 let
   mkNixpkgsOverlay = { attrName, over, extraImportArgs ? { } }:
     final: prev: {
@@ -21,9 +21,30 @@ let
     over = flake-inputs.nixpkgs-local;
   };
 in {
+  # Allow unfree packages.
+  nixpkgs.config.allowUnfree = true;
+
   # add overlays for the different nixpkgs-versions
   nixpkgs.overlays =
     [ nixos-unstable-overlay nixpkgs-master-overlay nixpkgs-local-overlay ];
+
+  # nix base config
+  nix = {
+    # for unstable/more recent nix:
+    # package = pkgs.unstable.nix;
+
+    extraOptions = ''
+      experimental-features = nix-command flakes
+    '';
+
+    settings = {
+      # add paths to the nix sandbox
+      extra-sandbox-paths = [
+        # ccache needs to be available in the sandbox
+        config.programs.ccache.cacheDir
+      ];
+    };
+  };
 
   # registry entries
   nix.registry = {

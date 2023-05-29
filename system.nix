@@ -5,23 +5,7 @@
 { config, pkgs, lib, ... }:
 
 {
-  # Enable flakes
-  nix = {
-    package = pkgs.nixFlakes;
-    extraOptions = ''
-      experimental-features = nix-command flakes
-    '';
-
-    settings = {
-      trusted-users = [ "felix" ];
-
-      # add paths to the nix sandbox
-      extra-sandbox-paths = [
-        # ccache needs to be available in the sandbox
-        config.programs.ccache.cacheDir
-      ];
-    };
-  };
+  nix.settings.trusted-users = [ "felix" ];
 
   imports = [
     # Include the results of the hardware scan.
@@ -73,9 +57,6 @@
     # For dualbooting with Windows
     hardwareClockInLocalTime = true;
   };
-
-  # Allow unfree packages.
-  nixpkgs.config.allowUnfree = true;
 
   # The global useDHCP flag is deprecated, therefore explicitly set to false here.
   # Per-interface useDHCP will be mandatory in the future, so this generated config
