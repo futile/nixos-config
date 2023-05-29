@@ -1,13 +1,13 @@
-# Edit this configuration file to define what should be installed on
-# your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
-
-{ config, pkgs, lib, ... }:
-
-{
+{ config, pkgs, lib, ... }: {
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
+
+    # base/common system config
+    ./modules/system-base.nix
+
+    # docker
+    ./modules/docker.nix
   ];
 
   nix.settings.trusted-users = [ "felix" ];
@@ -184,15 +184,7 @@
 
   services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
 
-  virtualisation.docker = {
-    enable = true;
-    storageDriver = "zfs";
-    daemon.settings = {
-      # enable ipv6 support inside docker
-      ipv6 = true;
-      fixed-cidr-v6 = "fd00::/80";
-    };
-  };
+  virtualisation.docker.storageDriver = "zfs";
 
   # virtualisation.virtualbox = {
   #   host.enable = true;
