@@ -27,6 +27,7 @@
         nix-prefetch-github
         nixpkgs-review
         nixpkgs-fmt
+        nix-diff
 
         # image editing
         inkscape
