@@ -29,19 +29,12 @@ in {
       [ my-google-drive-ocamlfuse my-keepassxc ] ++
       # packages from stable
       (with pkgs; [
-        htop
-        ripgrep
-        fd
-        bat
         python3
         element-desktop # temp stable, until bug resolved
-        file
         ccache
         libreoffice
         gcc
         gdb
-        lsof
-        killall
         xsel # for system clipboard with terminal emulators that ignore clipboard escape codes (for security reasons), such as wezterm
         nixpkgs-fmt
 

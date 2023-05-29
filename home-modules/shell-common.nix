@@ -28,4 +28,17 @@
     enable = true;
     package = pkgs.unstable.nnn.override ({ withNerdIcons = true; });
   };
+
+  programs.htop.enable = true;
+
+  programs.bat.enable = true;
+
+  home.packages = with pkgs; [
+    # tools that don't have home-manager modules
+    ripgrep
+    fd
+    file
+    lsof
+    killall
+  ];
 }
