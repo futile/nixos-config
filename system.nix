@@ -9,6 +9,9 @@
     # base/common system config
     ./modules/system-base.nix
 
+    # use pipewire for audio
+    ./modules/audio-pipewire.nix
+
     # neo layout
     ./modules/neo-layout.nix
 
@@ -16,7 +19,32 @@
     ./modules/docker.nix
   ];
 
+  # Define a user account. Don't forget to set a password with ‘passwd’.
+  users.users.felix = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "docker" ];
+    shell = pkgs.unstable.fish;
+  };
+
+  # Shell must also be in `/etc/shells` or it might not work
+  environment.shells = [ "${pkgs.unstable.fish}/bin/fish" ];
+
+  # we like our fish-shell
+  programs.fish.enable = true;
+
+  # allow our user to use `nix`
   nix.settings.trusted-users = [ "felix" ];
+
+  networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
+  networking.hostName = "nixos-home"; # Define your hostname.
+  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+
+  time = {
+    # Set your time zone.
+    timeZone = "Europe/Berlin";
+    # For dualbooting with Windows
+    hardwareClockInLocalTime = true;
+  };
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
@@ -42,17 +70,6 @@
   # TODO 22.05: Do I still want another kernel version?
   # Yeah let's, also need it for lenovo-p14s laptop, so why not? :)
   boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
-
-  networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
-  networking.hostName = "nixos-home"; # Define your hostname.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
-
-  time = {
-    # Set your time zone.
-    timeZone = "Europe/Berlin";
-    # For dualbooting with Windows
-    hardwareClockInLocalTime = true;
-  };
 
   # The global useDHCP flag is deprecated, therefore explicitly set to false here.
   # Per-interface useDHCP will be mandatory in the future, so this generated config
@@ -120,28 +137,6 @@
   # Enable CUPS to print documents.
   # services.printing.enable = true;
 
-  # Enable sound.
-  # Mostly from https://discourse.nixos.org/t/headphone-volume-resets-itself-to-100/13866/2
-  sound.enable = true;
-  hardware.pulseaudio.enable = false;
-  security.rtkit.enable = true;
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-  };
-
-  # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.felix = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" "docker" ];
-    shell = pkgs.unstable.fish;
-  };
-
-  # Shell must also be in `/etc/shells` or it might not work
-  environment.shells = [ "${pkgs.unstable.fish}/bin/fish" ];
-
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
@@ -161,7 +156,6 @@
     gnomeExtensions.vitals
     # gnomeExtensions.topicons-plus # package broken
     nordic
-    # ccache # not sure if I want this as a system package, maybe for convenient `ccache -s`?
 
     # monitoring
     lm_sensors
@@ -195,7 +189,6 @@
   # Keeping this for reference
   # programs.fuse.userAllowOther = true;
 
-  programs.fish.enable = true;
   programs.ccache = {
     enable = true;
     packageNames = [
