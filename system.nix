@@ -5,26 +5,20 @@
 { config, pkgs, lib, ... }:
 
 {
-  nix.settings.trusted-users = [ "felix" ];
-
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
   ];
 
+  nix.settings.trusted-users = [ "felix" ];
+
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Keep a maximum of 10 generations, so our /boot partition doesn't run full
-  boot.loader.systemd-boot.configurationLimit = 10;
-
   # ZFS support (& NTFS)
-  boot.supportedFilesystems = [ "zfs" "ntfs" ];
+  boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.requestEncryptionCredentials = true;
-
-  # enable REISUB etc.: https://www.kernel.org/doc/html/latest/admin-guide/sysrq.html
-  boot.kernel.sysctl = { "kernel.sysrq" = 1; };
 
   # enable booting into a crashDump kernel when my system panics/hangs
   # this causes recompilation, don't want/need it currently
@@ -81,12 +75,8 @@
   # networking.proxy.default = "http://user:password@proxy:port/";
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
-  # Select internationalisation properties.
-  i18n.defaultLocale = "en_US.UTF-8";
-  console = {
-    font = "Lat2-Terminus16";
-    keyMap = "neo";
-  };
+  # console keymap
+  console.keyMap = "neo";
 
   # Enable the X11 windowing system.
   services.xserver = {
