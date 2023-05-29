@@ -2,20 +2,13 @@
 let
   my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
   my-keepassxc = pkgs.unstable.keepassxc;
-  my-vivaldi = pkgs.unstable.vivaldi.override {
-    proprietaryCodecs = true;
-    vivaldi-ffmpeg-codecs = pkgs.unstable.vivaldi-ffmpeg-codecs;
-
-    # enabling this segfaults vivaldi at startup
-    # enableWidevine = true;
-    # widevine-cdm = vivaldi-pkgs.widevine-cdm;
-  };
   flakeRoot = flake-inputs.self.outPath;
 in {
   imports = let home-modules = "${flakeRoot}/home-modules";
   in [
     "${home-modules}/base.nix"
     "${home-modules}/shell-common.nix"
+    "${home-modules}/vivaldi.nix"
     "${home-modules}/doom-emacs.nix"
     "${home-modules}/helix.nix"
     "${home-modules}/git.nix"
@@ -33,7 +26,7 @@ in {
 
     packages =
       # bound packages
-      [ my-google-drive-ocamlfuse my-keepassxc my-vivaldi ] ++
+      [ my-google-drive-ocamlfuse my-keepassxc ] ++
       # packages from stable
       (with pkgs; [
         htop
