@@ -2,13 +2,14 @@
 let
   my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
   my-keepassxc = pkgs.unstable.keepassxc;
-  vivaldi-pkgs = pkgs.unstable;
-  my-vivaldi = vivaldi-pkgs.vivaldi.overrideAttrs (_: {
+  my-vivaldi = pkgs.unstable.vivaldi.override {
     proprietaryCodecs = true;
-    vivaldi-ffmpeg-codes = vivaldi-pkgs.vivaldi-ffmpeg-codecs;
-    enableWidevine = true;
-    vivaldi-widevine = vivaldi-pkgs.widevine-cdm;
-  });
+    vivaldi-ffmpeg-codecs = pkgs.unstable.vivaldi-ffmpeg-codecs;
+
+    # enabling this segfaults vivaldi at startup
+    # enableWidevine = true;
+    # widevine-cdm = vivaldi-pkgs.widevine-cdm;
+  };
   flakeRoot = flake-inputs.self.outPath;
 in {
   imports = let home-modules = "${flakeRoot}/home-modules";
