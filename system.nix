@@ -6,6 +6,9 @@
     # base/common system config
     ./modules/system-base.nix
 
+    # neo layout
+    ./modules/neo-layout.nix
+
     # docker
     ./modules/docker.nix
   ];
@@ -75,9 +78,6 @@
   # networking.proxy.default = "http://user:password@proxy:port/";
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
-  # console keymap
-  console.keyMap = "neo";
-
   # Enable the X11 windowing system.
   services.xserver = {
     enable = true;
@@ -108,11 +108,6 @@
 
     # disabling this for now, not using it anyway.
     # windowManager.qtile.enable = true;
-
-    # Configure keymap in X11
-    layout = "de,de";
-    xkbVariant = "neo,basic";
-    # xkbOptions = "grp:menu_toggle"; # 'menu_toggle' -> context-menu key
 
     # fast(er) key repeat
     # seem not to work!
