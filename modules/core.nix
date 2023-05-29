@@ -20,7 +20,8 @@ let
     attrName = "local";
     over = flake-inputs.nixpkgs-local;
   };
-in {
+in
+{
   # Allow unfree packages.
   nixpkgs.config.allowUnfree = true;
 

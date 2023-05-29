@@ -2,32 +2,33 @@
 
 let flakeRoot = flake-inputs.self.outPath;
 in {
-  imports = let modules = "${flakeRoot}/modules";
-  in [
-    # Include the results of the hardware scan.
-    ./hardware-configuration.nix
+  imports =
+    let modules = "${flakeRoot}/modules";
+    in [
+      # Include the results of the hardware scan.
+      ./hardware-configuration.nix
 
-    # ZFS with common settings
-    "${modules}/zfs.nix"
+      # ZFS with common settings
+      "${modules}/zfs.nix"
 
-    # base/common system config
-    "${modules}/system-base.nix"
+      # base/common system config
+      "${modules}/system-base.nix"
 
-    # use pipewire for audio
-    "${modules}/audio-pipewire.nix"
+      # use pipewire for audio
+      "${modules}/audio-pipewire.nix"
 
-    # neo layout
-    "${modules}/neo-layout.nix"
+      # neo layout
+      "${modules}/neo-layout.nix"
 
-    # my fonts
-    "${modules}/fonts.nix"
+      # my fonts
+      "${modules}/fonts.nix"
 
-    # docker
-    "${modules}/docker.nix"
+      # docker
+      "${modules}/docker.nix"
 
-    # user-configuration with home-manager
-    "${modules}/home-manager.nix"
-  ];
+      # user-configuration with home-manager
+      "${modules}/home-manager.nix"
+    ];
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.felix = {

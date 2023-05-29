@@ -13,7 +13,7 @@
     # symlink directly to this repo, for easier iteration/changes
     configFile."wezterm/wezterm.lua".source =
       config.lib.file.mkOutOfStoreSymlink
-      "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
+        "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
     configFile."wezterm/colors/everforest.toml".source =
       flake-inputs.wezterm-everforest + "/everforest.toml";
   };

@@ -56,7 +56,8 @@
         # load cachix caches; generated through `cachix use -m nixos <cache-name>`
         ./cachix.nix
       ];
-    in {
+    in
+    {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
 

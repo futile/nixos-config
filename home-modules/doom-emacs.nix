@@ -4,7 +4,7 @@ let
   # base-emacs = pkgs.unstable.emacsUnstableGcc;
   emacs-with-pkgs =
     (pkgs.unstable.emacsPackagesFor base-emacs).emacsWithPackages
-    (epkgs: (with epkgs; [ vterm ]));
+      (epkgs: (with epkgs; [ vterm ]));
   emacs-wrapped-for-doom = pkgs.lib.my.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
     pathsToWrap = [ "bin/emacs" "bin/emacs-*" ];
@@ -22,7 +22,8 @@ let
 
   # path to the emacs directory from $HOME
   emacs-path = ".emacs.d";
-in {
+in
+{
   home = {
     packages = with pkgs; [
       emacs-wrapped-for-doom

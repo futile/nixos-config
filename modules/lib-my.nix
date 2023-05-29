@@ -33,12 +33,18 @@ let
 
   # reference: https://discourse.nixos.org/t/wrapping-packages/4431
   mkWrappedWithDeps = final: prev:
-    { pkg, pathsToWrap, prefix-deps ? [ ], suffix-deps ? [ ]
-    , extraWrapProgramArgs ? [ ], otherArgs ? { } }:
+    { pkg
+    , pathsToWrap
+    , prefix-deps ? [ ]
+    , suffix-deps ? [ ]
+    , extraWrapProgramArgs ? [ ]
+    , otherArgs ? { }
+    }:
     let
       prefixBinPath = prev.lib.makeBinPath prefix-deps;
       suffixBinPath = prev.lib.makeBinPath suffix-deps;
-    in prev.symlinkJoin ({
+    in
+    prev.symlinkJoin ({
       name = pkg.name + "-wrapped";
       paths = [ pkg ];
       buildInputs = [ final.makeWrapper ];
@@ -62,4 +68,5 @@ let
       };
     };
   };
-in { nixpkgs.overlays = [ lib-my-overlay ]; }
+in
+{ nixpkgs.overlays = [ lib-my-overlay ]; }

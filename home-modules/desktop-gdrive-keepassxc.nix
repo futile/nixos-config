@@ -3,7 +3,8 @@
 let
   my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
   my-keepassxc = pkgs.unstable.keepassxc;
-in {
+in
+{
   home.packages = [ my-google-drive-ocamlfuse my-keepassxc ];
 
   systemd.user.services = {

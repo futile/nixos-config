@@ -1,20 +1,21 @@
 { config, pkgs, flake-inputs, thisFlakePath, ... }:
 let flakeRoot = flake-inputs.self.outPath;
 in {
-  imports = let home-modules = "${flakeRoot}/home-modules";
-  in [
-    "${home-modules}/base.nix"
-    "${home-modules}/shell-common.nix"
-    "${home-modules}/helix.nix"
-    "${home-modules}/git.nix"
-    "${home-modules}/fish.nix"
-    "${home-modules}/desktop-common.nix"
-    "${home-modules}/desktop-gdrive-keepassxc.nix"
-    "${home-modules}/vivaldi.nix"
-    "${home-modules}/zoom.nix"
-    "${home-modules}/wezterm.nix"
-    "${home-modules}/doom-emacs.nix"
-  ];
+  imports =
+    let home-modules = "${flakeRoot}/home-modules";
+    in [
+      "${home-modules}/base.nix"
+      "${home-modules}/shell-common.nix"
+      "${home-modules}/helix.nix"
+      "${home-modules}/git.nix"
+      "${home-modules}/fish.nix"
+      "${home-modules}/desktop-common.nix"
+      "${home-modules}/desktop-gdrive-keepassxc.nix"
+      "${home-modules}/vivaldi.nix"
+      "${home-modules}/zoom.nix"
+      "${home-modules}/wezterm.nix"
+      "${home-modules}/doom-emacs.nix"
+    ];
 
   home = {
     packages =

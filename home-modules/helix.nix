@@ -6,7 +6,8 @@ let
     pathsToWrap = [ "bin/hx" ];
     suffix-deps = pkgs.lib.my.editorTools;
   };
-in {
+in
+{
   programs.helix = {
     enable = true;
     package = helix-wrapped;
@@ -21,6 +22,6 @@ in {
       "${config.home.homeDirectory}/nixos/dotfiles/helix/config.toml";
     configFile."helix/languages.toml".source =
       config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/nixos/dotfiles/helix/languages.toml";
+        "${config.home.homeDirectory}/nixos/dotfiles/helix/languages.toml";
   };
 }
