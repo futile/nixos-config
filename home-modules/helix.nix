@@ -5,10 +5,9 @@ let
   helix-wrapped = lib.mkWrappedWithDeps {
     pkg = base-helix;
     pathsToWrap = [ "bin/hx" ];
-    suffix-deps = lib.mkEditorTools { inherit pkgs; };
+    suffix-deps = pkgs.lib.my.editorTools;
   };
-in
-{
+in {
   programs.helix = {
     enable = true;
     package = helix-wrapped;
@@ -21,7 +20,8 @@ in
     enable = true;
     configFile."helix/config.toml".source = config.lib.file.mkOutOfStoreSymlink
       "${config.home.homeDirectory}/nixos/dotfiles/helix/config.toml";
-    configFile."helix/languages.toml".source = config.lib.file.mkOutOfStoreSymlink
+    configFile."helix/languages.toml".source =
+      config.lib.file.mkOutOfStoreSymlink
       "${config.home.homeDirectory}/nixos/dotfiles/helix/languages.toml";
   };
 }

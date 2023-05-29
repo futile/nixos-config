@@ -32,6 +32,6 @@ let
     ];
 
   lib-my-overlay = final: prev: {
-    lib = prev.lib // { my = { editorTools = mkEditorTools prev; }; };
+    lib = prev.lib // { my = { editorTools = mkEditorTools final; }; };
   };
 in { nixpkgs.overlays = [ lib-my-overlay ]; }

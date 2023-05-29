@@ -5,7 +5,7 @@ let
   # base-emacs = pkgs.unstable.emacsUnstableGcc;
   emacs-with-pkgs =
     (pkgs.unstable.emacsPackagesFor base-emacs).emacsWithPackages
-      (epkgs: (with epkgs; [ vterm ]));
+    (epkgs: (with epkgs; [ vterm ]));
   emacs-wrapped-for-doom = lib.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
     pathsToWrap = [ "bin/emacs" "bin/emacs-*" ];
@@ -17,18 +17,13 @@ let
       "DOOMLOCALDIR"
       ''"${config.home.sessionVariables.DOOMLOCALDIR}"''
     ];
-    prefix-deps = with pkgs; [
-      ripgrep
-      findutils
-      fd
-    ];
-    suffix-deps = lib.mkEditorTools { inherit pkgs; };
+    prefix-deps = with pkgs; [ ripgrep findutils fd ];
+    suffix-deps = pkgs.lib.my.editorTools;
   };
 
   # path to the emacs directory from $HOME
   emacs-path = ".emacs.d";
-in
-{
+in {
   home = {
     packages = with pkgs; [
       emacs-wrapped-for-doom
