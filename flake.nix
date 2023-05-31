@@ -69,5 +69,17 @@
           ./hosts/nixos-home
         ];
       };
+
+      nixosConfigurations.nixos-work = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+
+        # forward flake-inputs to module arguments
+        specialArgs = { flake-inputs = inputs; };
+
+        modules = baseModules ++ [
+          # "draw the rest of the owl"
+          ./hosts/nixos-work
+        ];
+      };
     };
 }

@@ -18,8 +18,8 @@ let
 
       # nix
       unstable.nil # nix lsp
-      nixfmt
       nixpkgs-fmt
+      # nixfmt # don't want this for now, nixpkgs-fmt is superior :)
 
       # tex
       texlab
