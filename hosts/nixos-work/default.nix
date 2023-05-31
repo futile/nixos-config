@@ -83,49 +83,12 @@ in {
   # ZFS unlock at boot time
   boot.zfs.requestEncryptionCredentials = true;
 
-  # enable booting into a crashDump kernel when my system panics/hangs
-  # this causes recompilation, don't want/need it currently
-  # boot.crashDump.enable = true;
-
-  # more up-to-date kernel: `linuxPackages_latest`; for testing
-  # ccf/env_isolation I want at least 5.11 for overlayfs in user namespaces;
-  # this gives me 5.14 (at the time of writing).
-  #
-  # Need to hardcode the version for now, as otherwise zfs might no be
-  # available.  From NixOS 21.11 onwards I can use
-  # `config.boot.zfs.package.latestCompatibleLinuxPackages` it seems.
-  # https://discourse.nixos.org/t/package-zfs-kernel-2-0-6-5-15-2-in-is-marked-as-broken-refusing-to-evaluate/16168/3
-  # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages; # pkgs.linuxPackages_5_15;
-  # boot.kernelPackages = pkgs.linuxPackages_5_15; # virtualbox broken on current kernel >=5.17 :( https://github.com/NixOS/nixpkgs/commit/69af0d17174ee60f75e6e9f4d74c2152f4e7968e
-  # TODO 22.05: Do I still want another kernel version?
-  # Yeah let's, also need it for lenovo-p14s laptop, so why not? :)
+  # just for fun, don't think I need this
   boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
-
-  # The global useDHCP flag is deprecated, therefore explicitly set to false here.
-  # Per-interface useDHCP will be mandatory in the future, so this generated config
-  # replicates the default behaviour.
-  networking.useDHCP = false;
-
-  # Interface available when booting in VirtualBox
-  networking.interfaces.enp0s3.useDHCP = true;
-  systemd.units."sys-subsystem-net-devices-enp0s3.device".text = ''
-    [Unit]
-    ConditionVirtualization=oracle
-  '';
-
-  # Interface available when booting natively
-  networking.interfaces.eno1.useDHCP = true;
-  systemd.units."sys-subsystem-net-devices-eno1.device".text = ''
-    [Unit]
-    ConditionVirtualization=none
-  '';
 
   # Enable the X11 windowing system.
   services.xserver = {
     enable = true;
-
-    # nvidia let's go
-    videoDrivers = [ "nvidia" "nouveau" ];
 
     # Enable gdm & GNOME 3 Desktop Environment.
     displayManager = {
@@ -182,7 +145,6 @@ in {
 
     # monitoring
     lm_sensors
-    nvtop
     cachix # just use cachix system-wide
 
     # vpn stuff
@@ -245,7 +207,5 @@ in {
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  # system.stateVersion = "20.09"; # Did you read the comment?
-
-  # TODO system.stateVersion!!
+  system.stateVersion = "23.05"; # Did you read the comment?
 }

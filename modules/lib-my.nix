@@ -11,7 +11,7 @@ let
       shellcheck
 
       # python
-      python-language-server
+      # python-language-server # outdated, have to use the other one instead
       black
       python3Packages.pyflakes
       python3Packages.isort
