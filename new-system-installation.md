@@ -107,6 +107,19 @@ cd
 nixos-generate-config --root /mnt
 ```
 
-Wrangle generated files in `/mnt/etc/nixos` into this repo, creating a new host in `/hosts`, and adding an entry to `flake.nix`.
+* Wrangle generated files in `/mnt/etc/nixos` into this repo, creating a new host in `/hosts`, and adding an entry to `flake.nix`.
+* Run `nixos-install --flake /mnt/home/felix/nixos#<new-host-name>`.
+* Reboot & pray :)
+
+## Post-Install Stuff
+
+* `tide configure`
+* `mkdir -p ~/GoogleDrive && systemctl --user restart google-drive-ocamlfuse.service`
+* KeepassXC: Settings -> Enable Browser Integration (Chrome and Chromium for Vivaldi!)
+* `doom sync` (will take some time :))
+* `ssh-keygen ... && ssh-add <generated-key>`; check GitHub for further instructions
+* Upload key to GitHub: Settings -> SSH-Keys -> ...
+* Vivaldi: Activate sync, PW in KeepassXC
+
 
 [pimey-nixos]: https://github.com/pimeys/nixos
