@@ -108,6 +108,7 @@ nixos-generate-config --root /mnt
 ```
 
 * Wrangle generated files in `/mnt/etc/nixos` into this repo, creating a new host in `/hosts`, and adding an entry to `flake.nix`.
+* `cd /mnt/etc && mv nixos nixos-old && ln -s /home/felix/nixos`; will need to be done after reboot at latest.
 * Run `nixos-install --flake /mnt/home/felix/nixos#<new-host-name>`.
 * Reboot & pray :)
 
