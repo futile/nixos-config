@@ -7,6 +7,7 @@
     extraConfig = {
       init = { defaultBranch = "main"; };
       core = { editor = "hx"; };
+      fetch = { prune = "true"; pruneTags = "true"; };
       pull = { ff = "only"; };
       rebase = { autoStash = "true"; };
     };
