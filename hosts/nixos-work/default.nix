@@ -101,15 +101,18 @@ in {
 
       gdm = {
         enable = true;
-        # We don't want wayland for now; e.g. screensharing doesn't work (well)
-        wayland = false;
-        # When we want wayland, we also want to run with nvidia.
-        # This requires some other options (`nixos-rebuild` will tell us which),
-        # so disable for now.
-        # nvidiaWayland = true;
+        wayland = true;
       };
     };
-    desktopManager.gnome.enable = true;
+
+    desktopManager.gnome = {
+      enable = true;
+      extraGSettingsOverridePackages = [ pkgs.gnome.mutter ];
+      extraGSettingsOverrides = ''
+        [org.gnome.mutter]
+        experimental-features = ['scale-monitor-framebuffer']
+      '';
+    };
 
     # disabling this for now, not using it anyway.
     # windowManager.qtile.enable = true;
