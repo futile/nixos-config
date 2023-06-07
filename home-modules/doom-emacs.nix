@@ -1,4 +1,4 @@
-{ config, hlib, pkgs, flake-inputs, ... }@ha:
+{ config, pkgs, flake-inputs, ... }@ha:
 let
   base-emacs = pkgs.unstable.emacsUnstable;
   # base-emacs = pkgs.unstable.emacsUnstableGcc;
@@ -67,14 +67,16 @@ in
     # -- Result: I don't really understand how to use this/how to
     # start emacs/the service with this, so have to disable it.
     # socketActivation.enable = true;
+
+    startWithUserSession = "graphical";
   };
 
-  systemd.user.services.emacs = ha.lib.mkIf config.services.emacs.enable {
-    Unit = {
-      After = [ "graphical-session-pre.target" ];
-      PartOf = [ "graphical-session.target" ];
-    };
+  # systemd.user.services.emacs = ha.lib.mkIf config.services.emacs.enable {
+    # Unit = {
+      # After = [ "graphical-session-pre.target" ];
+      # PartOf = [ "graphical-session.target" ];
+    # };
 
-    Install.WantedBy = ha.lib.mkForce [ "graphical-session.target" ];
-  };
+    # Install.WantedBy = ha.lib.mkForce [ "graphical-session.target" ];
+  # };
 }
