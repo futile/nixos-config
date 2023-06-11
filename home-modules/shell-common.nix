@@ -31,6 +31,12 @@
 
   programs.htop.enable = true;
 
+  # the better htop
+  programs.btop = {
+    enable = true;
+    package = pkgs.unstable.btop;    
+  };
+
   programs.bat.enable = true;
 
   home.packages = with pkgs; [
