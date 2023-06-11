@@ -36,8 +36,8 @@ in {
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
 
         # rust tools
-        # rustup
-        # cargo-edit
+        rustup
+        cargo-edit
 
         # misc
         # texlive.combined.scheme-full

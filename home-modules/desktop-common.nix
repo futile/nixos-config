@@ -48,6 +48,7 @@
         tokei
         magic-wormhole
         trippy
+        lazygit
 
         # stuff I don't use atm
         # vscode
