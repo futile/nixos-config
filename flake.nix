@@ -21,6 +21,10 @@
       inputs = { nixpkgs.follows = "nixpkgs"; };
     };
 
+    hyprland = {
+      url = "github:hyprwm/Hyprland";
+    };
+
     fish-foreign-env = {
       url = "github:oh-my-fish/plugin-foreign-env";
       flake = false;

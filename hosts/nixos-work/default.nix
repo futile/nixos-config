@@ -31,6 +31,9 @@ in {
 
       # user-configuration with home-manager
       "${modules}/home-manager.nix"
+
+      # hyprland
+      flake-inputs.hyprland.nixosModules.default
     ];
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -125,6 +128,9 @@ in {
     # Enable touchpad support (enabled default in most desktopManager).
     # libinput.enable = true;
   };
+
+  # also enable hyprand
+  programs.hyprland.enable = true;
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget

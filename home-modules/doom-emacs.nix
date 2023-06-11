@@ -72,11 +72,11 @@ in
   };
 
   # systemd.user.services.emacs = ha.lib.mkIf config.services.emacs.enable {
-    # Unit = {
-      # After = [ "graphical-session-pre.target" ];
-      # PartOf = [ "graphical-session.target" ];
-    # };
+  # Unit = {
+  # After = [ "graphical-session-pre.target" ];
+  # PartOf = [ "graphical-session.target" ];
+  # };
 
-    # Install.WantedBy = ha.lib.mkForce [ "graphical-session.target" ];
+  # Install.WantedBy = ha.lib.mkForce [ "graphical-session.target" ];
   # };
 }

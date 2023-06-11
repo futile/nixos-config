@@ -34,7 +34,7 @@
   # the better htop
   programs.btop = {
     enable = true;
-    package = pkgs.unstable.btop;    
+    package = pkgs.unstable.btop;
   };
 
   programs.bat.enable = true;

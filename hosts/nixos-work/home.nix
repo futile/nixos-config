@@ -15,7 +15,23 @@ in {
       "${home-modules}/zoom.nix"
       "${home-modules}/wezterm.nix"
       "${home-modules}/doom-emacs.nix"
+      flake-inputs.hyprland.homeManagerModules.default
     ];
+
+  wayland.windowManager.hyprland = {
+    enable = true;
+    extraConfig = "source = ~/.config/hypr/local.conf";
+  };
+
+  xdg = {
+    enable = true;
+    configFile =
+      let dotdir = "${config.home.homeDirectory}/nixos/dotfiles/hyprland";
+      in {
+        "hypr/local.conf".source =
+          config.lib.file.mkOutOfStoreSymlink "${dotdir}/local.conf";
+      };
+  };
 
   home = {
     packages =
