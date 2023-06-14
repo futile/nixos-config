@@ -15,6 +15,7 @@ in {
       "${home-modules}/zoom.nix"
       "${home-modules}/wezterm.nix"
       "${home-modules}/doom-emacs.nix"
+      "${home-modules}/nvim-lazy.nix"
     ];
 
   home = {

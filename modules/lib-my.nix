@@ -29,6 +29,9 @@ let
 
       # dhall
       unstable.dhall-lsp-server
+
+      # lua
+      stylua
     ];
 
   # reference: https://discourse.nixos.org/t/wrapping-packages/4431
