@@ -1,19 +1,20 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- TODO: figure out how to use this on nixos
   -- add telescope-fzf-native
-  {
-    "telescope.nvim",
-    dependencies = {
-      "nvim-telescope/telescope-fzf-native.nvim",
-      build = "make",
-      config = function()
-        require("telescope").load_extension("fzf")
-      end,
-    },
-  },
+  -- {
+  --   "telescope.nvim",
+  --   dependencies = {
+  --     "nvim-telescope/telescope-fzf-native.nvim",
+  --     build = "make",
+  --     config = function()
+  --       require("telescope").load_extension("fzf")
+  --     end,
+  --   },
+  -- },
 
-  -- add pyright to lspconfig
+  -- LSP config feat. lspconfig
   {
     "neovim/nvim-lspconfig",
     ---@class PluginLspOpts
@@ -21,10 +22,28 @@ if true then return {
       ---@type lspconfig.options
       servers = {
         -- these will be automatically installed with mason and loaded with lspconfig
-        metals = {},
+        -- metals = {},
         nil_ls = {},
       },
     },
+  },
+
+  -- Metals setup with the official plugin
+  {
+    "scalameta/nvim-metals",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+    },
+    ft = {"scala", "sbt"},
+    config = function(_, _)
+      metals_config = require'metals'.bare_config()
+      metals_config.settings = {
+        showImplicitArguments = true,
+        excludedPackages = {},
+        useGlobalExecutable = true,
+      }
+      require('metals').initialize_or_attach(metals_config)
+    end
   },
 } end
 
