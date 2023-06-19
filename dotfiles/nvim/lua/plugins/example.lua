@@ -34,16 +34,47 @@ if true then return {
     dependencies = {
       "nvim-lua/plenary.nvim",
     },
-    ft = {"scala", "sbt"},
+    ft = {"scala", "sbt", "java"},
     config = function(_, _)
-      metals_config = require'metals'.bare_config()
+      -- ref: https://github.com/ornicar/dotfiles/blob/crom/nvim/lua/plugins/metals.lua
+
+      local metals = require("metals")
+      local metals_config = metals.bare_config()
       metals_config.settings = {
         showImplicitArguments = true,
         excludedPackages = {},
         useGlobalExecutable = true,
       }
-      require('metals').initialize_or_attach(metals_config)
-    end
+
+      -- make sure to have "g:metals_status" or an equivalent in the status bar
+      metals_config.init_options.statusBarProvider = "on"
+
+      metals_config.capabilities = require("cmp_nvim_lsp").default_capabilities()
+
+      metals_config.on_attach = function(client, bufnr)
+        require("lsp-format").on_attach(client, bufnr)
+      end
+
+      -- Autocmd that will actually be in charge of starting the whole thing
+      local nvim_metals_group = vim.api.nvim_create_augroup("nvim-metals", { clear = true })
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = { "scala", "sbt", "java" },
+        callback = function()
+          metals.initialize_or_attach(metals_config)
+        end,
+        group = nvim_metals_group,
+      })
+    end,
+  },
+
+  -- lualine (status line)
+  {
+    "nvim-lualine/lualine.nvim",
+    event = "VeryLazy",
+    opts = function(_, opts)
+      table.remove(opts.sections.lualine_x, 1) -- remove command
+      table.insert(opts.sections.lualine_x, 'g:metals_status')
+    end,
   },
 } end
 
