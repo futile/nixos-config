@@ -1,7 +1,6 @@
 { config, pkgs, flake-inputs, ... }@ha:
 let
-  base-emacs = pkgs.unstable.emacsUnstable;
-  # base-emacs = pkgs.unstable.emacsUnstableGcc;
+  base-emacs = pkgs.unstable.emacs-unstable;
   emacs-with-pkgs =
     (pkgs.unstable.emacsPackagesFor base-emacs).emacsWithPackages
       (epkgs: (with epkgs; [ vterm ]));
