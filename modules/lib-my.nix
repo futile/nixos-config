@@ -32,6 +32,7 @@ let
 
       # lua
       stylua
+      unstable.lua-language-server
     ];
 
   # reference: https://discourse.nixos.org/t/wrapping-packages/4431

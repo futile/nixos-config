@@ -24,6 +24,10 @@ if true then return {
         -- these will be automatically installed with mason and loaded with lspconfig
         -- metals = {},
         nil_ls = {},
+        lua_ls = {
+          -- don't install this with mason, we install with nix
+          mason = false,
+        },
       },
     },
   },
