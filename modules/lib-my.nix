@@ -18,6 +18,7 @@ let
 
       # nix
       unstable.nil # nix lsp
+      unstable.nixd # better nix lsp?
       nixpkgs-fmt
       # nixfmt # don't want this for now, nixpkgs-fmt is superior :)
 

@@ -22,8 +22,15 @@ if true then return {
       ---@type lspconfig.options
       servers = {
         -- these will be automatically installed with mason and loaded with lspconfig
+
+        -- using nvim-metals instead
         -- metals = {},
-        nil_ls = {},
+
+        -- nix ls
+        -- nil_ls = {},
+        nixd = {}, -- this is supposed to be better I think
+
+        -- lua ls
         lua_ls = {
           -- don't install this with mason, we install with nix
           mason = false,
