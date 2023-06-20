@@ -14,6 +14,14 @@ if true then return {
   --   },
   -- },
 
+  -- colorscheme
+  {
+    "LazyVim/LazyVim",
+    opts = {
+      colorscheme = "catppuccin-macchiato",
+    },
+  },
+
   -- LSP config feat. lspconfig
   {
     "neovim/nvim-lspconfig",
