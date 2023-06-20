@@ -92,6 +92,7 @@ if true then return {
     event = "VeryLazy",
     opts = function(_, opts)
       table.remove(opts.sections.lualine_x, 1) -- remove command
+      table.remove(opts.sections.lualine_x, 3) -- remove lazy update count
       table.insert(opts.sections.lualine_x, 'g:metals_status')
     end,
   },
