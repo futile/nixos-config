@@ -96,6 +96,22 @@ if true then return {
       table.insert(opts.sections.lualine_x, 'g:metals_status')
     end,
   },
+
+  -- neogit - magit for neovim
+  {
+    'TimUntersberger/neogit',
+    dependencies = 'nvim-lua/plenary.nvim',
+    keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
+  },
+
+  -- add symbols-outline
+  {
+    "simrat39/symbols-outline.nvim",
+    cmd = "SymbolsOutline",
+    keys = { { "<leader>cs", "<cmd>SymbolsOutline<cr>", desc = "Symbols Outline" } },
+    config = true,
+  },
+
 } end
 
 -- every spec file under the "plugins" directory will be loaded automatically by lazy.nvim
