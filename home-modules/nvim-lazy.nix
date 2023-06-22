@@ -5,6 +5,8 @@
     extraPackages = pkgs.lib.my.editorTools ++ [ pkgs.xsel ];
   };
 
+  home.packages = [ pkgs.unstable.neovide ];
+
   xdg = {
     enable = true;
     configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink
