@@ -1,6 +1,15 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- telescope settings
+  {
+    "nvim-telescope/telescope.nvim",
+    keys = {
+      -- this respects tab-cwd better in my experience.
+      { "<leader><space>", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
+    },
+  },
+
   -- projects for neovim
   { import = "lazyvim.plugins.extras.util.project" },
   {
