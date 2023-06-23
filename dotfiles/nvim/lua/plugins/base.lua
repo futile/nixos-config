@@ -1,28 +1,32 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
-  -- TODO: figure out how to use this on nixos
-  -- add telescope-fzf-native
-  -- {
-  --   "telescope.nvim",
-  --   dependencies = {
-  --     "nvim-telescope/telescope-fzf-native.nvim",
-  --     build = "make",
-  --     config = function()
-  --       require("telescope").load_extension("fzf")
-  --     end,
-  --   },
-  -- },
-
   -- projects for neovim
   { import = "lazyvim.plugins.extras.util.project" },
-
   {
     "ahmedkhalf/project.nvim",
     opts = {
       silent_chdir = false,
       scope_chdir = "tab",
     },
+  },
+
+  -- bufferline
+  {
+    "akinsho/bufferline.nvim",
+    opts = {
+      options = {
+        always_show_bufferline = true,
+        -- mode = "tabs", -- just trying this out.. - don't like it, would rather have named tabs xD
+      },
+    },
+  },
+
+  -- per-tab buffers
+  {
+    "tiagovla/scope.nvim",
+    event = "VeryLazy",
+    opts = {},
   },
 
   -- for neovide, otherwise it crashes when entering cmd mode with ":" :(
@@ -121,6 +125,52 @@ if true then return {
     config = true,
   },
 
+  -- TODO: figure out how to use this on nixos
+  -- add telescope-fzf-native
+  -- {
+  --   "telescope.nvim",
+  --   dependencies = {
+  --     "nvim-telescope/telescope-fzf-native.nvim",
+  --     build = "make",
+  --     config = function()
+  --       require("telescope").load_extension("fzf")
+  --     end,
+  --   },
+  -- },
+
+  -- dunno how to do this together with lazyvim, also see `nvim-lazy.nix`
+  -- add more treesitter parsers
+  -- {
+  --   "nvim-treesitter/nvim-treesitter",
+  --   opts = {
+  --     ensure_installed = {
+  --       "bash",
+  --       "html",
+  --       "javascript",
+  --       "json",
+  --       "lua",
+  --       "markdown",
+  --       "markdown_inline",
+  --       "python",
+  --       "query",
+  --       "regex",
+  --       "tsx",
+  --       "typescript",
+  --       "vim",
+  --       "yaml",
+  --       "scala",
+  --       "rust",
+  --       "css",
+  --       "dhall",
+  --       "dockerfile",
+  --       "fish",
+  --       "nix",
+  --       "prisma",
+  --       "sql",
+  --       "terraform",
+  --     },
+  --   },
+  -- },
 } end
 
 -- every spec file under the "plugins" directory will be loaded automatically by lazy.nvim
