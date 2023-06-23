@@ -115,6 +115,9 @@ if true then return {
     'TimUntersberger/neogit',
     dependencies = 'nvim-lua/plenary.nvim',
     keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
+    opts = {
+      disable_insert_on_commit = false,
+    },
   },
 
   -- symbols-outline
