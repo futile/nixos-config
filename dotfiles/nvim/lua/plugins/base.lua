@@ -14,6 +14,17 @@ if true then return {
   --   },
   -- },
 
+  -- projects for neovim
+  { import = "lazyvim.plugins.extras.util.project" },
+
+  {
+    "ahmedkhalf/project.nvim",
+    opts = {
+      silent_chdir = false,
+      scope_chdir = "tab",
+    },
+  },
+
   -- for neovide, otherwise it crashes when entering cmd mode with ":" :(
   {
     "folke/noice.nvim",
@@ -102,7 +113,7 @@ if true then return {
     keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
   },
 
-  -- add symbols-outline
+  -- symbols-outline
   {
     "simrat39/symbols-outline.nvim",
     cmd = "SymbolsOutline",
