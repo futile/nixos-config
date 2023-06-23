@@ -6,7 +6,7 @@
 
     extraConfig = {
       init = { defaultBranch = "main"; };
-      core = { editor = "hx"; };
+      core = { editor = "nvim"; };
       fetch = { prune = "true"; pruneTags = "true"; };
       pull = { ff = "only"; };
       rebase = { autoStash = "true"; };

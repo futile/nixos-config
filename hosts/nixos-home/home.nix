@@ -58,7 +58,7 @@ in {
       # packages from other nixpkgs branches
       [ ];
 
-    sessionVariables = { EDITOR = "vim"; };
+    sessionVariables = { EDITOR = "nvim"; };
 
     stateVersion = "22.05";
   };
