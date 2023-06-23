@@ -8,6 +8,10 @@ if true then return {
     opts = {
       silent_chdir = false,
       scope_chdir = "tab",
+      -- "pattern" before "lsp", to avoid "subprojects"
+      detection_methods = { "pattern", "lsp" },
+      -- don't want stuff like "package.json" in here, also to avoid subprojects
+      patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", },
     },
   },
 
@@ -17,7 +21,7 @@ if true then return {
     opts = {
       options = {
         always_show_bufferline = true,
-        -- mode = "tabs", -- just trying this out.. - don't like it, would rather have named tabs xD
+        -- mode = "tabs", -- just trying this out.. - don't like it, need another way for named tabs.
       },
     },
   },
