@@ -14,6 +14,10 @@ if true then return {
   { import = "lazyvim.plugins.extras.util.project" },
   {
     "ahmedkhalf/project.nvim",
+    keys = {
+      -- open the projects picker in a new tab, because I scope tabs to projects.
+      { "<leader>fp", "<Cmd>:tabnew | Telescope projects<CR>", desc = "Projects" },
+    },
     opts = {
       silent_chdir = false,
       scope_chdir = "tab",
