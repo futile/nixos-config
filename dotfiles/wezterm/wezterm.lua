@@ -6,9 +6,9 @@ return {
 	-- color_scheme = "nordfox",
 	-- color_scheme = "Seafoam Pastel",
 	-- color_scheme = "Solarized (light) (terminal.sexy)",
-	color_scheme = "kanagawabones",
+	-- color_scheme = "kanagawabones",
 	-- color_scheme = "onedark",
-	-- color_scheme = 'everforest',
+	color_scheme = "everforest",
 
 	font = wezterm.font_with_fallback({
 		"JetBrainsMono Nerd Font",

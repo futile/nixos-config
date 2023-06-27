@@ -3,4 +3,4 @@
 -- Add any additional options here
 
 -- for neovide Pog
-vim.o.guifont = "FiraCode Nerd Font Mono:h11"
+vim.o.guifont = "FiraCode Nerd Font Mono:h10"
