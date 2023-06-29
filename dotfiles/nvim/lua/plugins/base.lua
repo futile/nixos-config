@@ -1,6 +1,21 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- yank-ring etc.
+  { import = "lazyvim.plugins.extras.coding.yanky" },
+  {
+    "gbprod/yanky.nvim",
+    opts = {
+      ring = {
+        storage = "shada", -- "sqlite" needs extra config on Nix, don't have it yet
+      },
+    },
+  },
+  {
+    "kkharji/sqlite.lua",
+    enabled = false, -- needs extra config on Nix, see above
+  },
+
   -- telescope settings
   {
     "nvim-telescope/telescope.nvim",
