@@ -1,6 +1,9 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- typescript lsp & config
+  { import = "lazyvim.plugins.extras.lang.typescript" },
+
   -- rust lsp
   { 
     'simrat39/rust-tools.nvim',
@@ -150,7 +153,7 @@ if true then return {
 
   -- neogit - magit for neovim
   {
-    'TimUntersberger/neogit',
+    'NeogitOrg/neogit',
     dependencies = 'nvim-lua/plenary.nvim',
     keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
     opts = {
