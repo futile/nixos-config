@@ -13,4 +13,15 @@
 
   # Default console font
   console.font = "Lat2-Terminus16";
+
+  # increase limit of open files, aka `ulimit -Sn`.
+  # needed this for `vite` with lots of files.
+  # ref https://stackoverflow.com/questions/70473410/how-do-i-increase-the-limit-on-the-number-of-open-files-in-nixos
+  # ref https://vitejs.dev/guide/troubleshooting.html#requests-are-stalled-forever
+  security.pam.loginLimits = [{
+    domain = "*";
+    type = "soft";
+    item = "nofile";
+    value = "8192";
+  }];
 }
