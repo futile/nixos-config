@@ -57,3 +57,11 @@ format-check:
 # Show a diff of changes using `nix-diff`
 diff:
     nix-diff /run/current-system ./result
+
+# Nix collect garbage; dry-run
+nix-gc:
+    nix-collect-garbage --dry-run --delete-older-than 14d
+
+# Nix collect garbage; actual run
+nix-gc-force:
+    nix-collect-garbage --delete-older-than 14d
