@@ -39,9 +39,6 @@
         # organization/todos etc.
         obsidian
 
-        # alternative browser
-        firefox
-
         # useful cmdline-tools
         just
         dtrx

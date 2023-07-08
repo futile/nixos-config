@@ -12,6 +12,7 @@ in {
       "${home-modules}/desktop-common.nix"
       "${home-modules}/desktop-gdrive-keepassxc.nix"
       "${home-modules}/vivaldi.nix"
+      "${home-modules}/firefox.nix"
       "${home-modules}/zoom.nix"
       "${home-modules}/wezterm.nix"
       "${home-modules}/doom-emacs.nix"
