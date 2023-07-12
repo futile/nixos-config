@@ -3,14 +3,23 @@ return {
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "nordic",
+      -- evergreen <3
+      -- colorscheme = "nordic",
+
+      -- trying this out :)
+      colorscheme = "vitesse",
     },
   },
 
   -- -- Grouped Colorschemes below --
 
   -- these I haven't tried out/sorted yet
-
+  {
+    "2nthony/vitesse.nvim",
+    dependencies = {
+      "tjdevries/colorbuddy.nvim",
+    },
+  },
   -- < none atm. >
 
   -- most fav (but probably not always lol)
