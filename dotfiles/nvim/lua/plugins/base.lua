@@ -5,7 +5,7 @@ if true then return {
   { import = "lazyvim.plugins.extras.lang.typescript" },
 
   -- rust lsp
-  { 
+  {
     'simrat39/rust-tools.nvim',
     opts = {},
   },

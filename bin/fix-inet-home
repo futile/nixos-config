@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+declare -r INTERFACE="eno1"
+
+echo "taking $INTERFACE down.."
+sudo ip link set "$INTERFACE" down
+echo "sleeping 5 secs.."
+sleep 5
+echo "taking $INTERFACE back up.."
+sudo ip link set "$INTERFACE" up
+echo "done; internet should be back (and fixed) in a moment"
+
+# exit

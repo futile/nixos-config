@@ -189,6 +189,9 @@ in {
 
   services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
 
+  # enable opentabletdriver (for osu-lazer); see https://opentabletdriver.net/Wiki/Install/Linux#nixos
+  hardware.opentabletdriver.enable = true;
+
   # Since we run docker on an zfs partition
   virtualisation.docker.storageDriver = "zfs";
 
