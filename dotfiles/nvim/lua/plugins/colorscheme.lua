@@ -4,22 +4,13 @@ return {
     "LazyVim/LazyVim",
     opts = {
       -- evergreen <3
-      -- colorscheme = "nordic",
-
-      -- trying this out :)
-      colorscheme = "vitesse",
+      colorscheme = "nordic",
     },
   },
 
   -- -- Grouped Colorschemes below --
 
   -- these I haven't tried out/sorted yet
-  {
-    "2nthony/vitesse.nvim",
-    dependencies = {
-      "tjdevries/colorbuddy.nvim",
-    },
-  },
   -- < none atm. >
 
   -- most fav (but probably not always lol)
@@ -27,6 +18,14 @@ return {
 
   -- https://github.com/sainnhe/everforest
   { "sainnhe/everforest" },
+
+  -- ok, but I'll stay with nordic for now
+  {
+    "2nthony/vitesse.nvim",
+    dependencies = {
+      "tjdevries/colorbuddy.nvim",
+    },
+  },
 
   -- catppuccin-{mocha,macchiato}
 
