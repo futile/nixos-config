@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, config, thisFlakePath, ... }:
 
 {
   home = {
@@ -58,5 +58,11 @@
       (with pkgs.master; [ ]) ++
       # packages from other nixpkgs branches
       [ ];
+
+    file = {
+      ".npmrc".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/npmrc";
+    };
+
+    sessionPath = [ "$HOME/.npm-packages/bin" ];
   };
 }

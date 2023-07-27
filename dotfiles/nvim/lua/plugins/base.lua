@@ -188,6 +188,39 @@ if true then return {
   --   },
   -- },
 
+  -- add more treesitter parsers
+  {
+    "nvim-treesitter/nvim-treesitter",
+    opts = {
+      ensure_installed = {
+        "bash",
+        "html",
+        "javascript",
+        "json",
+        -- "lua",
+        "markdown",
+        "markdown_inline",
+        "python",
+        -- "query",
+        "regex",
+        "tsx",
+        "typescript",
+        "vim",
+        "yaml",
+        -- "scala",
+        -- "rust",
+        "css",
+        "dhall",
+        "dockerfile",
+        "fish",
+        "nix",
+        "prisma",
+        "sql",
+        "terraform",
+      },
+    },
+  },
+
   -- dunno how to do this together with lazyvim, also see `nvim-lazy.nix`
   -- add more treesitter parsers
   -- {
