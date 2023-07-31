@@ -40,7 +40,7 @@ dry-activate:
 build:
     nixos-rebuild build
 
-# Check the flacke using `nix flake check`
+# Check the flake using `nix flake check`
 check:
     nix flake check
 
