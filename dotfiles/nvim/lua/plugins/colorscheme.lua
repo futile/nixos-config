@@ -4,7 +4,8 @@ return {
     "LazyVim/LazyVim",
     opts = {
       -- evergreen <3
-      colorscheme = "nordic",
+      -- colorscheme = "nordic",
+      colorscheme = "everforest",
     },
   },
 
@@ -44,6 +45,12 @@ return {
 
   -- https://github.com/cocopon/iceberg.vim
   { "cocopon/iceberg.vim" },
+
+  -- Ok, but not my thing (atm)
+  {
+    "AstroNvim/astrotheme",
+    opts = {},
+  },
 
   -- look good with (lazy-)nvim, but I just don't like them :(
 
