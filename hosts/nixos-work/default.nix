@@ -126,7 +126,7 @@ in {
     autoRepeatInterval = 30;
 
     # Enable touchpad support (enabled default in most desktopManager).
-    # libinput.enable = true;
+    libinput.enable = true;
   };
 
   # also enable hyprand
