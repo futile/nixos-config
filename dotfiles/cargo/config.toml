@@ -1,0 +1,4 @@
+# make rust-analyzer use its own directory in target/, to not block other `cargo`-invocations
+# from: https://github.com/rust-lang/rust-analyzer/issues/6007
+[profile.rust-analyzer]
+inherits = "dev"

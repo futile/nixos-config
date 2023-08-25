@@ -1,6 +1,9 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- syntax highlighting etc. for `Earthfile`s
+  { 'earthly/earthly.vim', },
+
   -- open files on github/gitlab
   {
     'Almo7aya/openingh.nvim',
@@ -13,7 +16,24 @@ if true then return {
   -- rust lsp
   {
     'simrat39/rust-tools.nvim',
-    opts = {},
+    opts = {
+      server = {
+        settings = {
+          ['rust-analyzer'] = {
+            cargo = {
+              extraArgs = { "--profile", "rust-analyzer" }
+            },
+            -- need to specify it for all `cargo`-invocations (as above), it seems
+            -- check = {
+            --   extraArgs = { "--profile", "rust-analyzer" }
+            -- },
+            -- checkOnSave = {
+            --   extraArgs = { "--profile", "rust-analyzer" }
+            -- },
+          },
+        },
+      },
+    },
   },
 
   -- yank-ring etc.

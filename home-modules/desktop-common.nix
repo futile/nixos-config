@@ -61,6 +61,8 @@
 
     file = {
       ".npmrc".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/npmrc";
+      ".cargo/config.toml".source = config.lib.file.mkOutOfStoreSymlink
+        "${thisFlakePath}/dotfiles/cargo/config.toml";
     };
 
     sessionPath = [ "$HOME/.npm-packages/bin" ];
