@@ -1,6 +1,22 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- auto pairs
+  -- BROKEN
+  -- {
+  --   'altermo/ultimate-autopair.nvim',
+  --   event={'InsertEnter','CmdlineEnter'},
+  --   branch='v0.6',
+  --   opts={
+  --     --Config goes here
+  --   },
+  -- },
+  -- disable lazyvim default instead
+  -- {
+  --   "echasnovski/mini.pairs",
+  --   enable = false,
+  -- },
+
   -- add gh to Telescope
   {
     "telescope.nvim",
