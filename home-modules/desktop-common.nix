@@ -46,6 +46,7 @@
         magic-wormhole
         trippy
         lazygit
+        lazydocker
 
         # stuff I don't use atm
         # vscode

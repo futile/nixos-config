@@ -22,6 +22,15 @@
     lfs.enable = true;
   };
 
+  programs.gh = {
+    enable = true;
+    package = pkgs.unstable.gh;
+
+    settings = {
+      git_protocol = "ssh";
+    };
+  };
+
   home.packages = [
     pkgs.git-absorb # nifty git tool that automatically folds staged changes into their corresponding commits: https://github.com/tummychow/git-absorb
   ];

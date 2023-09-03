@@ -1,6 +1,17 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- add gh to Telescope
+  {
+    "telescope.nvim",
+    dependencies = {
+      "nvim-telescope/telescope-github.nvim",
+      config = function()
+        require("telescope").load_extension('gh')
+      end,
+    },
+  },
+
   -- syntax highlighting etc. for `Earthfile`s
   { 'earthly/earthly.vim', },
 
