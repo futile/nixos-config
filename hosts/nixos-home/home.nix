@@ -9,6 +9,7 @@ in {
       "${home-modules}/helix.nix"
       "${home-modules}/git.nix"
       "${home-modules}/fish.nix"
+      "${home-modules}/nushell.nix"
       "${home-modules}/desktop-common.nix"
       "${home-modules}/desktop-gdrive-keepassxc.nix"
       "${home-modules}/vivaldi.nix"

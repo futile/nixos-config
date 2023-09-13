@@ -13,7 +13,10 @@
     fileWidgetCommand = "fd --type f --follow . \\$dir";
   };
 
-  programs.zoxide.enable = true;
+  programs.zoxide = {
+    enable = true;
+    package = pkgs.unstable.zoxide;
+  };
 
   programs.exa = {
     enable = true;

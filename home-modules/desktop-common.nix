@@ -47,6 +47,7 @@
         trippy
         lazygit
         lazydocker
+        dig
 
         # stuff I don't use atm
         # vscode
