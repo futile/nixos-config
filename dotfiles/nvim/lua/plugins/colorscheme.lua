@@ -6,6 +6,7 @@ return {
       -- evergreen <3
       -- colorscheme = "nordic",
       colorscheme = "everforest",
+      -- colorscheme = "rose-pine-moon",
     },
   },
 
@@ -17,10 +18,13 @@ return {
   -- most fav (but probably not always lol)
   -- (somewhat ordered from most to least liked)
 
+  -- https://github.com/rose-pine/neovim
+  { "rose-pine/neovim" },
+
   -- https://github.com/sainnhe/everforest
   { "sainnhe/everforest" },
 
-  -- ok, but I'll stay with nordic for now
+  -- ok, but doesn't quite do it
   {
     "2nthony/vitesse.nvim",
     dependencies = {
