@@ -1,6 +1,22 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- Octo.nvim <3
+  {
+    'pwntester/octo.nvim',
+    requires = {
+      'nvim-lua/plenary.nvim',
+      'nvim-telescope/telescope.nvim',
+      'nvim-tree/nvim-web-devicons',
+    },
+    opts = {
+      enable_builtin = true,
+    },
+    keys = {
+       { "<leader>gO", "<cmd>Octo<cr>", desc = "Octo" },
+    }
+  },
+
   -- (postgres)-SQL interface based on vim-dadbod
   {
     'kristijanhusak/vim-dadbod-ui',
