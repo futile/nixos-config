@@ -34,11 +34,11 @@ in {
   users.users.felix = {
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" ];
-    shell = pkgs.unstable.fish;
+    shell = pkgs.fish;
   };
 
   # Shell must also be in `/etc/shells` or it might not work
-  environment.shells = [ "${pkgs.unstable.fish}/bin/fish" ];
+  # environment.shells = [ "${pkgs.unstable.fish}/bin/fish" ];
 
   # allow our user to use `nix`
   nix.settings.trusted-users = [ "felix" ];

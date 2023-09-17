@@ -64,7 +64,7 @@ in {
         # protonvpn-cli
 
         # hardware stuff
-        # v4l_utils # webcam utils
+        # v4l-utils # webcam utils
       ]) ++
       # packages from master
       (with pkgs.master; [ ]) ++

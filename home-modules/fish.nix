@@ -30,10 +30,10 @@
       # don't need this anymore, just keeping it around for reference
       # sshuttle-comsys = "sshuttle --dns -vv -r rath@login.comsys.rwth-aachen.de 137.226.12.0/24 137.226.13.0/24 137.226.59.0/24 137.226.113.0/26 2a00:8a60:1014::/48 -x 137.226.13.22 -x 137.226.13.41 -x 137.226.13.42 -x 137.226.13.43 -x 137.226.13.49 -x 137.226.13.55 -x 137.226.59.41";
 
-      ls = "exa --icons --group-directories-first";
+      ls = "eza --icons --group-directories-first";
       l = "ls";
       la = "ls -la";
-      lt = "exa --tree --git-ignore --icons --group-directories-first";
+      lt = "eza --tree --git-ignore --icons --group-directories-first";
       ltl = "lt -l";
       lta = "lt -a";
       ltla = "lt -la";
@@ -60,6 +60,6 @@
 
   # make sure these are enabled, without forcing a specific package
   # (so the specific package can be set somewhere else).
-  programs.exa.enable = true;
+  programs.eza.enable = true;
   programs.bat.enable = true;
 }

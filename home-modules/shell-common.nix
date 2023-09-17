@@ -18,10 +18,10 @@
     package = pkgs.unstable.zoxide;
   };
 
-  programs.exa = {
+  programs.eza = {
     enable = true;
     # enableAliases = true;
-    package = pkgs.unstable.exa;
+    package = pkgs.unstable.eza;
   };
 
   # nix-index

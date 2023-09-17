@@ -1,7 +1,7 @@
 { pkgs, ... }: {
   # fonts, mainly for starship-prompt at the time of writing
   # also for "tide" prompt (fish)
-  fonts.fonts = [
+  fonts.packages = [
     (pkgs.unstable.nerdfonts.override {
       fonts = [
         "JetBrainsMono" # wezterm default font

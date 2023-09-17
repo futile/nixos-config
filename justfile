@@ -10,6 +10,10 @@ _default:
 switch:
     sudo nixos-rebuild switch
 
+# Rebuild system with current configuration (does not update) for next boot
+switch-boot:
+    sudo nixos-rebuild boot
+
 # Update all flake inputs (i.e., package repos, doom-emacs version, etc.)
 update:
     nix flake update
