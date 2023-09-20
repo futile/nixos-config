@@ -203,6 +203,7 @@ if true then return {
       local metals_config = metals.bare_config()
       metals_config.settings = {
         showImplicitArguments = true,
+        showInferredType = true,
         excludedPackages = {},
         useGlobalExecutable = true,
       }
