@@ -209,7 +209,12 @@ if true then return {
       }
 
       -- make sure to have "g:metals_status" or an equivalent in the status bar
-      metals_config.init_options.statusBarProvider = "on"
+      metals_config.init_options = {
+        statusBarProvider = "on",
+        decorationProvider = true,
+        -- doesn't work with nvim-metals yet (2023-09-21)
+        -- inlineDecorationProvider = true,
+      }
 
       metals_config.capabilities = require("cmp_nvim_lsp").default_capabilities()
 
