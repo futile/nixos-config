@@ -13,10 +13,14 @@ in {
       "${home-modules}/desktop-common.nix"
       "${home-modules}/desktop-gdrive-keepassxc.nix"
       "${home-modules}/vivaldi.nix"
+
+      # > VA-API is enabled by default for Intel GPUs [10] if you are using Firefox 115 or a later version. For other GPUs, set media.ffmpeg.vaapi.enabled to true in about:config.
+      # from https://wiki.archlinux.org/title/Firefox#Hardware_video_acceleration
       "${home-modules}/firefox.nix"
+
       "${home-modules}/zoom.nix"
       "${home-modules}/wezterm.nix"
-      "${home-modules}/doom-emacs.nix"
+      # "${home-modules}/doom-emacs.nix" # emacs drains cpu for no reason :(
       "${home-modules}/nvim-lazy.nix"
       flake-inputs.hyprland.homeManagerModules.default
     ];
@@ -51,6 +55,9 @@ in {
       (with pkgs.unstable;
       [
         # messengers
+        signal-desktop
+        tdesktop
+        discord
         slack
         # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
 
@@ -65,6 +72,7 @@ in {
 
         # hardware stuff
         # v4l-utils # webcam utils
+        radeontop
       ]) ++
       # packages from master
       (with pkgs.master; [ ]) ++

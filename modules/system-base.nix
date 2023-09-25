@@ -1,4 +1,4 @@
-{ ... }: {
+{ pkgs, ... }: {
   # Keep a maximum of 10 generations, so our /boot partition doesn't run full
   boot.loader.systemd-boot.configurationLimit = 10;
 
@@ -13,6 +13,14 @@
 
   # Default console font
   console.font = "Lat2-Terminus16";
+
+  hardware.opengl = {
+    enable = true;
+    extraPackages = with pkgs; [
+      vaapiVdpau
+      libvdpau-va-gl
+    ];
+  };
 
   # These two settings (try to) increase `ulimit -Sn`, aka max number of open fd's per process (thread?).
   # Not even sure I want this, while it might make stuff work more out-of-the-box for me, it might hide
