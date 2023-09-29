@@ -8,7 +8,12 @@ return {
 	-- color_scheme = "Solarized (light) (terminal.sexy)",
 	-- color_scheme = "kanagawabones",
 	-- color_scheme = "onedark",
-	color_scheme = "everforest",
+	-- color_scheme = "everforest",
+	color_scheme = "Rosé Pine (base16)",
+	-- color_scheme = "rose-pine",
+	-- color_scheme = "Rosé Pine (Gogh)",
+	-- color_scheme = "Rosé Pine Moon (base16)",
+	-- color_scheme = "Rosé Pine Moon (Gogh)",
 
 	font = wezterm.font_with_fallback({
 		"JetBrainsMono Nerd Font",

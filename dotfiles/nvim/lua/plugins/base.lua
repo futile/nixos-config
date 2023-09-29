@@ -169,7 +169,7 @@ if true then return {
     "neovim/nvim-lspconfig",
     ---@class PluginLspOpts
     opts = {
-      ---@type lspconfig.options
+      -- ---@type lspconfig.options -- doesn't work/throws warnings
       servers = {
         -- these will be automatically installed with mason and loaded with lspconfig
 
