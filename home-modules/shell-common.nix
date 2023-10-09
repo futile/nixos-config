@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, thisFlakePath, ... }:
 
 {
   # direnv & nix-direnv
@@ -40,14 +40,24 @@
     package = pkgs.unstable.btop;
   };
 
+  # bat + config
   programs.bat.enable = true;
+  xdg = {
+    enable = true;
 
-  home.packages = with pkgs; [
-    # tools that don't have home-manager modules
-    ripgrep
-    fd
-    file
-    lsof
-    killall
-  ];
+    # symlink directly to this repo, for easier iteration/changes
+    configFile."bat/config".source =
+      config.lib.file.mkOutOfStoreSymlink
+        "${thisFlakePath}/dotfiles/bat/config";
+  };
+
+  home.packages = with pkgs;
+    [
+      # tools that don't have home-manager modules
+      ripgrep
+      fd
+      file
+      lsof
+      killall
+    ];
 }
