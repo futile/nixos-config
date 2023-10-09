@@ -23,6 +23,8 @@ in {
       # "${home-modules}/doom-emacs.nix" # emacs drains cpu for no reason :(
       "${home-modules}/nvim-lazy.nix"
       flake-inputs.hyprland.homeManagerModules.default
+
+      "${home-modules}/zellij.nix"
     ];
 
   wayland.windowManager.hyprland = {
