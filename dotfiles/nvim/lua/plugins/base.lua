@@ -262,14 +262,6 @@ if true then return {
     },
   },
 
-  -- symbols-outline
-  {
-    "simrat39/symbols-outline.nvim",
-    cmd = "SymbolsOutline",
-    keys = { { "<leader>cs", "<cmd>SymbolsOutline<cr>", desc = "Symbols Outline" } },
-    config = true,
-  },
-
   -- TODO: figure out how to use this on nixos
   -- add telescope-fzf-native
   -- {
