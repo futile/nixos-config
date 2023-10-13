@@ -1,6 +1,13 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- nu support
+  -- required a manual `:TSInstall nu` once
+  {
+    'LhKipp/nvim-nu',
+    opts = {},
+  },
+
   -- Octo.nvim <3
   {
     'pwntester/octo.nvim',
