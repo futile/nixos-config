@@ -18,6 +18,7 @@ in {
       "${home-modules}/wezterm.nix"
       "${home-modules}/doom-emacs.nix"
       "${home-modules}/nvim-lazy.nix"
+      "${home-modules}/sbt.nix"
     ];
 
   home = {

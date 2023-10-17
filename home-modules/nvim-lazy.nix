@@ -9,7 +9,6 @@ let
     postBuild = ''
       wrapProgram $out/bin/neovide \
         --set-default NEOVIDE_MULTIGRID "1" \
-        --set-default NEOVIDE_FRAME "none" \
         --set-default NEOVIDE_MAXIMIZED "1"
     '';
   };

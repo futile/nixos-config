@@ -6,3 +6,6 @@ debug
 foo.*
 *.log
 data
+
+# I think I want this to be local for now
+/lazyvim.json

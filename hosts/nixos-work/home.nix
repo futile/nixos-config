@@ -25,6 +25,7 @@ in {
       flake-inputs.hyprland.homeManagerModules.default
 
       "${home-modules}/zellij.nix"
+      "${home-modules}/sbt.nix"
     ];
 
   wayland.windowManager.hyprland = {
