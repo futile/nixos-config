@@ -3,7 +3,7 @@
 -- Add any additional options here
 
 -- for neovide Pog
-vim.o.guifont = "FiraCode Nerd Font Mono:h10"
+vim.o.guifont = "FiraCode Nerd Font Mono:h12"
 
 -- turn off relativenumbers, they make scrolling non-smooth
 vim.o.relativenumber = false

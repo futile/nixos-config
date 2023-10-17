@@ -6,7 +6,8 @@ return {
       -- evergreen <3
       -- colorscheme = "nordic",
       -- colorscheme = "everforest",
-      colorscheme = "rose-pine-moon",
+      -- colorscheme = "rose-pine-moon",
+      colorscheme = "astrolight",
     },
   },
 
