@@ -46,7 +46,34 @@
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
-  hardware.enableAllFirmware = true;
+  hardware = {
+    enableAllFirmware = true;
+    cpu.amd.updateMicrocode = true;
 
-  hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+    # from https://github.com/NixOS/nixpkgs/issues/111189#issuecomment-932985131
+    opengl = {
+      driSupport = true;
+      extraPackages = with pkgs; [
+        amdvlk
+        rocm-opencl-icd
+        rocm-opencl-runtime
+      ];
+    };
+  };
+
+  # from https://nixos.wiki/wiki/Laptop and https://github.com/AdnanHodzic/auto-cpufreq/blob/v1.9.9/auto-cpufreq.conf-example
+  # this helped a lot/just magically fixed my perf/temp problems!
+  services.auto-cpufreq = {
+    enable = true;
+    settings = {
+      battery = {
+        governor = "powersave";
+        turbo = "auto";
+      };
+      charger = {
+        governor = "performance";
+        turbo = "auto";
+      };
+    };
+  };
 }

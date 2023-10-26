@@ -2,13 +2,25 @@ return {
   -- set my current colorscheme
   {
     "LazyVim/LazyVim",
-    opts = {
-      -- evergreen <3
-      -- colorscheme = "nordic",
-      -- colorscheme = "everforest",
-      -- colorscheme = "rose-pine-moon",
-      colorscheme = "astrolight",
-    },
+
+    opts = function(_, opts)
+      if vim.g.neovide then
+        -- colorscheme in neovide
+        -- opts.colorscheme = "nordic"
+        opts.colorscheme = "astrolight"
+      else
+        -- colorscheme in terminal/otherwise
+        opts.colorscheme = "astrolight"
+      end
+    end,
+
+    -- opts = {
+    --   -- evergreen <3
+    --   -- colorscheme = "nordic",
+    --   -- colorscheme = "everforest",
+    --   -- colorscheme = "rose-pine-moon",
+    --   colorscheme = "astrolight",
+    -- },
   },
 
   -- -- Grouped Colorschemes below --
