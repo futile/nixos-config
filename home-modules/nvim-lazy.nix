@@ -17,7 +17,7 @@ in
 {
   programs.neovim = {
     enable = true;
-    extraPackages = pkgs.lib.my.editorTools ++ [ pkgs.xsel ];
+    extraPackages = pkgs.lib.my.editorTools ++ [ pkgs.xsel ]; # pkgs.codeium
 
     # dunno how to do this together with lazyvim :/
     # extraLuaConfig = ''
