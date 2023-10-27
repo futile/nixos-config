@@ -50,7 +50,7 @@ in {
 
         # misc
         texlive.combined.scheme-full
-        zotero
+        # zotero # disable due to CVE-2023-5217 in ‘zotero-6.0.27’ 
         protonvpn-cli
 
         # hardware stuff

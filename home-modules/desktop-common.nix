@@ -1,4 +1,4 @@
-{ pkgs, config, thisFlakePath, ... }:
+{ pkgs, config, thisFlakePath, flake-inputs, system, ... }:
 
 {
   home = {
@@ -58,8 +58,10 @@
       ]) ++
       # packages from master
       (with pkgs.master; [ ]) ++
-      # packages from other nixpkgs branches
-      [ ];
+      # packages from other sources/nixpkgs branches
+      [
+        flake-inputs.nix-alien.packages.${system}.nix-alien
+      ];
 
     file = {
       ".npmrc".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/npmrc";

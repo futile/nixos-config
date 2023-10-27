@@ -1,6 +1,15 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- codeium config, to support the downloaded LSP
+  {
+    "Exafunction/codeium.nvim",
+    opts = {
+      -- see ~/bin/wrap-codeium-nix-alien
+      wrapper = "wrap-codeium-nix-alien",
+    },
+  },
+
   -- nu support
   -- required a manual `:TSInstall nu` once
   {

@@ -17,7 +17,7 @@ in
 {
   programs.neovim = {
     enable = true;
-    extraPackages = pkgs.lib.my.editorTools ++ [ pkgs.xsel ]; # pkgs.codeium
+    extraPackages = pkgs.lib.my.editorTools ++ [ pkgs.xsel ];
 
     # dunno how to do this together with lazyvim :/
     # extraLuaConfig = ''
@@ -36,4 +36,8 @@ in
     configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink
       "${config.home.homeDirectory}/nixos/dotfiles/nvim";
   };
+
+  # home.file = {
+  #   ".cache/nvim/codeium/bin/1.2.90/language_server_linux_x64".source = "${pkgs.codeium}/bin/codeium_language_server";
+  # };
 }

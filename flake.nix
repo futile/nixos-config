@@ -23,6 +23,10 @@
       inputs = { nixpkgs.follows = "nixpkgs"; };
     };
 
+    nix-alien = {
+      url = "github:thiagokokada/nix-alien";
+    };
+
     hyprland = {
       url = "github:hyprwm/Hyprland";
     };
@@ -38,7 +42,7 @@
     };
 
     fish-tide = {
-      url = "github:IlanCosman/tide";
+      url = "github:IlanCosman/tide/7f41dd24d815c16e85560e1e6a28b03203e2bfe";
       flake = false;
     };
 
@@ -66,13 +70,14 @@
         # load cachix caches; generated through `cachix use -m nixos <cache-name>`
         ./cachix.nix
       ];
+      system = "x86_64-linux";
     in
     {
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
+        inherit system;
 
         # forward flake-inputs to module arguments
-        specialArgs = { flake-inputs = inputs; };
+        specialArgs = { flake-inputs = inputs; inherit system; };
 
         modules = baseModules ++ [
           # "draw the rest of the owl"
@@ -81,10 +86,10 @@
       };
 
       nixosConfigurations.nixos-work = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
+        inherit system;
 
         # forward flake-inputs to module arguments
-        specialArgs = { flake-inputs = inputs; };
+        specialArgs = { flake-inputs = inputs; inherit system; };
 
         modules = baseModules ++ [
           # "draw the rest of the owl"
