@@ -8,8 +8,9 @@
       init = { defaultBranch = "main"; };
       core = { editor = "nvim"; };
       fetch = { prune = "true"; pruneTags = "true"; };
-      pull = { ff = "only"; };
+      pull = { ff = "only"; prune = "true"; };
       rebase = { autoStash = "true"; };
+      merge = { conflictstyle = "diff3"; };
     };
 
     delta = {

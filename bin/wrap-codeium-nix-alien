@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "$1" >> "$HOME/wrap-codeium.log"
-
 if [[ $1 =~ ^.*/codeium/bin/.*/language_server_linux_x64$ ]]; then
   exec nix-alien "$1" -- ${@:2}
 else
