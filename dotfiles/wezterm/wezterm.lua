@@ -18,6 +18,7 @@ return {
 	color_scheme = "Sakura (base16)",
 
 	font = wezterm.font_with_fallback({
+		-- "FantasqueSansM Nerd Font Mono", -- I just can't use this, not pleasent enough xd
 		"JetBrainsMono Nerd Font",
 		"Symbols Nerd Font Mono",
 		"Symbols Nerd Font",

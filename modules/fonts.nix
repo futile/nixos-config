@@ -9,6 +9,7 @@
         "FiraCode"
         "DroidSansMono"
         "NerdFontsSymbolsOnly"
+        "FantasqueSansMono"
       ];
     })
   ];
