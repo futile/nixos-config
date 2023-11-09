@@ -318,10 +318,23 @@ if true then return {
     end,
   },
 
+  -- Diffview https://github.com/sindrets/diffview.nvim
+  { "sindrets/diffview.nvim",
+    keys = {
+      { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Open Diffview" }
+    },
+    opts = {},
+  },
+
   -- neogit - magit for neovim
   {
     'NeogitOrg/neogit',
-    dependencies = 'nvim-lua/plenary.nvim',
+    dependencies = {
+      "nvim-lua/plenary.nvim",         -- required
+      "nvim-telescope/telescope.nvim", -- optional
+      "sindrets/diffview.nvim",        -- optional
+      "ibhagwan/fzf-lua",              -- optional
+    },
     keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
     opts = {
       disable_insert_on_commit = false,
