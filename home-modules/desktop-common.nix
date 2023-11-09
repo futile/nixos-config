@@ -49,6 +49,11 @@
         lazydocker
         dig
 
+        # development
+        conda
+        sublime-merge
+        dbeaver
+
         # stuff I don't use atm
         # vscode
         # zellij
