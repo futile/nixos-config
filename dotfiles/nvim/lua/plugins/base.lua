@@ -336,6 +336,7 @@ if true then return {
       "ibhagwan/fzf-lua",              -- optional
     },
     keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
+    cmd = "Neogit",
     opts = {
       disable_insert_on_commit = false,
     },

@@ -7,10 +7,12 @@ return {
       if vim.g.neovide then
         -- colorscheme in neovide
         -- opts.colorscheme = "nordic"
-        opts.colorscheme = "astrolight"
+        -- opts.colorscheme = "astrolight"
+        opts.colorscheme = "embark"
       else
         -- colorscheme in terminal/otherwise
-        opts.colorscheme = "astrolight"
+        -- opts.colorscheme = "astrolight"
+        opts.colorscheme = "embark"
       end
     end,
 
@@ -26,6 +28,14 @@ return {
   -- -- Grouped Colorschemes below --
 
   -- these I haven't tried out/sorted yet
+
+  -- embark-theme
+  {
+    "embark-theme/vim",
+    name = "embark",
+    opts = {},
+  },
+
   -- < none atm. >
 
   -- most fav (but probably not always lol)
