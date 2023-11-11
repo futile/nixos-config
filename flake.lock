@@ -437,6 +437,7 @@
         "nixpkgs-master": "nixpkgs-master",
         "nixpkgs-pkgs-unstable": "nixpkgs-pkgs-unstable",
         "nixpkgs-unstable": "nixpkgs-unstable",
+        "wezterm-embark": "wezterm-embark",
         "wezterm-everforest": "wezterm-everforest"
       }
     },
@@ -482,6 +483,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "wezterm-embark": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1670152184,
+        "narHash": "sha256-i/rWs+6HBoLINapLKqsbN/Rttb9peEu2H3MFKaQvc5c=",
+        "owner": "dmshvetsov",
+        "repo": "wezterm-embark-theme",
+        "rev": "1fa0855058bd98dd2f36a2be361483560c3135d5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "dmshvetsov",
+        "repo": "wezterm-embark-theme",
         "type": "github"
       }
     },

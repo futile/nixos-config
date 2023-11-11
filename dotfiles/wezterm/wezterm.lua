@@ -15,7 +15,9 @@ return {
 	-- color_scheme = "Rosé Pine Moon (base16)",
 	-- color_scheme = "Rosé Pine Moon (Gogh)",
 	-- color_scheme = "rose-pine-dawn",
-	color_scheme = "Sakura (base16)",
+
+	-- color_scheme = "Sakura (base16)",
+	color_scheme = "embark",
 
 	font = wezterm.font_with_fallback({
 		-- "FantasqueSansM Nerd Font Mono", -- I just can't use this, not pleasent enough xd
