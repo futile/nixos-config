@@ -14,6 +14,7 @@
   "diffview.nvim": { "branch": "main", "commit": "d38c1b5266850f77f75e006bcc26213684e1e141" },
   "dressing.nvim": { "branch": "master", "commit": "fe3071330a0720ce3695ac915820c8134b22d1b0" },
   "earthly.vim": { "branch": "main", "commit": "66bf86d8292d71e6f2f5e8ea371471c9809efde6" },
+  "embark": { "branch": "main", "commit": "0e2c7d36b766dcebba2d8a3a0639784446dea086" },
   "everforest": { "branch": "master", "commit": "72f101bd63228a1a45012325e39c5280ec22c828" },
   "flash.nvim": { "branch": "main", "commit": "48817af25f51c0590653bbc290866e4890fe1cbe" },
   "friendly-snippets": { "branch": "main", "commit": "43727c2ff84240e55d4069ec3e6158d74cb534b6" },

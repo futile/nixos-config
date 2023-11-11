@@ -31,6 +31,9 @@ in {
   wayland.windowManager.hyprland = {
     enable = true;
     extraConfig = "source = ~/.config/hypr/local.conf";
+
+    # sets `NIXOS_OZONE_WL` at the time of writing (maybe more in the future :))
+    recommendedEnvironment = true;
   };
 
   xdg = {
