@@ -1,6 +1,14 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- ft .yuck (for eww)
+  { 'elkowar/yuck.vim' },
+
+  -- parinfer, for lisp (including yuck)
+  { 'eraserhd/parinfer-rust',
+    build = "nix-shell --run 'cargo build --release '"
+  },
+
   -- Use <tab> for completion and snippets (supertab)
   -- first: disable default <tab> and <s-tab> behavior in LuaSnip
   {
