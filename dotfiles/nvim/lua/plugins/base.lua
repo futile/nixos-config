@@ -149,15 +149,36 @@ if true then return {
   --   enable = false,
   -- },
 
-  -- add gh to Telescope
+  -- telescope settings
   {
-    "telescope.nvim",
+    "nvim-telescope/telescope.nvim",
+    -- add gh to Telescope
     dependencies = {
       "nvim-telescope/telescope-github.nvim",
       config = function()
         require("telescope").load_extension('gh')
       end,
     },
+    opts = function(_, opts)
+      local live_grep_with_hidden = function()
+        local action_state = require("telescope.actions.state")
+        local line = action_state.get_current_line()
+        require('telescope.builtin').live_grep({
+          additional_args = { '--hidden' },
+          default_text = line,
+        })
+      end
+
+      opts.pickers = vim.tbl_deep_extend("error", opts.pickers or {}, {
+        live_grep = {
+          mappings = {
+            i = {
+              ["<a-h>"] = live_grep_with_hidden,
+            },
+          },
+        }
+      })
+    end,
   },
 
   -- syntax highlighting etc. for `Earthfile`s
