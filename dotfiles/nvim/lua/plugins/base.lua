@@ -1,6 +1,21 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- copilot.lua
+  {
+    'zbirenbaum/copilot.lua',
+    -- enable more filetypes
+    opts = function(_, opts)
+      opts.filetypes = {
+        yaml = true,
+        markdown = true,
+        help = true,
+        gitcommit = true,
+        gitrebase = true,
+      }
+    end,
+  },
+
   -- ft .yuck (for eww)
   { 'elkowar/yuck.vim' },
 
@@ -73,6 +88,7 @@ if true then return {
       -- see ~/bin/wrap-codeium-nix-alien
       wrapper = "wrap-codeium-nix-alien",
     },
+    enabled = false,
   },
 
   -- nu support

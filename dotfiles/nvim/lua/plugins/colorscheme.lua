@@ -14,6 +14,8 @@ return {
         -- opts.colorscheme = "astrolight"
         opts.colorscheme = "embark"
       end
+      -- global override
+      -- opts.colorscheme = "pinkmare"
     end,
 
     -- opts = {
@@ -28,6 +30,23 @@ return {
   -- -- Grouped Colorschemes below --
 
   -- these I haven't tried out/sorted yet
+  -- oh-lucy
+  { "Yazeed1s/oh-lucy.nvim" },
+
+  -- mellifluous
+  -- `set background=dark/light` for dark/light variant
+  {
+    "ramojus/mellifluous.nvim",
+    config = true,
+  },
+
+  -- < none atm. >
+
+  -- most fav (but probably not always lol)
+  -- (somewhat ordered from most to least liked)
+
+  -- pinkmare
+  { "Matsuuu/pinkmare" },
 
   -- embark-theme
   {
@@ -35,11 +54,6 @@ return {
     name = "embark",
     opts = {},
   },
-
-  -- < none atm. >
-
-  -- most fav (but probably not always lol)
-  -- (somewhat ordered from most to least liked)
 
   -- https://github.com/rose-pine/neovim
   { "rose-pine/neovim" },

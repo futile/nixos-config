@@ -16,7 +16,8 @@ require("lazy").setup({
     -- { import = "lazyvim.plugins.extras.ui.mini-animate" },
     { import = "lazyvim.plugins.extras.editor.symbols-outline" },
     { import = "lazyvim.plugins.extras.lsp.none-ls" },
-    { import = "lazyvim.plugins.extras.coding.codeium" }, -- need to fix codeium setup with nix first xD
+    -- { import = "lazyvim.plugins.extras.coding.codeium" }, -- just wasn't very good :(
+    { import = "lazyvim.plugins.extras.coding.copilot" },
     -- import/override with your plugins
     { import = "plugins" },
   },
