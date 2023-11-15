@@ -14,5 +14,6 @@
     configDir = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/eww";
   };
 
-  home.packages = [ pkgs.wl-clipboard ];
+  # somewhat buggy with non-hyprland DE, i.e., gnome
+  # home.packages = [ pkgs.wl-clipboard ];
 }
