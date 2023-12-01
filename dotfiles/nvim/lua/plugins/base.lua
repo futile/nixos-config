@@ -1,6 +1,28 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- lsp file ops, i.e., rename -> lsp adjustments automatically
+  {
+    "antosha417/nvim-lsp-file-operations",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-neo-tree/neo-tree.nvim",
+    },
+    config = function()
+      require("lsp-file-operations").setup()
+    end,
+  },
+
+  -- preview colors inline
+  {
+    'NvChad/nvim-colorizer.lua' ,
+    opts = {
+      user_default_options = {
+        css = true,
+      }
+    },
+  },
+
   -- copilot.lua
   {
     'zbirenbaum/copilot.lua',
