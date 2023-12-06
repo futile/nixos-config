@@ -14,10 +14,14 @@
     };
 
     delta = {
-      enable = true;
+      enable = false;
       # options = {
       #   syntax-theme = "GitHub";
       # };
+    };
+
+    difftastic = {
+      enable = true;
     };
 
     lfs.enable = true;
