@@ -22,6 +22,7 @@
 
     difftastic = {
       enable = true;
+      # display = "inline"; # default is better imo, I think
     };
 
     lfs.enable = true;
