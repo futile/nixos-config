@@ -39,6 +39,9 @@
         # organization/todos etc.
         obsidian
 
+        # useful gui tools
+        wofi
+
         # useful cmdline-tools
         just
         dtrx
@@ -48,11 +51,22 @@
         lazygit
         lazydocker
         dig
+        tldr
+        jq
 
         # development
         conda
         sublime-merge
         dbeaver
+        scala-cli
+
+        # cargo tools
+        cargo-udeps
+        cargo-feature
+
+        # debugging stuff for hardware video accel
+        # gpu-viewer
+        # glxinfo
 
         # stuff I don't use atm
         # vscode
