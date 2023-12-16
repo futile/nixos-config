@@ -5,6 +5,13 @@ let
       ${attrName} = import over ({
         system = final.system;
         config.allowUnfree = true;
+
+        # obsidian 1.4.16 relies on an EOL electron version, so allow it for now.
+        # this will make sure that it will fail again if a newer version also relies
+        # on the old electron version, so the exemption won't be here forever.
+        # see https://github.com/NixOS/nixpkgs/issues/273611#issuecomment-1858755633
+        config.permittedInsecurePackages =
+          final.lib.optional (final.obsidian.version == "1.4.16") "electron-25.9.0";
       } // extraImportArgs);
     };
   nixos-unstable-overlay = mkNixpkgsOverlay {
