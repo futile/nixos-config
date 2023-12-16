@@ -74,8 +74,8 @@ in {
 
   time = {
     # Set your time zone.
-    # timeZone = "Europe/Berlin";
-    timeZone = "Asia/Bangkok";
+    timeZone = "Europe/Berlin";
+    # timeZone = "Asia/Bangkok";
 
     # For dualbooting with Windows
     hardwareClockInLocalTime = true;
