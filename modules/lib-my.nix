@@ -29,11 +29,14 @@ let
       unstable.metals
 
       # dhall
-      # unstable.dhall-lsp-server # currently (2023-08-19) broken
+      unstable.dhall-lsp-server # currently (2023-08-19) broken
 
       # lua
       stylua
       unstable.lua-language-server
+
+      # copilot
+      nodejs
     ];
 
   # reference: https://discourse.nixos.org/t/wrapping-packages/4431
