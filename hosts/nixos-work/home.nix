@@ -40,11 +40,6 @@ in {
       };
   };
 
-  # at the time of writing: for pointerCursor.gtk.enable
-  gtk = {
-    enable = true;
-  };
-
   home = {
     packages =
       # bound packages
@@ -104,15 +99,6 @@ in {
       [ ];
 
     sessionVariables = { EDITOR = "nvim"; };
-
-    pointerCursor = {
-      gtk.enable = true;
-      x11.enable = true;
-
-      package = pkgs.phinger-cursors;
-      name = "phinger-cursors-light";
-      size = 64;
-    };
 
     stateVersion = "22.11";
   };

@@ -89,5 +89,19 @@
     };
 
     sessionPath = [ "$HOME/.npm-packages/bin" ];
+
+    pointerCursor = {
+      gtk.enable = true;
+      x11.enable = true;
+
+      package = pkgs.phinger-cursors;
+      name = "phinger-cursors-light";
+      size = 64;
+    };
+  };
+
+  # at the time of writing: for pointerCursor.gtk.enable
+  gtk = {
+    enable = true;
   };
 }
