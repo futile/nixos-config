@@ -96,6 +96,7 @@
 
       package = pkgs.phinger-cursors;
       name = "phinger-cursors-light";
+
       size = 64;
     };
   };
