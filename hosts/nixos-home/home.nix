@@ -33,9 +33,7 @@ in {
         ccache
         gcc
         gdb
-      ]) ++
-      # packages from unstable
-      (with pkgs.unstable; [
+
         # messengers
         signal-desktop
         tdesktop
@@ -56,8 +54,6 @@ in {
         # hardware stuff
         v4l-utils # webcam utils
       ]) ++
-      # packages from master
-      (with pkgs.master; [ ]) ++
       # packages from other nixpkgs branches
       [ ];
 

@@ -1,6 +1,6 @@
 { config, pkgs, ... }:
 let
-  base-helix = pkgs.unstable.helix;
+  base-helix = pkgs.helix;
   helix-wrapped = pkgs.lib.my.mkWrappedWithDeps {
     pkg = base-helix;
     pathsToWrap = [ "bin/hx" ];
@@ -14,7 +14,7 @@ in
   };
 
   # for working system clipboard
-  home.packages = with pkgs.unstable; [ xsel ];
+  home.packages = with pkgs; [ xsel ];
 
   xdg = {
     enable = true;

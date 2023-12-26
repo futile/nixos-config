@@ -2,7 +2,7 @@
 # google-drive and keepassxc are currently intertwined, so set them up together
 let
   my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
-  my-keepassxc = pkgs.unstable.keepassxc;
+  my-keepassxc = pkgs.keepassxc;
 in
 {
   home.packages = [ my-google-drive-ocamlfuse my-keepassxc ];

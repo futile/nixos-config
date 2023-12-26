@@ -4,13 +4,18 @@
   inputs = {
     # nixpkgs = { url = "github:nixos/nixpkgs/nixos-23.05"; };
     nixpkgs = { url = "github:nixos/nixpkgs/nixos-unstable"; };
-    nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
+
+    # disabling this cause cause it's the same as `nixpkgs` atm (and it uses storage/network DL)
+    # nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
+    # nixpkgs-unstable = nixpkgs; # requires `inputs = rec {`. works, but duplicates the input, doesn't reference it
+
     nixpkgs-pkgs-unstable = { url = "github:nixos/nixpkgs/nixpkgs-unstable"; };
-    nixpkgs-master = { url = "github:nixos/nixpkgs/master"; };
+
+    # disabling this cause I don't need it currently (and it uses storage/network DL)
+    # nixpkgs-master = { url = "github:nixos/nixpkgs/master"; };
 
     # disabling this cause I didn't have a ~/gits/nixpkgs lying around
-    #nixpkgs-local = { url = "/home/felix/gits/nixpkgs"; };
-    nixpkgs-local = { url = "github:nixos/nixpkgs/nixos-23.05"; };
+    # nixpkgs-local = { url = "/home/felix/gits/nixpkgs"; };
 
     # for emacsGcc; see https://gist.github.com/mjlbach/179cf58e1b6f5afcb9a99d4aaf54f549
     emacs-overlay = { url = "github:nix-community/emacs-overlay"; };

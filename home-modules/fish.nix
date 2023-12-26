@@ -1,7 +1,7 @@
 { config, pkgs, flake-inputs, ... }: {
   programs.fish = {
     enable = true;
-    package = pkgs.unstable.fish;
+    package = pkgs.fish;
 
     plugins = [
       # Automatically sync environment variables set by sub-shells that are not fish.

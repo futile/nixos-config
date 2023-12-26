@@ -44,6 +44,7 @@ in {
   };
 
   # Shell must also be in `/etc/shells` or it might not work
+  # should be there by default, if we don't use one from another flake-input etc.
   # environment.shells = [ "${pkgs.unstable.fish}/bin/fish" ];
 
   # allow our user to use `nix`
@@ -137,7 +138,7 @@ in {
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    pkgs.unstable.fish # for the same reason it's also in `environment.shells`
+    pkgs.fish # for the same reason it's also in `environment.shells`
 
     wget
     bash

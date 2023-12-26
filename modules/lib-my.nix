@@ -17,8 +17,8 @@ let
       python3Packages.isort
 
       # nix
-      unstable.nil # nix lsp
-      unstable.nixd # better nix lsp?
+      nil # nix lsp
+      nixd # better nix lsp?
       nixpkgs-fmt
       # nixfmt # don't want this for now, nixpkgs-fmt is superior :)
 
@@ -26,14 +26,14 @@ let
       texlab
 
       # scala
-      unstable.metals
+      metals
 
       # dhall
-      unstable.dhall-lsp-server # currently (2023-08-19) broken
+      dhall-lsp-server # currently (2023-08-19) broken
 
       # lua
       stylua
-      unstable.lua-language-server
+      lua-language-server
 
       # copilot
       nodejs

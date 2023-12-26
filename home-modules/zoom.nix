@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 {
-  home.packages = [ pkgs.unstable.zoom-us ];
+  home.packages = [ pkgs.zoom-us ];
 
   # xdg = {
   # enable = true;

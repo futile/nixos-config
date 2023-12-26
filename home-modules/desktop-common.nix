@@ -9,15 +9,6 @@
         python3 # just for a quick shell, math etc.
         libreoffice # open word/excel/etc. files
 
-        # stuff I don't use atm
-        # procs # TODO move config from `nixos-home:~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
-        # sshuttle
-        # tree
-        # valgrind
-        # tilix
-      ]) ++
-      # packages from unstable
-      (with pkgs.unstable; [
         # music/sound
         spotify
         pavucontrol
@@ -74,9 +65,13 @@
         # xsettingsd
         # lxappearance
         # nitrogen
+        # procs # TODO move config from `nixos-home:~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
+        # sshuttle
+        # tree # just using `exa` now
+        # valgrind
+        # tilix
+
       ]) ++
-      # packages from master
-      (with pkgs.master; [ ]) ++
       # packages from other sources/nixpkgs branches
       [
         flake-inputs.nix-alien.packages.${system}.nix-alien

@@ -15,13 +15,11 @@
 
   programs.zoxide = {
     enable = true;
-    package = pkgs.unstable.zoxide;
   };
 
   programs.eza = {
     enable = true;
     # enableAliases = true;
-    package = pkgs.unstable.eza;
   };
 
   # nix-index
@@ -29,7 +27,7 @@
 
   programs.nnn = {
     enable = true;
-    package = pkgs.unstable.nnn.override ({ withNerdIcons = true; });
+    package = pkgs.nnn.override ({ withNerdIcons = true; });
   };
 
   programs.htop.enable = true;
@@ -37,7 +35,6 @@
   # the better htop
   programs.btop = {
     enable = true;
-    package = pkgs.unstable.btop;
   };
 
   # bat + config

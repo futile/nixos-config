@@ -1,8 +1,8 @@
 { config, pkgs, flake-inputs, ... }@ha:
 let
-  base-emacs = pkgs.unstable.emacs-unstable;
+  base-emacs = pkgs.emacs-unstable;
   emacs-with-pkgs =
-    (pkgs.unstable.emacsPackagesFor base-emacs).emacsWithPackages
+    (pkgs.emacsPackagesFor base-emacs).emacsWithPackages
       (epkgs: (with epkgs; [ vterm ]));
   emacs-wrapped-for-doom = pkgs.lib.my.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;

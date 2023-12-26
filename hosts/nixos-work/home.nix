@@ -50,10 +50,7 @@ in {
         ccache
         gcc
         gdb
-      ]) ++
-      # packages from unstable
-      (with pkgs.unstable;
-      [
+
         # messengers
         signal-desktop
         tdesktop

@@ -2,7 +2,7 @@
 let
   my-neovide = pkgs.symlinkJoin {
     name = "neovide";
-    paths = [ pkgs.unstable.neovide ];
+    paths = [ pkgs.neovide ];
     buildInputs = [ pkgs.makeWrapper ];
     # start neovide with `--multigrid --frame=none --maximized`
     # `home.sessionVariables` aren't picked up by graphical environments :(

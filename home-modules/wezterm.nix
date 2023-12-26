@@ -2,7 +2,7 @@
 
 {
   # rolling wezterm by hand, as I don't like the upstream home-manager module
-  home.packages = with pkgs.unstable; [
+  home.packages = with pkgs; [
     wezterm
     xsel # for system clipboard, because wezterm ignores clipboard escape codes for security reasons
   ];

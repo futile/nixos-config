@@ -4,7 +4,6 @@
   # starship prompt: https://starship.rs
   programs.starship = {
     enable = true;
-    package = pkgs.unstable.starship;
   };
 
   xdg = {
