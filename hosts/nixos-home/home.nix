@@ -67,6 +67,7 @@ in {
   };
 
   # see also system's 'default.nix'
+  # alternative I could use (only saw this later): https://gist.github.com/LnL7/ff53b4d209ff363b0d5b60c918147f4d
   systemd.user.services.x11-custom-auto-key-repeat = {
     Unit = {
       Description = "Change auto-repeat settings";
