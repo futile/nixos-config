@@ -1,6 +1,32 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
 if true then return {
+  -- let's try out harpoon: https://github.com/ThePrimeagen/harpoon/tree/harpoon2
+  {
+    "ThePrimeagen/harpoon",
+    branch = "harpoon2",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+    },
+    opts = {},
+    keys = function()
+      local harpoon = require("harpoon")
+
+      return {
+        { "<leader>a", function() harpoon:list():append() end },
+        { "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, desc = "Open harpoon window" },
+        { "<M-n>", function() harpoon:list():select(1) end },
+        { "<M-r>", function() harpoon:list():select(2) end },
+        { "<M-t>", function() harpoon:list():select(3) end },
+        { "<M-d>", function() harpoon:list():select(4) end },
+
+        -- Toggle previous & next buffers stored within Harpoon list
+        { "<M-g>", function() harpoon:list():prev() end },
+        { "<M-f>", function() harpoon:list():next() end },
+      }
+    end,
+  },
+
   -- lsp file ops, i.e., rename -> lsp adjustments automatically
   {
     "antosha417/nvim-lsp-file-operations",
