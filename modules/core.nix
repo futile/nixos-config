@@ -14,18 +14,26 @@ let
           final.lib.optional (final.obsidian.version == "1.4.16") "electron-25.9.0";
       } // extraImportArgs);
     };
-  nixos-unstable-overlay = mkNixpkgsOverlay {
-    attrName = "unstable";
-    over = flake-inputs.nixpkgs-unstable;
-    extraImportArgs = { overlays = [ flake-inputs.emacs-overlay.overlay ]; };
-  };
-  nixpkgs-master-overlay = mkNixpkgsOverlay {
-    attrName = "master";
-    over = flake-inputs.nixpkgs-master;
-  };
-  nixpkgs-local-overlay = mkNixpkgsOverlay {
-    attrName = "local";
-    over = flake-inputs.nixpkgs-local;
+  nixos-unstable-overlay = mkNixpkgsOverlay
+    {
+      attrName = "unstable";
+      over = flake-inputs.nixpkgs-unstable;
+      extraImportArgs = { overlays = [ flake-inputs.emacs-overlay.overlay ]; };
+    };
+  nixpkgs-master-overlay = mkNixpkgsOverlay
+    {
+      attrName = "master";
+      over = flake-inputs.nixpkgs-master;
+    };
+  nixpkgs-local-overlay = mkNixpkgsOverlay
+    {
+      attrName = "local";
+      over = flake-inputs.nixpkgs-local;
+    };
+  custom-packages-overlay = final: prev: {
+    my-custom-packages = {
+      phinger-cursors-extended = final.callPackage ../custom-packages/phinger-cursors-extended.nix { };
+    };
   };
 in
 {
@@ -34,7 +42,7 @@ in
 
   # add overlays for the different nixpkgs-versions
   nixpkgs.overlays =
-    [ nixos-unstable-overlay nixpkgs-master-overlay nixpkgs-local-overlay ];
+    [ nixos-unstable-overlay nixpkgs-master-overlay nixpkgs-local-overlay custom-packages-overlay ];
 
   # nix base config
   nix = {
@@ -69,3 +77,4 @@ in
     "unstable=${flake-inputs.nixpkgs-unstable}"
   ];
 }
+

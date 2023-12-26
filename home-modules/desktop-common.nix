@@ -94,8 +94,8 @@
       gtk.enable = true;
       x11.enable = true;
 
-      package = pkgs.phinger-cursors;
-      name = "phinger-cursors-light";
+      package = pkgs.my-custom-packages.phinger-cursors-extended;
+      name = "phinger-cursors-light-extended";
 
       size = 64;
     };

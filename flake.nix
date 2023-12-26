@@ -78,6 +78,11 @@
       system = "x86_64-linux";
     in
     {
+      packages.${system} = {
+        # these are here mostly for debugging, for actual use I base on the `nixpkgs`-instance of a configured system, see overlay in `core.nix`.
+        phinger-cursors-extended = nixpkgs.legacyPackages.${system}.callPackage ./custom-packages/phinger-cursors-extended.nix { };
+      };
+
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
         inherit system;
 
