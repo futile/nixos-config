@@ -117,6 +117,10 @@ in {
     ConditionVirtualization=none
   '';
 
+  # NOTE: workaround to prevent auto-login from crashing, see https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-945091229
+  systemd.services."getty@tty1".enable = false;
+  systemd.services."autovt@tty1".enable = false;
+
   # Enable the X11 windowing system.
   services.xserver = {
     enable = true;
@@ -129,7 +133,7 @@ in {
       # because we have encrypted ZFS, and thus already enter a password during boot
       autoLogin = {
         enable =
-          false; # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
+          true; # needs the workaround from above to not break my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
         user = "felix";
       };
 
@@ -143,6 +147,7 @@ in {
         # nvidiaWayland = true;
       };
     };
+
     desktopManager.gnome.enable = true;
 
     # disabling this for now, not using it anyway.
@@ -150,7 +155,7 @@ in {
 
     # fast(er) key repeat
     # seem not to work!
-    autoRepeatDelay = 190;
+    autoRepeatDelay = 150;
     autoRepeatInterval = 30;
 
     # Enable touchpad support (enabled default in most desktopManager).
