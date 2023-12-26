@@ -155,6 +155,7 @@ in {
 
     # fast(er) key repeat
     # seem not to work!
+    # See `nixos-home` for an x11-alternative using a systemd service to run `xset`.
     autoRepeatDelay = 150;
     autoRepeatInterval = 30;
 

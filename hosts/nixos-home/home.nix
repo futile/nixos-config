@@ -65,4 +65,37 @@ in {
 
     stateVersion = "22.05";
   };
+
+  # see also system's 'default.nix'
+  systemd.user.services.x11-custom-auto-key-repeat = {
+    Unit = {
+      Description = "Change auto-repeat settings";
+      PartOf = [ "graphical-session.target" ];
+    };
+
+    Service = {
+      Type = "oneshot";
+      ExecStart =
+        let
+          script-name = "run-xset-script";
+          script-pkg = pkgs.writeShellApplication {
+            name = script-name;
+
+            text = ''
+              set -euo pipefail
+              set -o xtrace
+
+              xset r rate 150 30
+            '';
+
+            # not even required, but here for reference :)
+            # runtimeInputs = [ pkgs.xlibs.xset ];
+          };
+        in
+        "${script-pkg}/bin/${script-name}";
+      RemainAfterExit = true;
+    };
+
+    Install = { WantedBy = [ "graphical-session.target" ]; };
+  };
 }
