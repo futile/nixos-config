@@ -40,13 +40,15 @@ update-doom-packages:
 
 # Build and show what changes would be activated (i.e., services)
 dry-activate:
-    # TODO: maybe use `--download-speed` for throttling?
-    # TODO: maybe also limit CPU-usage somewhat, maybe with a switch?
     sudo nixos-rebuild dry-activate
 
 # Build the system configuration to `./result`
 build:
     nixos-rebuild build
+
+# Build the system configuration, but throttle CPU, download-speed and run nice'd.
+build-throttled:
+    nice -n 19 nix --download-speed 1000 --max-substitution-jobs 1 build .#nixosConfigurations.$(hostname).config.system.build.toplevel
 
 # Check the flake using `nix flake check`
 check:
