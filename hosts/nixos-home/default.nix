@@ -147,6 +147,11 @@ in {
         # so disable for now.
         # nvidiaWayland = true;
       };
+
+      # try 34679 at making auto key repeat work..
+      sessionCommands = ''
+        xset r rate 150 30
+      '';
     };
 
     desktopManager.gnome.enable = true;
@@ -157,8 +162,8 @@ in {
     # fast(er) key repeat
     # seem not to work!
     # See `nixos-home` for an x11-alternative using a systemd service to run `xset`.
-    autoRepeatDelay = 150;
-    autoRepeatInterval = 30;
+    # autoRepeatDelay = 150;
+    # autoRepeatInterval = 30;
 
     # Enable touchpad support (enabled default in most desktopManager).
     # libinput.enable = true;
