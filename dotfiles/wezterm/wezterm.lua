@@ -30,6 +30,10 @@ return {
 
 	hide_tab_bar_if_only_one_tab = true,
 
+	-- force_reverse_video_cursor = true,
+
+	-- anti_alias_custom_block_glyphs = false,
+
 	colors = {
 		tab_bar = {},
 	},
