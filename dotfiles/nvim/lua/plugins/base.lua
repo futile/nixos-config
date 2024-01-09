@@ -1,520 +1,547 @@
 -- since this is just an example spec, don't actually load anything here and return an empty spec
 -- stylua: ignore
-if true then return {
-  -- let's try out harpoon: https://github.com/ThePrimeagen/harpoon/tree/harpoon2
-  {
-    "ThePrimeagen/harpoon",
-    branch = "harpoon2",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
+if true then
+  local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
+
+  return {
+    -- optimizations for big files - https://github.com/LunarVim/bigfile.nvim
+    {
+      "LunarVim/bigfile.nvim",
+      opts = {},
     },
-    opts = {},
-    keys = function()
-      local harpoon = require("harpoon")
 
-      return {
-        { "<leader>a", function() harpoon:list():append() end },
-        { "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, desc = "Open harpoon window" },
-        { "<M-n>", function() harpoon:list():select(1) end },
-        { "<M-r>", function() harpoon:list():select(2) end },
-        { "<M-t>", function() harpoon:list():select(3) end },
-        { "<M-d>", function() harpoon:list():select(4) end },
+    -- let's try out harpoon: https://github.com/ThePrimeagen/harpoon/tree/harpoon2
+    {
+      "ThePrimeagen/harpoon",
+      branch = "harpoon2",
+      dependencies = {
+        "nvim-lua/plenary.nvim",
+      },
+      opts = {},
+      keys = function()
+        local harpoon = require("harpoon")
 
-        -- Toggle previous & next buffers stored within Harpoon list
-        { "<M-g>", function() harpoon:list():prev() end },
-        { "<M-f>", function() harpoon:list():next() end },
-      }
-    end,
-  },
+        return {
+          { "<leader>a", function() harpoon:list():append() end },
+          { "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, desc = "Open harpoon window" },
+          { "<M-n>", function() harpoon:list():select(1) end },
+          { "<M-r>", function() harpoon:list():select(2) end },
+          { "<M-t>", function() harpoon:list():select(3) end },
+          { "<M-d>", function() harpoon:list():select(4) end },
 
-  -- lsp file ops, i.e., rename -> lsp adjustments automatically
-  {
-    "antosha417/nvim-lsp-file-operations",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      "nvim-neo-tree/neo-tree.nvim",
-    },
-    config = function()
-      require("lsp-file-operations").setup()
-    end,
-  },
-
-  -- preview colors inline
-  {
-    'NvChad/nvim-colorizer.lua' ,
-    opts = {
-      user_default_options = {
-        css = true,
-      }
-    },
-  },
-
-  -- copilot.lua
-  {
-    'zbirenbaum/copilot.lua',
-    -- enable more filetypes
-    opts = function(_, opts)
-      opts.filetypes = {
-        yaml = true,
-        markdown = true,
-        help = true,
-        gitcommit = true,
-        gitrebase = true,
-      }
-    end,
-  },
-
-  -- ft .yuck (for eww)
-  { 'elkowar/yuck.vim' },
-
-  -- parinfer, for lisp (including yuck)
-  { 'eraserhd/parinfer-rust',
-    build = "nix-shell --run 'cargo build --release '"
-  },
-
-  -- Use <tab> for completion and snippets (supertab)
-  -- first: disable default <tab> and <s-tab> behavior in LuaSnip
-  {
-    "L3MON4D3/LuaSnip",
-    keys = function()
-      return {}
-    end,
-  },
-  -- tabout.nvim
-  {
-    'abecodes/tabout.nvim',
-    requires = {
-      "nvim-treesitter/nvim-treesitter",
-    },
-    -- opts = {},
-    opts = function(_, opts)
-      local has_words_before = function()
-        unpack = unpack or table.unpack
-        local line, col = unpack(vim.api.nvim_win_get_cursor(0))
-        return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match("%s") == nil
-      end
-
-      local luasnip = require("luasnip")
-      local cmp = require("cmp")
-
-      local base_table = {}
-      if (opts['mapping'] ~= nil) then
-        base_table = opts.mapping
-      end
-
-      opts.mapping = vim.tbl_extend("force", base_table, {
-        ["<Tab>"] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.select_next_item()
-            -- You could replace the expand_or_jumpable() calls with expand_or_locally_jumpable()
-            -- this way you will only jump inside the snippet region
-          elseif luasnip.expand_or_jumpable() then
-            luasnip.expand_or_jump()
-          elseif has_words_before() then
-            cmp.complete()
-          else
-            fallback()
-          end
-        end, { "i", "s" }),
-        ["<S-Tab>"] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.select_prev_item()
-          elseif luasnip.jumpable(-1) then
-            luasnip.jump(-1)
-          else
-            fallback()
-          end
-        end, { "i", "s" }),
-      })
-    end,
-  },
-
-  -- codeium config, to support the downloaded LSP
-  {
-    "Exafunction/codeium.nvim",
-    opts = {
-      -- see ~/bin/wrap-codeium-nix-alien
-      wrapper = "wrap-codeium-nix-alien",
-    },
-    enabled = false,
-  },
-
-  -- nu support
-  -- required a manual `:TSInstall nu` once
-  {
-    'LhKipp/nvim-nu',
-    opts = {},
-  },
-
-  -- Octo.nvim <3
-  {
-    'pwntester/octo.nvim',
-    requires = {
-      'nvim-lua/plenary.nvim',
-      'nvim-telescope/telescope.nvim',
-      'nvim-tree/nvim-web-devicons',
-    },
-    opts = {
-      enable_builtin = true,
-    },
-    keys = {
-       { "<leader>gO", "<cmd>Octo<cr>", desc = "Octo" },
-    }
-  },
-
-  -- (postgres)-SQL interface based on vim-dadbod
-  {
-    'kristijanhusak/vim-dadbod-ui',
-    dependencies = {
-      { 'tpope/vim-dadbod', lazy = true },
-      { 'kristijanhusak/vim-dadbod-completion', ft = { 'sql', 'mysql', 'plsql' }, lazy = true },
-    },
-    cmd = {
-      'DBUI',
-      'DBUIToggle',
-      'DBUIAddConnection',
-      'DBUIFindBuffer',
-    },
-    init = function()
-      -- Your DBUI configuration
-      vim.g.db_ui_use_nerd_fonts = 1
-    end,
-  },
-
-  -- auto pairs
-  -- BROKEN
-  -- {
-  --   'altermo/ultimate-autopair.nvim',
-  --   event={'InsertEnter','CmdlineEnter'},
-  --   branch='v0.6',
-  --   opts={
-  --     --Config goes here
-  --   },
-  -- },
-  -- disable lazyvim default instead
-  -- {
-  --   "echasnovski/mini.pairs",
-  --   enable = false,
-  -- },
-
-  -- telescope settings
-  {
-    "nvim-telescope/telescope.nvim",
-    -- add gh to Telescope
-    dependencies = {
-      "nvim-telescope/telescope-github.nvim",
-      config = function()
-        require("telescope").load_extension('gh')
+          -- Toggle previous & next buffers stored within Harpoon list
+          { "<M-g>", function() harpoon:list():prev() end },
+          { "<M-f>", function() harpoon:list():next() end },
+        }
       end,
     },
-    opts = function(_, opts)
-      local live_grep_with_hidden = function()
-        local action_state = require("telescope.actions.state")
-        local line = action_state.get_current_line()
-        require('telescope.builtin').live_grep({
-          additional_args = { '--hidden' },
-          default_text = line,
-        })
-      end
 
-      opts.pickers = vim.tbl_deep_extend("error", opts.pickers or {}, {
-        live_grep = {
-          mappings = {
-            i = {
-              ["<a-h>"] = live_grep_with_hidden,
-            },
-          },
+    -- lsp file ops, i.e., rename -> lsp adjustments automatically
+    {
+      "antosha417/nvim-lsp-file-operations",
+      dependencies = {
+        "nvim-lua/plenary.nvim",
+        "nvim-neo-tree/neo-tree.nvim",
+      },
+      config = function()
+        require("lsp-file-operations").setup()
+      end,
+    },
+
+    -- preview colors inline
+    {
+      'NvChad/nvim-colorizer.lua' ,
+      opts = {
+        user_default_options = {
+          css = true,
         }
-      })
-    end,
-  },
+      },
+    },
 
-  -- syntax highlighting etc. for `Earthfile`s
-  { 'earthly/earthly.vim', },
+    -- copilot.lua
+    {
+      'zbirenbaum/copilot.lua',
+      -- enable more filetypes
+      opts = function(_, opts)
+        opts.filetypes = {
+          yaml = true,
+          markdown = true,
+          help = true,
+          gitcommit = true,
+          gitrebase = true,
+        }
+      end,
+    },
 
-  -- open files on github/gitlab
-  {
-    'Almo7aya/openingh.nvim',
-    opts = {},
-  },
+    -- ft .yuck (for eww)
+    { 'elkowar/yuck.vim' },
 
-  -- typescript lsp & config
-  { import = "lazyvim.plugins.extras.lang.typescript" },
+    -- parinfer, for lisp (including yuck)
+    { 'eraserhd/parinfer-rust',
+      build = "nix-shell --run 'cargo build --release '"
+    },
 
-  -- rust lsp
-  {
-    'simrat39/rust-tools.nvim',
-    opts = {
-      server = {
-        settings = {
-          ['rust-analyzer'] = {
-            cargo = {
-              extraArgs = { "--profile", "rust-analyzer" }
+    -- snippet editing & creation: https://github.com/chrisgrieser/nvim-scissors
+    {
+      "chrisgrieser/nvim-scissors",
+      dependencies = "nvim-telescope/telescope.nvim", -- optional
+      opts = {
+        snippetDir = snippetsDir,
+      },
+    },
+
+    -- Use <tab> for completion and snippets (supertab)
+    -- first: disable default <tab> and <s-tab> behavior in LuaSnip
+    {
+      "L3MON4D3/LuaSnip",
+      config = function()
+        require("luasnip.loaders.from_vscode").lazy_load({ paths = { snippetsDir } })
+      end,
+    },
+
+    -- tabout.nvim -- didn't really use this, let's disable it.
+    -- Use <tab> for completion and snippets (supertab)
+    -- first: disable default <tab> and <s-tab> behavior in LuaSnip
+    -- {
+    --   "L3MON4D3/LuaSnip",
+    --   keys = function()
+    --     return {}
+    --   end,
+    -- },
+    -- {
+    --   'abecodes/tabout.nvim',
+    --   requires = {
+    --     "nvim-treesitter/nvim-treesitter",
+    --   },
+    --   -- opts = {},
+    --   opts = function(_, opts)
+    --     local has_words_before = function()
+    --       unpack = unpack or table.unpack
+    --       local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+    --       return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match("%s") == nil
+    --     end
+    --
+    --     local luasnip = require("luasnip")
+    --     local cmp = require("cmp")
+    --
+    --     local base_table = {}
+    --     if (opts['mapping'] ~= nil) then
+    --       base_table = opts.mapping
+    --     end
+    --
+    --     opts.mapping = vim.tbl_extend("force", base_table, {
+    --       ["<Tab>"] = cmp.mapping(function(fallback)
+    --         if cmp.visible() then
+    --           cmp.select_next_item()
+    --           -- You could replace the expand_or_jumpable() calls with expand_or_locally_jumpable()
+    --           -- this way you will only jump inside the snippet region
+    --         elseif luasnip.expand_or_jumpable() then
+    --           luasnip.expand_or_jump()
+    --         elseif has_words_before() then
+    --           cmp.complete()
+    --         else
+    --           fallback()
+    --         end
+    --       end, { "i", "s" }),
+    --       ["<S-Tab>"] = cmp.mapping(function(fallback)
+    --         if cmp.visible() then
+    --           cmp.select_prev_item()
+    --         elseif luasnip.jumpable(-1) then
+    --           luasnip.jump(-1)
+    --         else
+    --           fallback()
+    --         end
+    --       end, { "i", "s" }),
+    --     })
+    --   end,
+    -- },
+
+    -- codeium config, to support the downloaded LSP
+    {
+      "Exafunction/codeium.nvim",
+      opts = {
+        -- see ~/bin/wrap-codeium-nix-alien
+        wrapper = "wrap-codeium-nix-alien",
+      },
+      enabled = false,
+    },
+
+    -- nu support
+    -- required a manual `:TSInstall nu` once
+    {
+      'LhKipp/nvim-nu',
+      opts = {},
+    },
+
+    -- Octo.nvim <3
+    {
+      'pwntester/octo.nvim',
+      requires = {
+        'nvim-lua/plenary.nvim',
+        'nvim-telescope/telescope.nvim',
+        'nvim-tree/nvim-web-devicons',
+      },
+      opts = {
+        enable_builtin = true,
+      },
+      keys = {
+        { "<leader>gO", "<cmd>Octo<cr>", desc = "Octo" },
+      }
+    },
+
+    -- (postgres)-SQL interface based on vim-dadbod
+    {
+      'kristijanhusak/vim-dadbod-ui',
+      dependencies = {
+        { 'tpope/vim-dadbod', lazy = true },
+        { 'kristijanhusak/vim-dadbod-completion', ft = { 'sql', 'mysql', 'plsql' }, lazy = true },
+      },
+      cmd = {
+        'DBUI',
+        'DBUIToggle',
+        'DBUIAddConnection',
+        'DBUIFindBuffer',
+      },
+      init = function()
+        -- Your DBUI configuration
+        vim.g.db_ui_use_nerd_fonts = 1
+      end,
+    },
+
+    -- auto pairs
+    -- BROKEN
+    -- {
+    --   'altermo/ultimate-autopair.nvim',
+    --   event={'InsertEnter','CmdlineEnter'},
+    --   branch='v0.6',
+    --   opts={
+    --     --Config goes here
+    --   },
+    -- },
+    -- disable lazyvim default instead
+    -- {
+    --   "echasnovski/mini.pairs",
+    --   enable = false,
+    -- },
+
+    -- telescope settings
+    {
+      "nvim-telescope/telescope.nvim",
+      -- add gh to Telescope
+      dependencies = {
+        "nvim-telescope/telescope-github.nvim",
+        config = function()
+          require("telescope").load_extension('gh')
+        end,
+      },
+      opts = function(_, opts)
+        local live_grep_with_hidden = function()
+          local action_state = require("telescope.actions.state")
+          local line = action_state.get_current_line()
+          require('telescope.builtin').live_grep({
+            additional_args = { '--hidden' },
+            default_text = line,
+          })
+        end
+
+        opts.pickers = vim.tbl_deep_extend("error", opts.pickers or {}, {
+          live_grep = {
+            mappings = {
+              i = {
+                ["<a-h>"] = live_grep_with_hidden,
+              },
             },
-            -- need to specify it for all `cargo`-invocations (as above), it seems
-            -- check = {
-            --   extraArgs = { "--profile", "rust-analyzer" }
-            -- },
-            -- checkOnSave = {
-            --   extraArgs = { "--profile", "rust-analyzer" }
-            -- },
+          }
+        })
+      end,
+    },
+
+    -- syntax highlighting etc. for `Earthfile`s
+    { 'earthly/earthly.vim', },
+
+    -- open files on github/gitlab
+    {
+      'Almo7aya/openingh.nvim',
+      opts = {},
+    },
+
+    -- typescript lsp & config
+    { import = "lazyvim.plugins.extras.lang.typescript" },
+
+    -- rust lsp
+    {
+      'simrat39/rust-tools.nvim',
+      opts = {
+        server = {
+          settings = {
+            ['rust-analyzer'] = {
+              cargo = {
+                extraArgs = { "--profile", "rust-analyzer" }
+              },
+              -- need to specify it for all `cargo`-invocations (as above), it seems
+              -- check = {
+              --   extraArgs = { "--profile", "rust-analyzer" }
+              -- },
+              -- checkOnSave = {
+              --   extraArgs = { "--profile", "rust-analyzer" }
+              -- },
+            },
           },
         },
       },
     },
-  },
 
-  -- yank-ring etc.
-  { import = "lazyvim.plugins.extras.coding.yanky" },
-  {
-    "gbprod/yanky.nvim",
-    opts = {
-      ring = {
-        storage = "shada", -- "sqlite" needs extra config on Nix, don't have it yet
-      },
-    },
-  },
-  {
-    "kkharji/sqlite.lua",
-    enabled = false, -- needs extra config on Nix, see above
-  },
-
-  -- telescope settings
-  {
-    "nvim-telescope/telescope.nvim",
-    keys = {
-      -- this respects tab-cwd better in my experience.
-      { "<leader><space>", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
-    },
-  },
-
-  -- projects for neovim
-  { import = "lazyvim.plugins.extras.util.project" },
-  {
-    "ahmedkhalf/project.nvim",
-    keys = {
-      -- open the projects picker in a new tab, because I scope tabs to projects.
-      { "<leader>fp", "<Cmd>:tabnew | Telescope projects<CR>", desc = "Projects" },
-    },
-    opts = {
-      silent_chdir = false,
-      scope_chdir = "tab",
-      -- "pattern" before "lsp", to avoid "subprojects"
-      detection_methods = { "pattern", "lsp" },
-      -- don't want stuff like "package.json" in here, also to avoid subprojects
-      patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", },
-    },
-  },
-
-  -- bufferline
-  {
-    "akinsho/bufferline.nvim",
-    opts = {
-      options = {
-        always_show_bufferline = true,
-        -- mode = "tabs", -- just trying this out.. - don't like it, need another way for named tabs.
-      },
-    },
-  },
-
-  -- per-tab buffers
-  {
-    "tiagovla/scope.nvim",
-    event = "VeryLazy",
-    opts = {},
-  },
-
-  -- for neovide, otherwise it crashes when entering cmd mode with ":" :(
-  {
-    "folke/noice.nvim",
-    enabled = false,
-  },
-
-  -- LSP config feat. lspconfig
-  {
-    "neovim/nvim-lspconfig",
-    ---@class PluginLspOpts
-    opts = {
-      -- ---@type lspconfig.options -- doesn't work/throws warnings
-      servers = {
-        -- these will be automatically installed with mason and loaded with lspconfig
-
-        -- using nvim-metals instead
-        -- metals = {},
-
-        -- nix ls
-        -- nil_ls = {},
-        nixd = {}, -- this is supposed to be better I think
-
-        -- lua ls
-        lua_ls = {
-          -- don't install this with mason, we install with nix
-          mason = false,
+    -- yank-ring etc.
+    { import = "lazyvim.plugins.extras.coding.yanky" },
+    {
+      "gbprod/yanky.nvim",
+      opts = {
+        ring = {
+          storage = "shada", -- "sqlite" needs extra config on Nix, don't have it yet
         },
       },
     },
-  },
-
-  -- Metals setup with the official plugin
-  {
-    "scalameta/nvim-metals",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
+    {
+      "kkharji/sqlite.lua",
+      enabled = false, -- needs extra config on Nix, see above
     },
-    ft = {"scala", "sbt", "java"},
-    config = function(_, _)
-      -- ref: https://github.com/ornicar/dotfiles/blob/crom/nvim/lua/plugins/metals.lua
 
-      local metals = require("metals")
-      local metals_config = metals.bare_config()
-      metals_config.settings = {
-        showImplicitArguments = true,
-        showInferredType = true,
-        excludedPackages = {},
-        useGlobalExecutable = true,
-      }
-
-      -- make sure to have "g:metals_status" or an equivalent in the status bar
-      metals_config.init_options = {
-        statusBarProvider = "on",
-        decorationProvider = true,
-        -- doesn't work with nvim-metals yet (2023-09-21)
-        -- inlineDecorationProvider = true,
-      }
-
-      metals_config.capabilities = require("cmp_nvim_lsp").default_capabilities()
-
-      metals_config.on_attach = function(client, bufnr)
-        require("lsp-format").on_attach(client, bufnr)
-      end
-
-      -- Autocmd that will actually be in charge of starting the whole thing
-      local nvim_metals_group = vim.api.nvim_create_augroup("nvim-metals", { clear = true })
-      vim.api.nvim_create_autocmd("FileType", {
-        pattern = { "scala", "sbt", "java" },
-        callback = function()
-          metals.initialize_or_attach(metals_config)
-        end,
-        group = nvim_metals_group,
-      })
-    end,
-  },
-
-  -- lualine (status line)
-  {
-    "nvim-lualine/lualine.nvim",
-    event = "VeryLazy",
-    opts = function(_, opts)
-      table.remove(opts.sections.lualine_x, 1) -- remove command
-      table.remove(opts.sections.lualine_x, 3) -- remove lazy update count
-      table.insert(opts.sections.lualine_x, 'g:metals_status')
-    end,
-  },
-
-  -- Diffview https://github.com/sindrets/diffview.nvim
-  { "sindrets/diffview.nvim",
-    keys = {
-      { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Open Diffview" }
-    },
-    opts = {},
-  },
-
-  -- neogit - magit for neovim
-  {
-    'NeogitOrg/neogit',
-    dependencies = {
-      "nvim-lua/plenary.nvim",         -- required
-      "nvim-telescope/telescope.nvim", -- optional
-      "sindrets/diffview.nvim",        -- optional
-      "ibhagwan/fzf-lua",              -- optional
-    },
-    keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
-    cmd = "Neogit",
-    opts = {
-      disable_insert_on_commit = false,
-    },
-  },
-
-  -- TODO: figure out how to use this on nixos
-  -- add telescope-fzf-native
-  -- {
-  --   "telescope.nvim",
-  --   dependencies = {
-  --     "nvim-telescope/telescope-fzf-native.nvim",
-  --     build = "make",
-  --     config = function()
-  --       require("telescope").load_extension("fzf")
-  --     end,
-  --   },
-  -- },
-
-  -- add more treesitter parsers
-  {
-    "nvim-treesitter/nvim-treesitter",
-    opts = {
-      ensure_installed = {
-        "bash",
-        "html",
-        "javascript",
-        "json",
-        "lua",
-        "markdown",
-        "markdown_inline",
-        "python",
-        -- "query",
-        "regex",
-        "tsx",
-        "typescript",
-        "vim",
-        "yaml",
-        "scala",
-        "rust",
-        "css",
-        "dhall",
-        "dockerfile",
-        "fish",
-        "nix",
-        "prisma",
-        "sql",
-        "terraform",
+    -- telescope settings
+    {
+      "nvim-telescope/telescope.nvim",
+      keys = {
+        -- this respects tab-cwd better in my experience.
+        { "<leader><space>", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
       },
     },
-  },
 
-  -- dunno how to do this together with lazyvim, also see `nvim-lazy.nix`
-  -- add more treesitter parsers
-  -- {
-  --   "nvim-treesitter/nvim-treesitter",
-  --   opts = {
-  --     ensure_installed = {
-  --       "bash",
-  --       "html",
-  --       "javascript",
-  --       "json",
-  --       "lua",
-  --       "markdown",
-  --       "markdown_inline",
-  --       "python",
-  --       "query",
-  --       "regex",
-  --       "tsx",
-  --       "typescript",
-  --       "vim",
-  --       "yaml",
-  --       "scala",
-  --       "rust",
-  --       "css",
-  --       "dhall",
-  --       "dockerfile",
-  --       "fish",
-  --       "nix",
-  --       "prisma",
-  --       "sql",
-  --       "terraform",
-  --     },
-  --   },
-  -- },
-} end
+    -- projects for neovim
+    { import = "lazyvim.plugins.extras.util.project" },
+    {
+      "ahmedkhalf/project.nvim",
+      keys = {
+        -- open the projects picker in a new tab, because I scope tabs to projects.
+        { "<leader>fp", "<Cmd>:tabnew | Telescope projects<CR>", desc = "Projects" },
+      },
+      opts = {
+        silent_chdir = false,
+        scope_chdir = "tab",
+        -- "pattern" before "lsp", to avoid "subprojects"
+        detection_methods = { "pattern", "lsp" },
+        -- don't want stuff like "package.json" in here, also to avoid subprojects
+        patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", },
+      },
+    },
+
+    -- bufferline
+    {
+      "akinsho/bufferline.nvim",
+      opts = {
+        options = {
+          always_show_bufferline = true,
+          -- mode = "tabs", -- just trying this out.. - don't like it, need another way for named tabs.
+        },
+      },
+    },
+
+    -- per-tab buffers
+    {
+      "tiagovla/scope.nvim",
+      event = "VeryLazy",
+      opts = {},
+    },
+
+    -- for neovide, otherwise it crashes when entering cmd mode with ":" :(
+    {
+      "folke/noice.nvim",
+      enabled = false,
+    },
+
+    -- LSP config feat. lspconfig
+    {
+      "neovim/nvim-lspconfig",
+      ---@class PluginLspOpts
+      opts = {
+        -- ---@type lspconfig.options -- doesn't work/throws warnings
+        servers = {
+          -- these will be automatically installed with mason and loaded with lspconfig
+
+          -- using nvim-metals instead
+          -- metals = {},
+
+          -- nix ls
+          -- nil_ls = {},
+          nixd = {}, -- this is supposed to be better I think
+
+          -- lua ls
+          lua_ls = {
+            -- don't install this with mason, we install with nix
+            mason = false,
+          },
+        },
+      },
+    },
+
+    -- Metals setup with the official plugin
+    {
+      "scalameta/nvim-metals",
+      dependencies = {
+        "nvim-lua/plenary.nvim",
+      },
+      ft = {"scala", "sbt", "java"},
+      config = function(_, _)
+        -- ref: https://github.com/ornicar/dotfiles/blob/crom/nvim/lua/plugins/metals.lua
+
+        local metals = require("metals")
+        local metals_config = metals.bare_config()
+        metals_config.settings = {
+          showImplicitArguments = true,
+          showInferredType = true,
+          excludedPackages = {},
+          useGlobalExecutable = true,
+        }
+
+        -- make sure to have "g:metals_status" or an equivalent in the status bar
+        metals_config.init_options = {
+          statusBarProvider = "on",
+          decorationProvider = true,
+          -- doesn't work with nvim-metals yet (2023-09-21)
+          -- inlineDecorationProvider = true,
+        }
+
+        metals_config.capabilities = require("cmp_nvim_lsp").default_capabilities()
+
+        metals_config.on_attach = function(client, bufnr)
+          require("lsp-format").on_attach(client, bufnr)
+        end
+
+        -- Autocmd that will actually be in charge of starting the whole thing
+        local nvim_metals_group = vim.api.nvim_create_augroup("nvim-metals", { clear = true })
+        vim.api.nvim_create_autocmd("FileType", {
+          pattern = { "scala", "sbt", "java" },
+          callback = function()
+            metals.initialize_or_attach(metals_config)
+          end,
+          group = nvim_metals_group,
+        })
+      end,
+    },
+
+    -- lualine (status line)
+    {
+      "nvim-lualine/lualine.nvim",
+      event = "VeryLazy",
+      opts = function(_, opts)
+        table.remove(opts.sections.lualine_x, 1) -- remove command
+        table.remove(opts.sections.lualine_x, 3) -- remove lazy update count
+        table.insert(opts.sections.lualine_x, 'g:metals_status')
+      end,
+    },
+
+    -- Diffview https://github.com/sindrets/diffview.nvim
+    { "sindrets/diffview.nvim",
+      keys = {
+        { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Open Diffview" }
+      },
+      opts = {},
+    },
+
+    -- neogit - magit for neovim
+    {
+      'NeogitOrg/neogit',
+      dependencies = {
+        "nvim-lua/plenary.nvim",         -- required
+        "nvim-telescope/telescope.nvim", -- optional
+        "sindrets/diffview.nvim",        -- optional
+        "ibhagwan/fzf-lua",              -- optional
+      },
+      keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
+      cmd = "Neogit",
+      opts = {
+        disable_insert_on_commit = false,
+      },
+    },
+
+    -- TODO: figure out how to use this on nixos
+    -- add telescope-fzf-native
+    -- {
+    --   "telescope.nvim",
+    --   dependencies = {
+    --     "nvim-telescope/telescope-fzf-native.nvim",
+    --     build = "make",
+    --     config = function()
+    --       require("telescope").load_extension("fzf")
+    --     end,
+    --   },
+    -- },
+
+    -- add more treesitter parsers
+    {
+      "nvim-treesitter/nvim-treesitter",
+      opts = {
+        ensure_installed = {
+          "bash",
+          "html",
+          "javascript",
+          "json",
+          "lua",
+          "markdown",
+          "markdown_inline",
+          "python",
+          -- "query",
+          "regex",
+          "tsx",
+          "typescript",
+          "vim",
+          "yaml",
+          "scala",
+          "rust",
+          "css",
+          "dhall",
+          "dockerfile",
+          "fish",
+          "nix",
+          "prisma",
+          "sql",
+          "terraform",
+        },
+      },
+    },
+
+    -- dunno how to do this together with lazyvim, also see `nvim-lazy.nix`
+    -- add more treesitter parsers
+    -- {
+    --   "nvim-treesitter/nvim-treesitter",
+    --   opts = {
+    --     ensure_installed = {
+    --       "bash",
+    --       "html",
+    --       "javascript",
+    --       "json",
+    --       "lua",
+    --       "markdown",
+    --       "markdown_inline",
+    --       "python",
+    --       "query",
+    --       "regex",
+    --       "tsx",
+    --       "typescript",
+    --       "vim",
+    --       "yaml",
+    --       "scala",
+    --       "rust",
+    --       "css",
+    --       "dhall",
+    --       "dockerfile",
+    --       "fish",
+    --       "nix",
+    --       "prisma",
+    --       "sql",
+    --       "terraform",
+    --     },
+    --   },
+    -- },
+  } end
 
 -- every spec file under the "plugins" directory will be loaded automatically by lazy.nvim
 --
