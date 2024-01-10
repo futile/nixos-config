@@ -25,6 +25,11 @@ let
       # tex
       texlab
 
+      # typst
+      typst-lsp
+      typstfmt
+      # typst-live
+
       # scala
       metals
 

@@ -4,6 +4,33 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+  -- typst lsp, nil lsp
+    {
+      "neovim/nvim-lspconfig",
+      ---@class PluginLspOpts
+      opts = {
+        -- ---@type lspconfig.options
+        servers = {
+          typst_lsp = {
+            mason = false,
+            settings = {
+              exportPdf = "onType",
+            },
+          },
+          nil_ls = {
+            mason = false,
+            settings = {
+              ["nil"] = {
+                formatting = {
+                  command = { "nixpkgs-fmt" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
     -- disable these, I use Nix
     {
       "williamboman/mason-lspconfig.nvim",
