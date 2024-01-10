@@ -352,9 +352,10 @@ if true then
     },
 
     -- for neovide, otherwise it crashes when entering cmd mode with ":" :(
+    -- fixed! :D
     {
       "folke/noice.nvim",
-      enabled = false,
+      enabled = true,
     },
 
     -- LSP config feat. lspconfig
