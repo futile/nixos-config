@@ -4,6 +4,16 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- disable these, I use Nix
+    {
+      "williamboman/mason-lspconfig.nvim",
+      enabled = false,
+    },
+    {
+      "williamboman/mason.nvim",
+      enabled = false,
+    },
+
     -- optimizations for big files - https://github.com/LunarVim/bigfile.nvim
     {
       "LunarVim/bigfile.nvim",
@@ -372,13 +382,13 @@ if true then
 
           -- nix ls
           -- nil_ls = {},
-          nixd = {}, -- this is supposed to be better I think
+          -- nixd = {}, -- this is supposed to be better I think
 
           -- lua ls
-          lua_ls = {
-            -- don't install this with mason, we install with nix
-            mason = false,
-          },
+          -- lua_ls = {
+          --   -- don't install this with mason, we install with nix
+          --   mason = false,
+          -- },
         },
       },
     },

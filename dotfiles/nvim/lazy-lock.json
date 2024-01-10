@@ -43,6 +43,7 @@
   "neodev.nvim": { "branch": "main", "commit": "be8d4d4cab6c13c6a572269c9d6a63774baba9a0" },
   "neogit": { "branch": "master", "commit": "faf78f21dcab87f92a8fd5021a3394257aeddc69" },
   "neovim": { "branch": "main", "commit": "67b03139fe43f1fcd03cb34620ec3d41eb407793" },
+  "noice.nvim": { "branch": "main", "commit": "92433164e2f7118d4122c7674c3834d9511722ba" },
   "none-ls.nvim": { "branch": "main", "commit": "fbdcbf8e152529af846b3a333f039751829b84c2" },
   "nordic.nvim": { "branch": "main", "commit": "5e8d79cd0dde9c7238f65f05b6d37d3d2bbab9f2" },
   "nui.nvim": { "branch": "main", "commit": "35da9ca1de0fc4dda96c2e214d93d363c145f418" },
