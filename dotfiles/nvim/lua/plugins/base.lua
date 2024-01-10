@@ -1,10 +1,9 @@
--- since this is just an example spec, don't actually load anything here and return an empty spec
--- stylua: ignore
+-- -- stylua: ignore -- I want formatting, damn it!
 if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
-  -- typst lsp, nil lsp
+    -- typst lsp, nil lsp
     {
       "neovim/nvim-lspconfig",
       ---@class PluginLspOpts
@@ -26,6 +25,9 @@ if true then
                 },
               },
             },
+          },
+          lua_ls = {
+            mason = false,
           },
         },
       },
@@ -58,6 +60,7 @@ if true then
       keys = function()
         local harpoon = require("harpoon")
 
+        -- stylua: ignore
         return {
           { "<leader>a", function() harpoon:list():append() end },
           { "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, desc = "Open harpoon window" },
@@ -87,17 +90,17 @@ if true then
 
     -- preview colors inline
     {
-      'NvChad/nvim-colorizer.lua' ,
+      "NvChad/nvim-colorizer.lua",
       opts = {
         user_default_options = {
           css = true,
-        }
+        },
       },
     },
 
     -- copilot.lua
     {
-      'zbirenbaum/copilot.lua',
+      "zbirenbaum/copilot.lua",
       -- enable more filetypes
       opts = function(_, opts)
         opts.filetypes = {
@@ -111,12 +114,10 @@ if true then
     },
 
     -- ft .yuck (for eww)
-    { 'elkowar/yuck.vim' },
+    { "elkowar/yuck.vim" },
 
     -- parinfer, for lisp (including yuck)
-    { 'eraserhd/parinfer-rust',
-      build = "nix-shell --run 'cargo build --release '"
-    },
+    { "eraserhd/parinfer-rust", build = "nix-shell --run 'cargo build --release '" },
 
     -- snippet editing & creation: https://github.com/chrisgrieser/nvim-scissors
     {
@@ -206,38 +207,38 @@ if true then
     -- nu support
     -- required a manual `:TSInstall nu` once
     {
-      'LhKipp/nvim-nu',
+      "LhKipp/nvim-nu",
       opts = {},
     },
 
     -- Octo.nvim <3
     {
-      'pwntester/octo.nvim',
+      "pwntester/octo.nvim",
       requires = {
-        'nvim-lua/plenary.nvim',
-        'nvim-telescope/telescope.nvim',
-        'nvim-tree/nvim-web-devicons',
+        "nvim-lua/plenary.nvim",
+        "nvim-telescope/telescope.nvim",
+        "nvim-tree/nvim-web-devicons",
       },
       opts = {
         enable_builtin = true,
       },
       keys = {
         { "<leader>gO", "<cmd>Octo<cr>", desc = "Octo" },
-      }
+      },
     },
 
     -- (postgres)-SQL interface based on vim-dadbod
     {
-      'kristijanhusak/vim-dadbod-ui',
+      "kristijanhusak/vim-dadbod-ui",
       dependencies = {
-        { 'tpope/vim-dadbod', lazy = true },
-        { 'kristijanhusak/vim-dadbod-completion', ft = { 'sql', 'mysql', 'plsql' }, lazy = true },
+        { "tpope/vim-dadbod", lazy = true },
+        { "kristijanhusak/vim-dadbod-completion", ft = { "sql", "mysql", "plsql" }, lazy = true },
       },
       cmd = {
-        'DBUI',
-        'DBUIToggle',
-        'DBUIAddConnection',
-        'DBUIFindBuffer',
+        "DBUI",
+        "DBUIToggle",
+        "DBUIAddConnection",
+        "DBUIFindBuffer",
       },
       init = function()
         -- Your DBUI configuration
@@ -268,15 +269,15 @@ if true then
       dependencies = {
         "nvim-telescope/telescope-github.nvim",
         config = function()
-          require("telescope").load_extension('gh')
+          require("telescope").load_extension("gh")
         end,
       },
       opts = function(_, opts)
         local live_grep_with_hidden = function()
           local action_state = require("telescope.actions.state")
           local line = action_state.get_current_line()
-          require('telescope.builtin').live_grep({
-            additional_args = { '--hidden' },
+          require("telescope.builtin").live_grep({
+            additional_args = { "--hidden" },
             default_text = line,
           })
         end
@@ -288,17 +289,17 @@ if true then
                 ["<a-h>"] = live_grep_with_hidden,
               },
             },
-          }
+          },
         })
       end,
     },
 
     -- syntax highlighting etc. for `Earthfile`s
-    { 'earthly/earthly.vim', },
+    { "earthly/earthly.vim" },
 
     -- open files on github/gitlab
     {
-      'Almo7aya/openingh.nvim',
+      "Almo7aya/openingh.nvim",
       opts = {},
     },
 
@@ -307,13 +308,13 @@ if true then
 
     -- rust lsp
     {
-      'simrat39/rust-tools.nvim',
+      "simrat39/rust-tools.nvim",
       opts = {
         server = {
           settings = {
-            ['rust-analyzer'] = {
+            ["rust-analyzer"] = {
               cargo = {
-                extraArgs = { "--profile", "rust-analyzer" }
+                extraArgs = { "--profile", "rust-analyzer" },
               },
               -- need to specify it for all `cargo`-invocations (as above), it seems
               -- check = {
@@ -366,7 +367,7 @@ if true then
         -- "pattern" before "lsp", to avoid "subprojects"
         detection_methods = { "pattern", "lsp" },
         -- don't want stuff like "package.json" in here, also to avoid subprojects
-        patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", },
+        patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn" },
       },
     },
 
@@ -395,38 +396,13 @@ if true then
       enabled = true,
     },
 
-    -- LSP config feat. lspconfig
-    {
-      "neovim/nvim-lspconfig",
-      ---@class PluginLspOpts
-      opts = {
-        -- ---@type lspconfig.options -- doesn't work/throws warnings
-        servers = {
-          -- these will be automatically installed with mason and loaded with lspconfig
-
-          -- using nvim-metals instead
-          -- metals = {},
-
-          -- nix ls
-          -- nil_ls = {},
-          -- nixd = {}, -- this is supposed to be better I think
-
-          -- lua ls
-          -- lua_ls = {
-          --   -- don't install this with mason, we install with nix
-          --   mason = false,
-          -- },
-        },
-      },
-    },
-
     -- Metals setup with the official plugin
     {
       "scalameta/nvim-metals",
       dependencies = {
         "nvim-lua/plenary.nvim",
       },
-      ft = {"scala", "sbt", "java"},
+      ft = { "scala", "sbt", "java" },
       config = function(_, _)
         -- ref: https://github.com/ornicar/dotfiles/blob/crom/nvim/lua/plugins/metals.lua
 
@@ -472,26 +448,27 @@ if true then
       opts = function(_, opts)
         table.remove(opts.sections.lualine_x, 1) -- remove command
         table.remove(opts.sections.lualine_x, 3) -- remove lazy update count
-        table.insert(opts.sections.lualine_x, 'g:metals_status')
+        table.insert(opts.sections.lualine_x, "g:metals_status")
       end,
     },
 
     -- Diffview https://github.com/sindrets/diffview.nvim
-    { "sindrets/diffview.nvim",
+    {
+      "sindrets/diffview.nvim",
       keys = {
-        { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Open Diffview" }
+        { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Open Diffview" },
       },
       opts = {},
     },
 
     -- neogit - magit for neovim
     {
-      'NeogitOrg/neogit',
+      "NeogitOrg/neogit",
       dependencies = {
-        "nvim-lua/plenary.nvim",         -- required
+        "nvim-lua/plenary.nvim", -- required
         "nvim-telescope/telescope.nvim", -- optional
-        "sindrets/diffview.nvim",        -- optional
-        "ibhagwan/fzf-lua",              -- optional
+        "sindrets/diffview.nvim", -- optional
+        "ibhagwan/fzf-lua", -- optional
       },
       keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
       cmd = "Neogit",
@@ -787,8 +764,8 @@ return {
         ["<Tab>"] = cmp.mapping(function(fallback)
           if cmp.visible() then
             cmp.select_next_item()
-            -- You could replace the expand_or_jumpable() calls with expand_or_locally_jumpable()
-            -- this way you will only jump inside the snippet region
+          -- You could replace the expand_or_jumpable() calls with expand_or_locally_jumpable()
+          -- this way you will only jump inside the snippet region
           elseif luasnip.expand_or_jumpable() then
             luasnip.expand_or_jump()
           elseif has_words_before() then
