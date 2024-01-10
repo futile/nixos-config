@@ -33,12 +33,12 @@ in
   # Allow unfree packages.
   nixpkgs.config.allowUnfree = true;
 
-  # NOTE: obsidian 1.4.16 relies on an EOL electron version, so allow it for now.
+  # NOTE: obsidian 1.4.16, 1.5.3 rely on an EOL electron version, so allow it for now.
   # this will make sure that it will fail again if a newer version also relies
   # on the old electron version, so the exemption won't be here forever.
   # see https://github.com/NixOS/nixpkgs/issues/273611#issuecomment-1858755633
   nixpkgs.config.permittedInsecurePackages =
-    lib.optional (pkgs.obsidian.version == "1.4.16") "electron-25.9.0";
+    lib.optional (pkgs.obsidian.version == "1.5.3") "electron-25.9.0";
 
   # nix base config
   nix = {
