@@ -3,6 +3,12 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- overseer, task runner
+    {
+      "stevearc/overseer.nvim",
+      opts = {},
+    },
+
     -- typst lsp, nil lsp
     {
       "neovim/nvim-lspconfig",
@@ -449,6 +455,7 @@ if true then
         table.remove(opts.sections.lualine_x, 1) -- remove command
         table.remove(opts.sections.lualine_x, 3) -- remove lazy update count
         table.insert(opts.sections.lualine_x, "g:metals_status")
+        table.insert(opts.sections.lualine_x, "overseer")
       end,
     },
 
