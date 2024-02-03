@@ -221,7 +221,10 @@ in {
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
   # Enable CUPS to print documents.
-  # services.printing.enable = true;
+  services.printing = {
+    enable = true;
+    drivers = [ pkgs.samsung-unified-linux-driver ];
+  };
 
   # virtualisation.virtualbox = {
   #   host.enable = true;
