@@ -3,9 +3,9 @@
   console.keyMap = "neo";
 
   # Configure keymap in X11
-  services.xserver = {
+  services.xserver.xkb = {
     layout = "de,de";
-    xkbVariant = "neo,basic";
+    variant = "neo,basic";
     # xkbOptions = "grp:menu_toggle"; # 'menu_toggle' -> context-menu key
   };
 }
