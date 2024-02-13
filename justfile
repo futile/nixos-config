@@ -42,9 +42,9 @@ update-doom-packages:
 dry-activate:
     sudo nixos-rebuild dry-activate
 
-# Build the system configuration to `./result`
+# Build the system configuration to `./result` (`nice`'d)
 build:
-    nixos-rebuild build
+    nice -n 19 nixos-rebuild build
 
 # Build the system configuration, but throttle CPU, download-speed and run nice'd.
 build-throttled:
