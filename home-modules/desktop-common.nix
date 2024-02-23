@@ -44,6 +44,7 @@
         dig
         tldr
         jq
+        kondo # for cleaning (old) build artifacts, cache folders etc. interactively
 
         # development
         conda
