@@ -2,8 +2,13 @@
 
 {
   # direnv & nix-direnv
-  programs.direnv.enable = true;
-  programs.direnv.nix-direnv.enable = true;
+  programs.direnv = {
+    enable = true;
+    nix-direnv.enable = true;
+
+    # can't just symlink it, because `nix-direnv` also writes to it.
+    stdlib = "source ${thisFlakePath}/dotfiles/direnv/direnvrc.sh";
+  };
 
   programs.fzf = {
     enable = true;
