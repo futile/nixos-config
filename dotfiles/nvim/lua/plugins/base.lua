@@ -3,6 +3,17 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    --  vim-matchup [improved % motion]
+    --  https://github.com/andymass/vim-matchup
+    {
+      "andymass/vim-matchup",
+      -- event = "VeryLazy",
+      config = function()
+        vim.g.matchup_matchparen_deferred = 1 -- work async
+        vim.g.matchup_matchparen_offscreen = {} -- disable status bar icon
+      end,
+    },
+
     -- overseer, task runner
     {
       "stevearc/overseer.nvim",
@@ -500,6 +511,9 @@ if true then
     -- add more treesitter parsers
     {
       "nvim-treesitter/nvim-treesitter",
+      dependencies = {
+        "andymass/vim-matchup",
+      },
       opts = {
         ensure_installed = {
           "bash",
@@ -526,6 +540,11 @@ if true then
           "prisma",
           "sql",
           "terraform",
+        },
+        matchup = {
+          enable = true,
+          enable_quotes = true,
+          include_match_words = true,
         },
       },
     },
