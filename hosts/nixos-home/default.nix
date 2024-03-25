@@ -191,7 +191,7 @@ in {
 
     # monitoring
     lm_sensors
-    nvtop
+    nvtopPackages.full
     cachix # just use cachix system-wide
 
     # vpn stuff
