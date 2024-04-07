@@ -79,7 +79,7 @@ if true then
 
         -- stylua: ignore
         return {
-          { "<leader>a", function() harpoon:list():append() end },
+          { "<leader>a", function() harpoon:list():add() end },
           { "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, desc = "Open harpoon window" },
           { "<M-n>", function() harpoon:list():select(1) end },
           { "<M-r>", function() harpoon:list():select(2) end },
