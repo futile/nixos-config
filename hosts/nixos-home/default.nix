@@ -169,6 +169,17 @@ in {
     # libinput.enable = true;
   };
 
+  # give me steam (wanna try PD2)
+  # from https://wiki.nixos.org/wiki/Steam
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true; # Open ports in the firewall for Steam Remote Play
+    dedicatedServer.openFirewall = true; # Open ports in the firewall for Source Dedicated Server
+    extraCompatPackages = with pkgs; [
+      proton-ge-bin
+    ];
+  };
+
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
@@ -197,6 +208,9 @@ in {
     # vpn stuff
     openvpn
     gnome.networkmanager-openvpn
+
+    # for steam etc.
+    protontricks
   ];
 
   services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
