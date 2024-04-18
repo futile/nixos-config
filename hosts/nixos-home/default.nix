@@ -122,6 +122,13 @@ in {
   systemd.services."getty@tty1".enable = false;
   systemd.services."autovt@tty1".enable = false;
 
+  # because we have encrypted ZFS, and thus already enter a password during boot
+  services.displayManager.autoLogin = {
+    # needs the workaround from above to not break my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
+    enable = true;
+    user = "felix";
+  };
+
   # Enable the X11 windowing system.
   services.xserver = {
     enable = true;
@@ -131,13 +138,6 @@ in {
 
     # Enable gdm & GNOME 3 Desktop Environment.
     displayManager = {
-      # because we have encrypted ZFS, and thus already enter a password during boot
-      autoLogin = {
-        enable =
-          true; # needs the workaround from above to not break my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
-        user = "felix";
-      };
-
       gdm = {
         enable = true;
         # We don't want wayland for now; e.g. screensharing doesn't work (well)
