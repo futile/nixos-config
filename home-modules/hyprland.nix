@@ -7,7 +7,6 @@
 
   programs.eww = {
     enable = true;
-    package = pkgs.eww-wayland;
     configDir = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/eww";
   };
 
