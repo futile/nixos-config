@@ -49,7 +49,7 @@
         # development
         conda
         sublime-merge
-        dbeaver
+        dbeaver-bin
         scala-cli
 
         # cargo tools
