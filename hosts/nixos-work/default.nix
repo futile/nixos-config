@@ -98,13 +98,6 @@ in {
 
     # Enable gdm & GNOME 3 Desktop Environment.
     displayManager = {
-      # because we have encrypted ZFS, and thus already enter a password during boot
-      autoLogin = {
-        enable =
-          false; # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
-        user = "felix";
-      };
-
       gdm = {
         enable = true;
         wayland = true;
@@ -127,10 +120,17 @@ in {
     # seem not to work!
     autoRepeatDelay = 190;
     autoRepeatInterval = 30;
-
-    # Enable touchpad support (enabled default in most desktopManager).
-    libinput.enable = true;
   };
+
+  # because we have encrypted ZFS, and thus already enter a password during boot
+  services.displayManager.autoLogin = {
+    enable =
+      false; # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
+    user = "felix";
+  };
+
+  # Enable touchpad support (enabled default in most desktopManager).
+  services.libinput.enable = true;
 
   # also enable hyprand
   programs.hyprland.enable = true;

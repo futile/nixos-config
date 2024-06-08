@@ -1,7 +1,7 @@
 { config, pkgs, thisFlakePath, ... }: {
   programs.nushell = {
     enable = true;
-    package = pkgs.nushellFull;
+    package = pkgs.nushell;
 
     # We want the generate config files to be used (they are also written to
     # by zoxide, direnv, etc.'s configs, but we also want our shared files to
