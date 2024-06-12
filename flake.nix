@@ -33,7 +33,7 @@
     };
 
     hyprland = {
-      url = "github:hyprwm/Hyprland";
+      url = "git+https://github.com/hyprwm/Hyprland?submodules=1";
     };
 
     fish-foreign-env = {
@@ -65,6 +65,8 @@
       url = "github:dmshvetsov/wezterm-embark-theme";
       flake = false;
     };
+
+    wezterm-git.url = "github:wez/wezterm?dir=nix";
   };
 
   outputs = { self, nixpkgs, ... }@inputs:
@@ -109,6 +111,11 @@
         modules = baseModules ++ [
           # "draw the rest of the owl"
           ./hosts/nixos-work
+          # use wezterm from git, because unstable currently fails to start on wayland
+          ({ config, flake-inputs, system, ... }: {
+            nixpkgs.overlays =
+              [ (final: prev: { wezterm = flake-inputs.wezterm-git.packages.${prev.system}.default; }) ];
+          })
         ];
       };
     };
