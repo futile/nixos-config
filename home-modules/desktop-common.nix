@@ -51,6 +51,7 @@
         sublime-merge
         dbeaver-bin
         scala-cli
+        earthly
 
         # cargo tools
         cargo-udeps
