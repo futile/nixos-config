@@ -3,6 +3,15 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    --  precognition.nvim [shows where `w`, `e`, etc. will jump]
+    --  https://github.com/tris203/precognition.nvim
+    {
+      "tris203/precognition.nvim",
+      opts = {
+        startVisible = false,
+      },
+    },
+
     --  vim-matchup [improved % motion]
     --  https://github.com/andymass/vim-matchup
     {

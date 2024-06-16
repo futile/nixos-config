@@ -4,12 +4,12 @@ let
     name = "neovide";
     paths = [ pkgs.neovide ];
     buildInputs = [ pkgs.makeWrapper ];
-    # start neovide with `--multigrid --frame=none --maximized`
+    # start neovide with `--fork --frame=none --maximized`
     # `home.sessionVariables` aren't picked up by graphical environments :(
     postBuild = ''
       wrapProgram $out/bin/neovide \
-        --set-default NEOVIDE_MULTIGRID "1" \
         --set-default NEOVIDE_FRAME "none" \
+        --set-default NEOVIDE_FORK "1" \
         --set-default NEOVIDE_MAXIMIZED "1"
     '';
   };
