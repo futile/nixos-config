@@ -16,7 +16,7 @@ let
       python3Packages.pyflakes
       python3Packages.isort
       ruff-lsp
-      nodePackages.pyright
+      pyright
 
       # nix
       nil # nix lsp
