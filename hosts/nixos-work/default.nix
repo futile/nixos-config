@@ -29,6 +29,9 @@ in {
       # docker
       "${modules}/docker.nix"
 
+      # ausweisapp
+      "${modules}/ausweisapp.nix"
+
       # user-configuration with home-manager
       "${modules}/home-manager.nix"
 
