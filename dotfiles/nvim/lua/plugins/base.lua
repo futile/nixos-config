@@ -90,10 +90,11 @@ if true then
         return {
           { "<leader>a", function() harpoon:list():add() end },
           { "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, desc = "Open harpoon window" },
-          { "<M-n>", function() harpoon:list():select(1) end },
-          { "<M-r>", function() harpoon:list():select(2) end },
-          { "<M-t>", function() harpoon:list():select(3) end },
-          { "<M-d>", function() harpoon:list():select(4) end },
+          -- <M-n> already bound to "Next Reference"
+          -- { "<M-n>", function() harpoon:list():select(1) end },
+          { "<M-r>", function() harpoon:list():select(1) end },
+          { "<M-t>", function() harpoon:list():select(2) end },
+          { "<M-d>", function() harpoon:list():select(3) end },
 
           -- Toggle previous & next buffers stored within Harpoon list
           { "<M-g>", function() harpoon:list():prev() end },
