@@ -14,7 +14,8 @@
   # Default console font
   console.font = "Lat2-Terminus16";
 
-  hardware.opengl = {
+  # Used to be `hardware.opengl`
+  hardware.graphics = {
     enable = true;
     extraPackages = with pkgs; [
       vaapiVdpau
