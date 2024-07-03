@@ -3,6 +3,13 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- tokyonight colorscheme, from folke
+    {
+      "folke/tokyonight.nvim",
+      lazy = false,
+      priority = 1000,
+      opts = {},
+    },
     --  precognition.nvim [shows where `w`, `e`, etc. will jump]
     --  https://github.com/tris203/precognition.nvim
     {
