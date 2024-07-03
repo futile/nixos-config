@@ -51,8 +51,7 @@
     cpu.amd.updateMicrocode = true;
 
     # from https://github.com/NixOS/nixpkgs/issues/111189#issuecomment-932985131
-    opengl = {
-      driSupport = true;
+    graphics = {
       extraPackages = with pkgs; [
         amdvlk
         rocm-opencl-icd
@@ -76,4 +75,6 @@
       };
     };
   };
+  # have to disable this, as the two conflict.
+  services.power-profiles-daemon.enable = false;
 }
