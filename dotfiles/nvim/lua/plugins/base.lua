@@ -133,19 +133,19 @@ if true then
     },
 
     -- copilot.lua
-    {
-      "zbirenbaum/copilot.lua",
-      -- enable more filetypes
-      opts = function(_, opts)
-        opts.filetypes = {
-          yaml = true,
-          markdown = true,
-          help = true,
-          gitcommit = true,
-          gitrebase = true,
-        }
-      end,
-    },
+    -- {
+    --   "zbirenbaum/copilot.lua",
+    --   -- enable more filetypes
+    --   opts = function(_, opts)
+    --     opts.filetypes = {
+    --       yaml = true,
+    --       markdown = true,
+    --       help = true,
+    --       gitcommit = true,
+    --       gitrebase = true,
+    --     }
+    --   end,
+    -- },
 
     -- ft .yuck (for eww)
     { "elkowar/yuck.vim" },
