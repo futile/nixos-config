@@ -137,7 +137,10 @@ in {
     enable = true;
 
     # nvidia let's go
-    videoDrivers = [ "nvidia" "nouveau" ];
+    videoDrivers = [
+      "nvidia"
+      #"nouveau" 
+    ];
 
     # Enable gdm & GNOME 3 Desktop Environment.
     displayManager = {

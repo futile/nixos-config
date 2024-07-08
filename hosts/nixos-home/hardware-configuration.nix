@@ -23,6 +23,14 @@
     ++ # from `sudo sensors-detect`
     [ "coretemp" "nct6775" ];
 
+  # for fixing some NVIDIA/NVK-stuff, maybe (see https://discourse.nixos.org/t/drm-kernel-driver-nvidia-drm-in-use-nvk-requires-nouveau/42222/18)
+  # actually I think this caused a kernel bug in the nvidia-driver that crashed my pc when waking up from suspend
+  # boot.kernelParams = [ "nvidia-drm.fbdev=1" ];
+  # hardware.nvidia.modesetting.enable = true;
+  # alternative (also from that thread/linked somewhere):
+  # this one works :)
+  environment.sessionVariables.VK_DRIVER_FILES = "/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json";
+
   # care; this might need something like:
   # `with config.boot.kernelPackages;`
   # see https://nixos.wiki/wiki/Linux_kernel#Custom_kernel_modules
