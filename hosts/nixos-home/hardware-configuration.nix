@@ -31,6 +31,17 @@
   # this one works :)
   environment.sessionVariables.VK_DRIVER_FILES = "/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json";
 
+  # see https://nixos.wiki/wiki/Nvidia#Modifying_NixOS_Configuration
+  hardware.nvidia = {
+    modesetting.enable = true;
+
+    # trying to fix crashes when resuming from suspend
+    # but did not work :(
+    powerManagement.enable = true;
+
+    nvidiaSettings = true;
+  };
+
   # care; this might need something like:
   # `with config.boot.kernelPackages;`
   # see https://nixos.wiki/wiki/Linux_kernel#Custom_kernel_modules
