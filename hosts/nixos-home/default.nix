@@ -197,8 +197,8 @@ in {
     coreutils
     git
     rsync
-    gnome3.dconf-editor
-    gnome3.adwaita-icon-theme
+    dconf-editor
+    adwaita-icon-theme
     gnomeExtensions.appindicator
     gnomeExtensions.pop-shell
     gnomeExtensions.pop-launcher-super-key

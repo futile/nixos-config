@@ -37,7 +37,8 @@
         just
         dtrx
         tokei
-        magic-wormhole
+        # magic-wormhole # broken atm, due to python 3.12 bump; I opened https://github.com/NixOS/nixpkgs/issues/325854
+        magic-wormhole-rs
         trippy
         lazygit
         lazydocker
