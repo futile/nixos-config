@@ -368,6 +368,18 @@ if true then
       "mrcjkb/rustaceanvim",
       opts = {
         server = {
+          -- this replaces the default keybindings, see https://www.lazyvim.org/extras/lang/rust#rustaceanvim
+          on_attach = function(_, bufnr)
+            vim.keymap.set("n", "<leader>cR", function()
+              vim.cmd.RustLsp("codeAction")
+            end, { desc = "Code Action", buffer = bufnr })
+            vim.keymap.set("n", "<leader>rr", function()
+              vim.cmd.RustLsp("runnables")
+            end, { desc = "Rust Runnables", buffer = bufnr })
+            vim.keymap.set("n", "<C-r>", function()
+              vim.cmd.RustLsp({ "run", bang = true })
+            end, { desc = "Rust Rerun Last Runnable", buffer = bufnr })
+          end,
           default_settings = {
             -- rust-analyzer language server configuration
             ["rust-analyzer"] = {
