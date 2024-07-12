@@ -32,15 +32,37 @@
   environment.sessionVariables.VK_DRIVER_FILES = "/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json";
 
   # see https://nixos.wiki/wiki/Nvidia#Modifying_NixOS_Configuration
+  # and https://discourse.nixos.org/t/all-nividia-drivers-crash-or-do-not-work/47427/7?u=futile
   hardware.nvidia = {
+    # seems this like should almost always be enabled.
     modesetting.enable = true;
 
     # trying to fix crashes when resuming from suspend
     # but did not work :(
     powerManagement.enable = true;
+    powerManagement.finegrained = false;
 
+    # just enable the `nvidia-settings` tool; should be default, but why not explicitly.
     nvidiaSettings = true;
+
+    # not supported for my GPU :( https://github.com/NVIDIA/open-gpu-kernel-modules#compatible-gpus
+    # (i.e., system won't boot/switch into graphical mode when booting)
+    open = false;
+
+    # this one (535) fixes my crash after resume-from-suspend! :tada:
+    # See:
+    # https://github.com/NixOS/nixpkgs/blob/feb2849fdeb70028c70d73b848214b00d324a497/pkgs/os-specific/linux/nvidia-x11/default.nix#L108-L119
+    # https://bbs.archlinux.org/viewtopic.php?pid=2155426#p2155426
+    # https://discourse.nixos.org/t/random-freeze-of-system/44766
+    package = config.boot.kernelPackages.nvidiaPackages.legacy_535;
   };
+
+  # nvidia let's go
+  services.xserver.videoDrivers = [
+    "nvidia"
+    #"nouveau" 
+  ];
+
 
   # care; this might need something like:
   # `with config.boot.kernelPackages;`

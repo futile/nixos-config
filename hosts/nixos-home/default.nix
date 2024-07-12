@@ -136,12 +136,6 @@ in {
   services.xserver = {
     enable = true;
 
-    # nvidia let's go
-    videoDrivers = [
-      "nvidia"
-      #"nouveau" 
-    ];
-
     # Enable gdm & GNOME 3 Desktop Environment.
     displayManager = {
       gdm = {
