@@ -39,7 +39,9 @@
 
     # trying to fix crashes when resuming from suspend
     # but did not work :(
-    powerManagement.enable = true;
+    # setting to false again, sometimes also helps it seems - 2024-07-14
+    # Yep, seems to actually help!! :tada: - 2024-07-15
+    powerManagement.enable = false;
     powerManagement.finegrained = false;
 
     # just enable the `nvidia-settings` tool; should be default, but why not explicitly.
@@ -54,6 +56,7 @@
     # https://github.com/NixOS/nixpkgs/blob/feb2849fdeb70028c70d73b848214b00d324a497/pkgs/os-specific/linux/nvidia-x11/default.nix#L108-L119
     # https://bbs.archlinux.org/viewtopic.php?pid=2155426#p2155426
     # https://discourse.nixos.org/t/random-freeze-of-system/44766
+    # - Sadly did not fix it, I think :( let's observe for now - 2024-07-14
     package = config.boot.kernelPackages.nvidiaPackages.legacy_535;
   };
 
