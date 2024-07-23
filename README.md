@@ -11,6 +11,7 @@ The general layout of this repository is as follows:
 * `module/` contains NixOS-modules related to individual things, i.e., ZFS or docker configuration. These are meant to be reusable, and are built upon by the hosts in `hosts/`.
 * `home-modules/` contains home-manager modules, for things that are not in NixOS, or where home-manager offers more configuration options. Usually more high-level and desktop-y.
 * `dotfiles/` contains dotfiles for various programs and editors, which are either symlinked or copied into the built system.
+* `project-flakes/` contains flakes for working on projects that don't have a `flake.nix`, I usually symlink them into the project.
 * `bin/` contains binaries/scripts that are added to `$PATH` using home-manager.
 * `scripts/` contains scripts that should not be on `$PATH`, but are somehow related to a system.
 * `cachix.nix` and `cachix/` contain (boilerplate) cachix configuration.
