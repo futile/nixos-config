@@ -1,0 +1,1 @@
+{"bcomponent":{"body":["#[derive(Debug, Component, Reflect)]","pub struct ${1:name} {","    ${2:fields}","}"],"prefix":"bcomponent"}}
