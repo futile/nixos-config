@@ -3,6 +3,11 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- Project local (and global) LSP settings
+    -- must come BEFORE lspconfig (but I don't use that)
+    -- https://github.com/folke/neoconf.nvim/
+    { "folke/neoconf.nvim" },
+
     -- Improve `gx` handling
     -- https://github.com/chrishrb/gx.nvim
     {
