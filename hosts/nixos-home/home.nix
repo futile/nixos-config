@@ -19,6 +19,7 @@ in {
       "${home-modules}/doom-emacs.nix"
       "${home-modules}/nvim-lazy.nix"
       "${home-modules}/sbt.nix"
+      "${home-modules}/yazi.nix"
     ];
 
   home = {

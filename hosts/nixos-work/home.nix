@@ -28,6 +28,7 @@ in {
 
       "${home-modules}/zellij.nix"
       "${home-modules}/sbt.nix"
+      "${home-modules}/yazi.nix"
     ];
 
   xdg = {
