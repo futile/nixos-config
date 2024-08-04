@@ -40,5 +40,6 @@
 
   home.packages = [
     pkgs.git-absorb # nifty git tool that automatically folds staged changes into their corresponding commits: https://github.com/tummychow/git-absorb
+    pkgs.git-town # git-town, see https://www.git-town.com/introduction
   ];
 }
