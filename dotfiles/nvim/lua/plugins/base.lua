@@ -385,6 +385,7 @@ if true then
     -- rustaceanvim
     {
       "mrcjkb/rustaceanvim",
+      version = "^5",
       opts = {
         server = {
           -- this replaces the default keybindings, see https://www.lazyvim.org/extras/lang/rust#rustaceanvim
