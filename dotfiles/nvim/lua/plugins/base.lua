@@ -3,6 +3,16 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- IDE-style breadcrumbs
+    -- https://github.com/Bekaboo/dropbar.nvim
+    {
+      "Bekaboo/dropbar.nvim",
+      -- optional, but required for fuzzy finder support
+      -- dependencies = {
+      --   "nvim-telescope/telescope-fzf-native.nvim",
+      -- },
+    },
+
     -- Project local (and global) LSP settings
     -- must come BEFORE lspconfig (but I don't use that)
     -- https://github.com/folke/neoconf.nvim/
@@ -529,6 +539,10 @@ if true then
       "nvim-lualine/lualine.nvim",
       event = "VeryLazy",
       opts = function(_, opts)
+        -- always show full path, don't abbreviate.
+        -- want this for now, let's see how it works out :)
+        opts.sections.lualine_c[#opts.sections.lualine_c - 1] = { LazyVim.lualine.pretty_path({ length = 0 }) }
+
         table.remove(opts.sections.lualine_x, 1) -- remove command
         table.remove(opts.sections.lualine_x, 3) -- remove lazy update count
         table.insert(opts.sections.lualine_x, "g:metals_status")
