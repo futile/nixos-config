@@ -75,3 +75,8 @@ nix-gc:
 # Nix collect garbage; actual run
 nix-gc-force:
     nix-collect-garbage --delete-older-than 14d
+
+# Delete ZFS snapshots older than one year (dry-run, see https://github.com/bahamas10/zfs-prune-snapshots for more, might need `sudo`)
+# To list them first: `zfs list -t snapshot`
+prune-old-zfs-snapshots:
+    nix run unstable#zfs-prune-snapshots -- -Rvn 1y

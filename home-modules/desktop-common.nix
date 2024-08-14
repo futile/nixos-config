@@ -57,6 +57,10 @@
         # cargo tools
         cargo-udeps
         cargo-feature
+        cargo-audit
+
+        # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
+        measureme
 
         # debugging stuff for hardware video accel
         # gpu-viewer
