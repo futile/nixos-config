@@ -66,6 +66,7 @@
 
   home.packages = [
     pkgs.git-absorb # nifty git tool that automatically folds staged changes into their corresponding commits: https://github.com/tummychow/git-absorb
+    pkgs.git-filter-repo # powerful history re-writing tool, use with care! https://github.com/newren/git-filter-repo
     pkgs.git-town # git-town, see https://www.git-town.com/introduction
   ];
 }
