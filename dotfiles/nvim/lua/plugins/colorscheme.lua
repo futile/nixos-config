@@ -30,6 +30,15 @@ return {
   -- -- Grouped Colorschemes below --
 
   -- these I haven't tried out/sorted yet
+
+  -- OldWorld
+  -- https://github.com/dgox16/oldworld.nvim
+  {
+    "dgox16/oldworld.nvim",
+    lazy = false,
+    priority = 1000,
+  },
+
   -- oh-lucy
   { "Yazeed1s/oh-lucy.nvim" },
 
