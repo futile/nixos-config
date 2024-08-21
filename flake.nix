@@ -56,11 +56,6 @@
       flake = false;
     };
 
-    wezterm-everforest = {
-      url = "git+https://git.sr.ht/~maksim/wezterm-everforest";
-      flake = false;
-    };
-
     wezterm-embark = {
       url = "github:dmshvetsov/wezterm-embark-theme";
       flake = false;

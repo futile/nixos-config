@@ -14,8 +14,6 @@
     configFile."wezterm/wezterm.lua".source =
       config.lib.file.mkOutOfStoreSymlink
         "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
-    configFile."wezterm/colors/everforest.toml".source =
-      flake-inputs.wezterm-everforest + "/everforest.toml";
     configFile."wezterm/colors/embark.toml".source =
       flake-inputs.wezterm-embark + "/colors/embark.toml";
   };
