@@ -57,7 +57,7 @@
         # cargo tools
         cargo-udeps
         cargo-feature
-        cargo-audit
+        # cargo-audit # broken for now due to Rust 1.80/`time`-lib fallout, should (?) be fixed by v0.20.1 soon
 
         # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
         measureme

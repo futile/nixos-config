@@ -30,6 +30,9 @@ return {
 
 	hide_tab_bar_if_only_one_tab = true,
 
+	-- fix completely broken rendering on NixOS unstable: https://github.com/NixOS/nixpkgs/issues/336069
+	front_end = "WebGpu",
+
 	-- force_reverse_video_cursor = true,
 
 	-- anti_alias_custom_block_glyphs = false,

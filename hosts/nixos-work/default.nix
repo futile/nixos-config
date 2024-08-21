@@ -171,7 +171,6 @@ in {
 
   # Since we run docker on an zfs partition
   virtualisation.docker.storageDriver = "zfs";
-  virtualisation.docker.package = pkgs.docker_24; # just cause I like it/used it before :)
 
   programs.ccache = {
     enable = true;

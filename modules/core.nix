@@ -33,12 +33,12 @@ in
   # Allow unfree packages.
   nixpkgs.config.allowUnfree = true;
 
-  # NOTE: obsidian 1.4.16, 1.5.3 rely on an EOL electron version, so allow it for now.
-  # this will make sure that it will fail again if a newer version also relies
-  # on the old electron version, so the exemption won't be here forever.
-  # see https://github.com/NixOS/nixpkgs/issues/273611#issuecomment-1858755633
-  nixpkgs.config.permittedInsecurePackages =
-    lib.optional (pkgs.obsidian.version == "1.5.3") "electron-25.9.0";
+  nixpkgs.config.permittedInsecurePackages = [
+    # NOTE: Uses a somewhat vulnerable, deprecated end-to-end library.
+    # Think this is used for Matrix video calls? allow it for now.
+    # See also: https://github.com/NixOS/nixpkgs/pull/334638#issuecomment-2289025802
+    "jitsi-meet-1.0.8043"
+  ];
 
   # nix base config
   nix = {

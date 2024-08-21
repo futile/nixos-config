@@ -47,7 +47,7 @@
     };
 
     fish-tide = {
-      url = "github:IlanCosman/tide/7f41dd24d815c16e85560e1e6a28b03203e2bfe";
+      url = "github:IlanCosman/tide";
       flake = false;
     };
 
