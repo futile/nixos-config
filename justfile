@@ -1,6 +1,9 @@
 # allow positional arguments to commands
 
 set positional-arguments := true
+set ignore-comments := true
+
+# ignore comment lines in recipes
 
 # List available recipes
 _default:
@@ -77,6 +80,6 @@ nix-gc-force:
     nix-collect-garbage --delete-older-than 14d
 
 # Delete ZFS snapshots older than one year (dry-run, see https://github.com/bahamas10/zfs-prune-snapshots for more, might need `sudo`)
-# To list them first: `zfs list -t snapshot`
 prune-old-zfs-snapshots:
+    # To list them first: `zfs list -t snapshot`
     nix run unstable#zfs-prune-snapshots -- -Rvn 1y
