@@ -3,6 +3,41 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- :Telescope emoji
+    -- https://github.com/xiyaowong/telescope-emoji.nvim
+    {
+      "xiyaowong/telescope-emoji.nvim",
+      dependencies = {
+        "nvim-telescope/telescope.nvim",
+        opts = {
+          extensions = {
+            emoji = {
+              action = function(emoji)
+                -- argument emoji is a table.
+                -- {name="", value="", cagegory="", description=""}
+
+                -- vim.fn.setreg("*", emoji.value)
+                -- print([[Press p or "*p to paste this emoji]] .. emoji.value)
+
+                -- insert emoji when picked
+                vim.api.nvim_put({ emoji.value }, "c", false, true)
+              end,
+            },
+          },
+        },
+      },
+      config = function()
+        require("telescope").load_extension("emoji")
+      end,
+    },
+
+    -- scrollbar with symbols
+    -- https://github.com/lewis6991/satellite.nvim
+    {
+      "lewis6991/satellite.nvim",
+      opts = {},
+    },
+
     -- IDE-style breadcrumbs
     -- https://github.com/Bekaboo/dropbar.nvim
     {
@@ -328,7 +363,6 @@ if true then
     -- telescope settings
     {
       "nvim-telescope/telescope.nvim",
-      -- add gh to Telescope
       dependencies = {
         "nvim-telescope/telescope-github.nvim",
         config = function()
