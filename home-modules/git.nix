@@ -16,7 +16,6 @@
 
       git-town = {
         ship-delete-tracking-branch = "false";
-        sync-before-ship = "false";
         sync-feature-strategy = "rebase";
         sync-perennial-strategy = "rebase";
         sync-upstream = "true";
