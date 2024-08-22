@@ -5,9 +5,8 @@ if true then
   return {
     -- Bookmarks
     -- https://github.com/LintaoAmons/bookmarks.nvim
-    -- using my own fork because I wanted to change some stuff
     {
-      "futile/bookmarks.nvim",
+      "LintaoAmons/bookmarks.nvim",
       -- tag = "v0.5.4", -- optional, pin the plugin at specific version for stability
       dependencies = {
         { "nvim-telescope/telescope.nvim" },
@@ -18,7 +17,7 @@ if true then
       opts = {
         json_db_path = vim.fs.normalize(vim.fn.stdpath("config") .. "/bookmarks_" .. vim.fn.hostname() .. ".db.json"),
         signs = {
-          mark = { icon = " ", color = "", line_bg = "" },
+          mark = { icon = "󰃁", color = "", line_bg = "" },
           desc_format = function(desc)
             return "󰃁 " .. desc
           end,
@@ -52,7 +51,10 @@ if true then
           "äd",
           function()
             local api = require("bookmarks.api")
-            api.mark({ name = "" })
+            local bm = api.find_existing_bookmark_under_cursor()
+            if bm then
+              api.mark({ name = "" })
+            end
           end,
           desc = "Delete bookmark in current line",
         },
