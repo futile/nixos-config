@@ -1,0 +1,52 @@
+{
+  "bookmark_lists": [
+    {
+      "bookmarks": [
+        {
+          "content": "    pub fn fully_expand_fragment(&mut self, input_fragment: AstFragment) -> AstFragment {",
+          "created_at": 1724327349,
+          "githash": "abb1ba28206",
+          "id": 1724327349,
+          "location": {
+            "col": 16,
+            "line": 424,
+            "path": "/home/felix/gits/rust/compiler/rustc_expand/src/expand.rs",
+            "project_name": "rust",
+            "relative_path": "compiler/rustc_expand/src/expand.rs"
+          },
+          "name": "fully_expand_fragment",
+          "visited_at": 1724328530
+        },
+        {
+          "content": "    fn expand_invoc(",
+          "created_at": 1724327469,
+          "githash": "abb1ba28206",
+          "id": 1724327469,
+          "location": {
+            "col": 7,
+            "line": 650,
+            "path": "/home/felix/gits/rust/compiler/rustc_expand/src/expand.rs",
+            "project_name": "rust",
+            "relative_path": "compiler/rustc_expand/src/expand.rs"
+          },
+          "name": "expand_invoc",
+          "visited_at": 1724334822
+        }
+      ],
+      "collapse": false,
+      "id": "2024082213484202663755",
+      "is_active": true,
+      "name": "Default"
+    }
+  ],
+  "projects": [
+    {
+      "name": "rust",
+      "path": "/home/felix/gits/rust"
+    },
+    {
+      "name": "nvim",
+      "path": "/home/felix/nixos/dotfiles/nvim"
+    }
+  ]
+}

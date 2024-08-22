@@ -3,6 +3,84 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- Bookmarks
+    -- https://github.com/LintaoAmons/bookmarks.nvim
+    -- using my own fork because I wanted to change some stuff
+    {
+      "futile/bookmarks.nvim",
+      -- tag = "v0.5.4", -- optional, pin the plugin at specific version for stability
+      dependencies = {
+        { "nvim-telescope/telescope.nvim" },
+        { "stevearc/dressing.nvim" }, -- optional: to have the same UI shown in the GIF
+      },
+      lazy = false,
+      dev = false,
+      opts = {
+        json_db_path = vim.fs.normalize(vim.fn.stdpath("config") .. "/bookmarks_" .. vim.fn.hostname() .. ".db.json"),
+        signs = {
+          mark = { icon = " ", color = "", line_bg = "" },
+          desc_format = function(desc)
+            return "󰃁 " .. desc
+          end,
+        },
+        -- shows an empty buffer after `:BookmarksCalibration`, don't need that
+        show_calibrate_result = false,
+        -- disabling this actually makes it work?? lol, but ok :)
+        auto_calibrate_cur_buf = false,
+      },
+      keys = {
+        {
+          mode = { "n", "v" },
+          "äa",
+          "<cmd>BookmarksMark<cr>",
+          desc = "Add current line into active BookmarkList.",
+        },
+        {
+          mode = { "n", "v" },
+          "äg",
+          function()
+            local picker = require("bookmarks.adapter.picker")
+            local api = require("bookmarks.api")
+            picker.pick_bookmark_of_current_project(function(bookmark)
+              api.goto_bookmark(bookmark)
+            end, { all = true })
+          end,
+          desc = "Go to bookmark in current project",
+        },
+        {
+          mode = { "n", "v" },
+          "äd",
+          function()
+            local api = require("bookmarks.api")
+            api.mark({ name = "" })
+          end,
+          desc = "Delete bookmark in current line",
+        },
+        { mode = { "n", "v" }, "äc", "<cmd>BookmarksCommands<cr>", desc = "Find and trigger a bookmark command." },
+        {
+          mode = { "n", "v" },
+          "är",
+          "<cmd>BookmarksGotoRecent<cr>",
+          desc = "Go to latest visited/created Bookmark",
+        },
+        {
+          mode = { "n", "v" },
+          "ät",
+          "<cmd>BookmarksTree<cr>",
+          desc = "Open Bookmarks Tree View",
+        },
+      },
+    },
+
+    -- indent blankline config (already part of LazyVim)
+    -- https://github.com/lukas-reineke/indent-blankline.nvim
+    {
+      "lukas-reineke/indent-blankline.nvim",
+      opts = {
+        scope = { show_start = true, show_end = true, char = "▏" },
+      },
+    },
+
     -- :Telescope emoji
     -- https://github.com/xiyaowong/telescope-emoji.nvim
     {
@@ -489,7 +567,11 @@ if true then
         { "<leader>fp", "<Cmd>:tabnew | Telescope projects<CR>", desc = "Projects" },
       },
       opts = {
+        -- this is enabled by LazyVim, but we want auto-cd behavior!
+        manual_mode = false,
+        -- show us a message when changing directory :)
         silent_chdir = false,
+        -- change directory for the current tab, not globally or per-window
         scope_chdir = "tab",
         -- "pattern" before "lsp", to avoid "subprojects"
         detection_methods = { "pattern", "lsp" },

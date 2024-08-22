@@ -7,5 +7,8 @@ foo.*
 *.log
 data
 
+# nvim bookmarks backup files, don't need to track
+/bookmarks_*.db.json.backup
+
 # I think I want this to be local for now
 /lazyvim.json

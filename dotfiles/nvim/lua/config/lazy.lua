@@ -34,8 +34,16 @@ require("lazy").setup({
     version = false, -- always use the latest git commit
     -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
+  dev = {
+    path = "~/gits/nvim-lazy-dev-plugins",
+  },
   install = { colorscheme = { "tokyonight", "habamax" } },
-  checker = { enabled = true }, -- automatically check for plugin updates
+  checker = {
+    -- automatically check for plugin updates
+    enabled = true,
+    -- but only once every 24h
+    frequency = 24 * 3600,
+  },
   performance = {
     rtp = {
       -- disable some rtp plugins
