@@ -1,0 +1,61 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette
+{
+  "vim_mode": true,
+  "vim": {
+    // "use_multiline_find": true,
+    "use_smartcase_find": true,
+  },
+  "ui_font_size": 18,
+  "buffer_font_family": "FiraCode Nerd Font Mono:h12",
+  // "buffer_font_size": 16,
+  "cursor_blink": false,
+  "theme": {
+    "mode": "system",
+    "light": "Solarized Light",
+    // "dark": "One Dark",
+    "dark": "Gruvbox Dark",
+  },
+  "inlay_hints": {
+    "enabled": true,
+  },
+  "tabs": {
+    // Show git status colors in the editor tabs.
+    // "git_status": false,
+    // Position of the close button on the editor tabs.
+    // "close_position": "right",
+    // Whether to show the file icon for a tab.
+    "file_icons": true,
+  },
+  // try to get rid of update-messages on NixOS (:
+  "auto_update": false,
+  "file_scan_exclusions": [
+    "**/.direnv/",
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/CVS",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/.classpath",
+    "**/.settings"
+  ],
+  "journal": {
+    // The path of the directory where journal entries are stored
+    "path": "~/.config/zed/journal",
+    // What format to display the hours in
+    // May take 2 values:
+    // 1. hour12
+    // 2. hour24
+    "hour_format": "hour24"
+  },
+  "terminal": {
+    "line_height": "standard",
+  },
+}

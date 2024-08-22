@@ -20,6 +20,7 @@ in {
       "${home-modules}/nvim-lazy.nix"
       "${home-modules}/sbt.nix"
       "${home-modules}/yazi.nix"
+      "${home-modules}/zed-editor.nix"
     ];
 
   home = {
