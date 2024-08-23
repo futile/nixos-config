@@ -1,4 +1,4 @@
-{ config, lib, pkgs, thisFlakePath, ... }:
+{ config, pkgs, thisFlakePath, ... }:
 
 {
   # direnv & nix-direnv
@@ -30,8 +30,9 @@
   # nix-index
   programs.nix-index.enable = true;
 
+  # nnn; some file explorer I never used, now prefer `yazi`
   programs.nnn = {
-    enable = true;
+    enable = false;
     package = pkgs.nnn.override ({ withNerdIcons = true; });
   };
 
