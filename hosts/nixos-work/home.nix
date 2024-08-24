@@ -8,6 +8,7 @@ in {
       "${home-modules}/shell-common.nix"
       "${home-modules}/helix.nix"
       "${home-modules}/git.nix"
+      "${home-modules}/jj.nix"
       "${home-modules}/fish.nix"
       "${home-modules}/nushell.nix"
       "${home-modules}/desktop-common.nix"

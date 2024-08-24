@@ -53,7 +53,6 @@
         dbeaver-bin
         scala-cli
         earthly
-        jujutsu
 
         # cargo tools
         cargo-udeps

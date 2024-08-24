@@ -1,0 +1,8 @@
+[user]
+name = "Felix Rath"
+email = "felixm.rath@gmail.com"
+
+[ui]
+paginate = "auto"
+default-command = "log"
+pager = "less -FRX"
