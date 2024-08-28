@@ -34,6 +34,7 @@
 
     hyprland = {
       url = "git+https://github.com/hyprwm/Hyprland?submodules=1";
+      inputs = { nixpkgs.follows = "nixpkgs"; };
     };
 
     fish-foreign-env = {
