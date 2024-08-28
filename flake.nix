@@ -37,6 +37,11 @@
       inputs = { nixpkgs.follows = "nixpkgs"; };
     };
 
+    nixos-cosmic = {
+      url = "github:lilyinstarlight/nixos-cosmic";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     fish-foreign-env = {
       url = "github:oh-my-fish/plugin-foreign-env";
       flake = false;

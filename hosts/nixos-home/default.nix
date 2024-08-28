@@ -31,6 +31,9 @@ in {
 
       # user-configuration with home-manager
       "${modules}/home-manager.nix"
+
+      # cosmic desktop - https://github.com/lilyinstarlight/nixos-cosmic
+      flake-inputs.nixos-cosmic.nixosModules.default
     ];
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -168,6 +171,12 @@ in {
     # Enable touchpad support (enabled default in most desktopManager).
     # libinput.enable = true;
   };
+
+  # enable cosmic desktop
+  services.desktopManager.cosmic.enable = true;
+
+  # doesn't allow login currently, because doesn't show my user
+  # services.displayManager.cosmic-greeter.enable = true;
 
   # give me steam (wanna try PD2)
   # from https://wiki.nixos.org/wiki/Steam
