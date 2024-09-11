@@ -30,7 +30,22 @@
             "relative_path": "compiler/rustc_expand/src/expand.rs"
           },
           "name": "expand_invoc",
-          "visited_at": 1724334822
+          "visited_at": 1725876296
+        },
+        {
+          "content": "use std::cell::Cell;",
+          "created_at": 1725879713,
+          "githash": "55289311280",
+          "id": 1725879713,
+          "location": {
+            "col": 0,
+            "line": 1,
+            "path": "/home/felix/gits/rust/compiler/rustc_expand/src/derive_macro_expansion.rs",
+            "project_name": "rust",
+            "relative_path": "compiler/rustc_expand/src/derive_macro_expansion.rs"
+          },
+          "name": "derive_macro_expansion.rs",
+          "visited_at": 1725879713
         }
       ],
       "collapse": false,

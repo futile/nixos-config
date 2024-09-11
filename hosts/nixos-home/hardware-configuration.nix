@@ -41,6 +41,7 @@
     # but did not work :(
     # setting to false again, sometimes also helps it seems - 2024-07-14
     # Yep, seems to actually help!! :tada: - 2024-07-15
+    # setting to true again, as suspend is crashing again (: - 2024-08-14
     powerManagement.enable = false;
     powerManagement.finegrained = false;
 
@@ -57,7 +58,8 @@
     # https://bbs.archlinux.org/viewtopic.php?pid=2155426#p2155426
     # https://discourse.nixos.org/t/random-freeze-of-system/44766
     # - Sadly did not fix it, I think :( let's observe for now - 2024-07-14
-    package = config.boot.kernelPackages.nvidiaPackages.legacy_535;
+    # Let's try stable/whatever the default is again..
+    # package = config.boot.kernelPackages.nvidiaPackages.legacy_535;
   };
 
   # nvidia let's go

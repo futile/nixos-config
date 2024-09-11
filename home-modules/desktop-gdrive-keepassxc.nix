@@ -1,20 +1,20 @@
 { pkgs, ... }:
 # google-drive and keepassxc are currently intertwined, so set them up together
-let
-  my-google-drive-ocamlfuse = pkgs.google-drive-ocamlfuse;
-  my-keepassxc = pkgs.keepassxc;
-in
 {
-  home.packages = [ my-google-drive-ocamlfuse my-keepassxc ];
+  home.packages = with pkgs; [ keepassxc rclone ];
 
   systemd.user.services = {
-    google-drive-ocamlfuse = {
-      Unit = { Description = "Automount google drive"; };
+    # also based on https://thunderysteak.github.io/rclone-mount-onedrive
+    rclone-gdrive = {
+      Unit = {
+        Description = "Automount google drive";
+        After = "network-online.target";
+      };
 
       Service = {
         Type = "simple";
         ExecStart =
-          "${my-google-drive-ocamlfuse}/bin/google-drive-ocamlfuse -f %h/GoogleDrive";
+          "${pkgs.rclone}/bin/rclone mount --vfs-cache-mode=full gdrive: %h/GoogleDrive";
       };
 
       Install = { WantedBy = [ "default.target" ]; };
@@ -24,13 +24,13 @@ in
       Unit = {
         Description = "Autostart Keepassxc";
         After =
-          [ "graphical-session-pre.target" "google-drive-ocamlfuse.service" ];
-        Wants = [ "google-drive-ocamlfuse.service" ];
+          [ "graphical-session-pre.target" "rclone-gdrive.service" ];
+        Wants = [ "rclone-gdrive.service" ];
       };
 
       Service = {
         Type = "simple";
-        ExecStart = "${my-keepassxc}/bin/keepassxc";
+        ExecStart = "${pkgs.keepassxc}/bin/keepassxc";
       };
 
       Install = { WantedBy = [ "graphical-session.target" ]; };
