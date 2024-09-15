@@ -164,10 +164,10 @@ in {
 
     # vpn stuff
     openvpn
-    gnome.networkmanager-openvpn
+    networkmanager-openvpn
   ];
 
-  services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
+  services.udev.packages = with pkgs; [ gnome-settings-daemon ];
 
   # Since we run docker on an zfs partition
   virtualisation.docker.storageDriver = "zfs";

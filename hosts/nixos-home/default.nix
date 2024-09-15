@@ -216,13 +216,13 @@ in {
 
     # vpn stuff
     openvpn
-    gnome.networkmanager-openvpn
+    networkmanager-openvpn
 
     # for steam etc.
     protontricks
   ];
 
-  services.udev.packages = with pkgs; [ gnome3.gnome-settings-daemon ];
+  services.udev.packages = with pkgs; [ gnome-settings-daemon ];
 
   # enable opentabletdriver (for osu-lazer); see https://opentabletdriver.net/Wiki/Install/Linux#nixos
   hardware.opentabletdriver.enable = true;
