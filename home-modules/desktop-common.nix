@@ -47,6 +47,12 @@
         jq
         kondo # for cleaning (old) build artifacts, cache folders etc. interactively
 
+        # system(d) management
+        systemctl-tui # TUI for systemd services
+        systemdgenie # GUI for systemd services
+        qjournalctl # GUI for journal viewing & filtering
+        # ksystemlog # seems very cool, but sadly seems to not work without more/full KDE
+
         # development
         conda
         sublime-merge
