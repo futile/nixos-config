@@ -14,7 +14,8 @@
       Service = {
         Type = "simple";
         ExecStart =
-          "${pkgs.rclone}/bin/rclone mount --vfs-cache-mode=full gdrive: %h/GoogleDrive";
+          # `--allow-other` because service doesn't properly run as my user while booting/something about graphical DE..
+          "${pkgs.rclone}/bin/rclone mount --allow-other --vfs-cache-mode=full gdrive: %h/GoogleDrive";
       };
 
       Install = { WantedBy = [ "default.target" ]; };
