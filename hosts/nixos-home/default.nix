@@ -224,6 +224,9 @@ in {
 
   services.udev.packages = with pkgs; [ gnome-settings-daemon ];
 
+  # NOTE: required for `--allow-other` with rclone, see `home-modules/desktop-gdrive-keepassxc.nix`
+  programs.fuse.userAllowOther = true;
+
   # enable opentabletdriver (for osu-lazer); see https://opentabletdriver.net/Wiki/Install/Linux#nixos
   hardware.opentabletdriver.enable = true;
 

@@ -3,6 +3,10 @@
 {
   home.packages = with pkgs; [ keepassxc rclone ];
 
+  # NOTE: requires a normal module, here for documentation!
+  # required for `--allow-other` with rclone, see below
+  # programs.fuse.userAllowOther = true;
+
   systemd.user.services = {
     # also based on https://thunderysteak.github.io/rclone-mount-onedrive
     rclone-gdrive = {
