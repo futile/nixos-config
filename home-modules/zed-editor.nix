@@ -3,7 +3,7 @@ let
   base-zed = pkgs.zed-editor;
   my-zed = pkgs.lib.my.mkWrappedWithDeps {
     pkg = base-zed;
-    pathsToWrap = [ "bin/zed" ];
+    pathsToWrap = [ "bin/zeditor" ];
     extraWrapProgramArgs = [ ];
     prefix-deps = with pkgs; [ ripgrep findutils fd ];
     suffix-deps = pkgs.lib.my.editorTools;

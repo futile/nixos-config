@@ -38,11 +38,8 @@
     modesetting.enable = true;
 
     # trying to fix crashes when resuming from suspend
-    # but did not work :(
-    # setting to false again, sometimes also helps it seems - 2024-07-14
-    # Yep, seems to actually help!! :tada: - 2024-07-15
-    # setting to true again, as suspend is crashing again (: - 2024-08-14
-    powerManagement.enable = false;
+    # false crashing (color garble on screen after wake up) - 2024-09-24
+    powerManagement.enable = true;
     powerManagement.finegrained = false;
 
     # just enable the `nvidia-settings` tool; should be default, but why not explicitly.

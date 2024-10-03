@@ -91,19 +91,10 @@ in {
   # this causes recompilation, don't want/need it currently
   # boot.crashDump.enable = true;
 
-  # more up-to-date kernel: `linuxPackages_latest`; for testing
-  # ccf/env_isolation I want at least 5.11 for overlayfs in user namespaces;
-  # this gives me 5.14 (at the time of writing).
-  #
-  # Need to hardcode the version for now, as otherwise zfs might no be
-  # available.  From NixOS 21.11 onwards I can use
-  # `config.boot.zfs.package.latestCompatibleLinuxPackages` it seems.
-  # https://discourse.nixos.org/t/package-zfs-kernel-2-0-6-5-15-2-in-is-marked-as-broken-refusing-to-evaluate/16168/3
-  # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages; # pkgs.linuxPackages_5_15;
-  # boot.kernelPackages = pkgs.linuxPackages_5_15; # virtualbox broken on current kernel >=5.17 :( https://github.com/NixOS/nixpkgs/commit/69af0d17174ee60f75e6e9f4d74c2152f4e7968e
-  # TODO 22.05: Do I still want another kernel version?
-  # Yeah let's, also need it for lenovo-p14s laptop, so why not? :)
-  boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
+  # 2024-10-01 `latestCompatibleLinuxPackages` was deprecated, need to hardcode now..
+  # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
+  # ... but 6.11 broken with zfs for now (:
+  boot.kernelPackages = pkgs.linuxPackages_6_6;
 
   # The global useDHCP flag is deprecated, therefore explicitly set to false here.
   # Per-interface useDHCP will be mandatory in the future, so this generated config

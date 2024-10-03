@@ -39,7 +39,9 @@
 
     nixos-cosmic = {
       url = "github:lilyinstarlight/nixos-cosmic";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # Should be the other way around (according to README.md), but don't wanna for now.
+      # Also, this causes local rebuilds :)
+      # inputs.nixpkgs.follows = "nixpkgs";
     };
 
     fish-foreign-env = {

@@ -92,8 +92,10 @@ in {
   # ZFS unlock at boot time
   boot.zfs.requestEncryptionCredentials = true;
 
-  # just for fun, don't think I need this
-  boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
+  # 2024-10-01 `latestCompatibleLinuxPackages` was deprecated, need to hardcode now..
+  # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
+  # ... but 6.11 broken with zfs for now (:
+  boot.kernelPackages = pkgs.linuxPackages_6_6;
 
   # Enable the X11 windowing system.
   services.xserver = {
@@ -109,7 +111,7 @@ in {
 
     desktopManager.gnome = {
       enable = true;
-      extraGSettingsOverridePackages = [ pkgs.gnome.mutter ];
+      extraGSettingsOverridePackages = [ pkgs.mutter ];
       extraGSettingsOverrides = ''
         [org.gnome.mutter]
         experimental-features = ['scale-monitor-framebuffer']
