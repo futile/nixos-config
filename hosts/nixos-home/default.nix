@@ -166,7 +166,7 @@ in {
   # enable cosmic desktop
   services.desktopManager.cosmic.enable = true;
 
-  # doesn't allow login currently, because doesn't show my user
+  # cosmic greeter; doesn't allow gnome session I think, but works with cosmic.
   # services.displayManager.cosmic-greeter.enable = true;
 
   # give me steam (wanna try PD2)
