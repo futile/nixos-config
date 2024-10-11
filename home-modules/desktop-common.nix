@@ -46,6 +46,7 @@
         tldr
         jq
         kondo # for cleaning (old) build artifacts, cache folders etc. interactively
+        libtree # for checking nested deps for Nix builds etc.
 
         # system(d) management
         systemctl-tui # TUI for systemd services

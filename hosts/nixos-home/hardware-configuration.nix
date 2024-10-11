@@ -39,6 +39,8 @@
 
     # trying to fix crashes when resuming from suspend
     # false crashing (color garble on screen after wake up) - 2024-09-24
+    # true crashing (black screen after wake up) - 2024-10-10
+    # false crashing (screen doesn't turn back on after wake up) - 2024-10-10
     powerManagement.enable = true;
     powerManagement.finegrained = false;
 
