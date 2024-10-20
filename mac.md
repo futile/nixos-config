@@ -1,0 +1,5 @@
+- git
+  - split done, ready to setup :)
+- nvim + neovide etc.
+- wezterm
+- fish
