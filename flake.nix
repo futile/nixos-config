@@ -72,7 +72,7 @@
     wezterm-git.url = "github:wez/wezterm?dir=nix";
   };
 
-  outputs = { self, nixpkgs, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, ... }@inputs:
     let
       # base modules that will commonly be used by all systems
       baseModules = [
@@ -120,6 +120,18 @@
               [ (final: prev: { wezterm = flake-inputs.wezterm-git.packages.${prev.system}.default; }) ];
           })
         ];
+      };
+# system = "aarch64-darwin";
+      homeConfigurations."frath" = home-manager.lib.homeManagerConfiguration {
+        pkgs = nixpkgs.legacyPackages.${system};
+        # inherit pkgs;
+
+        # Specify your home configuration modules here, for example,
+        # the path to your home.nix.
+        modules = [ ./hosts/hm-cf/home.nix ];
+
+        # Optionally use extraSpecialArgs
+        # to pass through arguments to home.nix
       };
     };
 }
