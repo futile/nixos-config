@@ -25,7 +25,7 @@ in {
       "${home-modules}/shell-common.nix"
       "${home-modules}/git.nix"
       "${home-modules}/fish.nix"
-      "${home-modules}/desktop-common.nix"
+      # "${home-modules}/desktop-common.nix"
       "${home-modules}/wezterm.nix"
       "${home-modules}/nvim-lazy.nix"
     ];
