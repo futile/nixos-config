@@ -121,10 +121,9 @@
           })
         ];
       };
-# system = "aarch64-darwin";
+
       homeConfigurations."frath" = home-manager.lib.homeManagerConfiguration {
         pkgs = nixpkgs.legacyPackages.${system};
-        # inherit pkgs;
 
         # Specify your home configuration modules here, for example,
         # the path to your home.nix.
@@ -132,6 +131,9 @@
 
         # Optionally use extraSpecialArgs
         # to pass through arguments to home.nix
+
+        # forward flake-inputs to module arguments
+        extraSpecialArgs = { flake-inputs = inputs; system = "aarch64-darwin"; };
       };
     };
 }
