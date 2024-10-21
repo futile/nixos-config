@@ -1,6 +1,7 @@
-{ config, pkgs, ... }:
+{ config, pkgs, flake-inputs, thisFlakePath, ... }:
 
-{
+let flakeRoot = flake-inputs.self.outPath;
+in {
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
   home.username = "frath";
@@ -17,24 +18,86 @@
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
-  home.packages = [
-    # # Adds the 'hello' command to your environment. It prints a friendly
-    # # "Hello, world!" when run.
-    # pkgs.hello
+  imports =
+    let home-modules = "${flakeRoot}/home-modules";
+    in [
+      # "${home-modules}/base.nix"
+      "${home-modules}/shell-common.nix"
+      "${home-modules}/git.nix"
+      "${home-modules}/fish.nix"
+      "${home-modules}/desktop-common.nix"
+      "${home-modules}/wezterm.nix"
+      "${home-modules}/nvim-lazy.nix"
+    ];
 
-    # # It is sometimes useful to fine-tune packages, for example, by applying
-    # # overrides. You can do that directly here, just don't forget the
-    # # parentheses. Maybe you want to install Nerd Fonts with a limited number of
-    # # fonts?
-    # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
+  home.packages =
+    # bound packages
+    [ ] ++
+    # packages from pkgs
+    (with pkgs; [
+      # compile stuff, for convenience I guess; but generally want to get rid of it
+      # ccache
+      # gcc
+      # gdb
 
-    # # You can also create simple shell scripts directly inside your
-    # # configuration. For example, this adds a command 'my-hello' to your
-    # # environment:
-    # (pkgs.writeShellScriptBin "my-hello" ''
-    #   echo "Hello, ${config.home.username}!"
-    # '')
-  ];
+      # rust & cargo tools
+      rustup
+      cargo-edit
+      cargo-udeps
+      cargo-feature
+      # cargo-audit # broken for now due to Rust 1.80/`time`-lib fallout, should (?) be fixed by v0.20.1 soon
+
+      # misc
+      python3 # just for a quick shell, math etc.
+      # libreoffice # open word/excel/etc. files
+
+      # nix tools, so I can do some nixpkgs-stuff if I want to
+      nix-prefetch-git
+      nix-prefetch-github
+      nixpkgs-review
+      nixpkgs-fmt
+      nix-diff
+
+      # image editing
+      # inkscape
+      # gimp
+
+      # useful cmdline-tools
+      just
+      dtrx
+      tokei
+      # trippy
+      # lazygit
+      # lazydocker
+      # dig
+      tldr
+      jq
+      kondo # for cleaning (old) build artifacts, cache folders etc. interactively
+      libtree # for checking nested deps for Nix builds etc.
+
+      # development
+      # conda
+      # sublime-merge
+      # dbeaver-bin
+      # scala-cli
+      # earthly
+
+      # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
+      measureme
+
+      # # It is sometimes useful to fine-tune packages, for example, by applying
+      # # overrides. You can do that directly here, just don't forget the
+      # # parentheses. Maybe you want to install Nerd Fonts with a limited number of
+      # # fonts?
+      # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
+
+      # # You can also create simple shell scripts directly inside your
+      # # configuration. For example, this adds a command 'my-hello' to your
+      # # environment:
+      # (pkgs.writeShellScriptBin "my-hello" ''
+      #   echo "Hello, ${config.home.username}!"
+      # '')
+    ]);
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
@@ -49,6 +112,9 @@
     #   org.gradle.console=verbose
     #   org.gradle.daemon.idletimeout=3600000
     # '';
+
+    ".cargo/config.toml".source = config.lib.file.mkOutOfStoreSymlink
+      "${thisFlakePath}/dotfiles/cargo/config.toml";
   };
 
   # Home Manager can also manage your environment variables through
@@ -68,9 +134,88 @@
   #  /etc/profiles/per-user/frath/etc/profile.d/hm-session-vars.sh
   #
   home.sessionVariables = {
-    # EDITOR = "emacs";
+    EDITOR = "nvim";
   };
+
+  # not using this yet, needs to use `.text = ''...` when I do
+  # file = {
+  #   ".npmrc".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/npmrc";
+  # };
+  # sessionPath = [ "$HOME/.npm-packages/bin" ];
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
+
+  nixpkgs.overlays = [
+    (final: prev: {
+      lib = prev.lib // {
+        my = {
+          editorTools = (with final; [
+            # misc
+            multimarkdown
+            jq
+            editorconfig-core-c
+
+            # shell
+            shfmt
+            shellcheck
+
+            # python
+            black
+            python3Packages.pyflakes
+            python3Packages.isort
+            ruff-lsp
+            pyright
+
+            # nix
+            nil # nix lsp
+            nixd # better nix lsp?
+            nixpkgs-fmt
+            # nixfmt # don't want this for now, nixpkgs-fmt is superior :)
+
+            # tex
+            # texlab
+
+            # typst
+            # typst-lsp # currently broken due to Rust 1.80 `time`-fallout
+            typstfmt
+            # typst-live
+
+            # scala
+            # metals
+
+            # dhall
+            # dhall-lsp-server # currently (2023-08-19) broken
+
+            # lua
+            stylua
+            lua-language-server
+          ]);
+
+          # TODO: put `mkWrappedWithDeps` into its own file, so we can import/use it here
+          # mkWrappedWithDeps = mkWrappedWithDeps final prev;
+        };
+      };
+    })
+  ];
+
+  # nix configuration
+  nix = {
+    enable = true; # hopefully /etc/nix also still works xD
+
+    # registry entries
+    registry = {
+      unstable.flake = flake-inputs.nixpkgs;
+      punstable.flake = flake-inputs.nixpkgs-pkgs-unstable;
+      # master.flake = flake-inputs.nixpkgs-master;
+      # local.flake = flake-inputs.nixpkgs-local;
+    };
+
+    # nix path to correspond to my flakes
+    nixPath = [
+      "nixpkgs=${flake-inputs.nixpkgs}"
+      "unstable=${flake-inputs.nixpkgs}"
+      "punstable=${flake-inputs.nixpkgs-pkgs-unstable}"
+    ];
+  };
 }

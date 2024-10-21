@@ -2,10 +2,11 @@
 
 {
   # rolling wezterm by hand, as I don't like the upstream home-manager module
-  home.packages = with pkgs; [
+  home.packages = with pkgs; ([
     wezterm
+  ] ++ (lib.optionals stdenv.isLinux [
     xsel # for system clipboard, because wezterm ignores clipboard escape codes for security reasons
-  ];
+  ]));
 
   xdg = {
     enable = true;

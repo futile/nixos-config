@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, thisFlakePath, ... }:
 let
   my-neovide = pkgs.symlinkJoin {
     name = "neovide";
@@ -17,7 +17,7 @@ in
 {
   programs.neovim = {
     enable = true;
-    extraPackages = pkgs.lib.my.editorTools ++ [ pkgs.xsel ];
+    extraPackages = pkgs.lib.my.editorTools ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.xsel ]);
 
     # dunno how to do this together with lazyvim :/
     # extraLuaConfig = ''
@@ -34,7 +34,7 @@ in
   xdg = {
     enable = true;
     configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/nixos/dotfiles/nvim";
+      "${thisFlakePath}/dotfiles/nvim";
   };
 
   # home.file = {
