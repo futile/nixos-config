@@ -146,58 +146,8 @@ in {
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  nixpkgs.overlays = [
-    (final: prev: {
-      lib = prev.lib // {
-        my = {
-          editorTools = (with final; [
-            # misc
-            multimarkdown
-            jq
-            editorconfig-core-c
-
-            # shell
-            shfmt
-            shellcheck
-
-            # python
-            black
-            python3Packages.pyflakes
-            python3Packages.isort
-            ruff-lsp
-            pyright
-
-            # nix
-            nil # nix lsp
-            nixd # better nix lsp?
-            nixpkgs-fmt
-            # nixfmt # don't want this for now, nixpkgs-fmt is superior :)
-
-            # tex
-            # texlab
-
-            # typst
-            # typst-lsp # currently broken due to Rust 1.80 `time`-fallout
-            typstfmt
-            # typst-live
-
-            # scala
-            # metals
-
-            # dhall
-            # dhall-lsp-server # currently (2023-08-19) broken
-
-            # lua
-            stylua
-            lua-language-server
-          ]);
-
-          # TODO: put `mkWrappedWithDeps` into its own file, so we can import/use it here
-          # mkWrappedWithDeps = mkWrappedWithDeps final prev;
-        };
-      };
-    })
-  ];
+  # need to do this in `flake.nix`! (or differently, but doesn't work this way)
+  # nixpkgs.overlays = ;
 
   # nix configuration
   nix = {
