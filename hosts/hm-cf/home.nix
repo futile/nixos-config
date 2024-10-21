@@ -21,6 +21,9 @@ in {
   imports =
     let home-modules = "${flakeRoot}/home-modules";
     in [
+      # fix apps not showing in spotlight etc.
+      flake-inputs.mac-app-util.homeManagerModules.default
+
       # "${home-modules}/base.nix"
       "${home-modules}/shell-common.nix"
       "${home-modules}/git.nix"

@@ -70,6 +70,8 @@
     };
 
     wezterm-git.url = "github:wez/wezterm?dir=nix";
+
+    mac-app-util.url = "github:hraban/mac-app-util";
   };
 
   outputs = { self, nixpkgs, home-manager, ... }@inputs:
@@ -173,6 +175,33 @@
 
                   # TODO: put `mkWrappedWithDeps` into its own file, so we can import/use it here
                   # mkWrappedWithDeps = mkWrappedWithDeps final prev;
+                  mkWrappedWithDeps =
+                    { pkg
+                    , pathsToWrap
+                    , prefix-deps ? [ ]
+                    , suffix-deps ? [ ]
+                    , extraWrapProgramArgs ? [ ]
+                    , otherArgs ? { }
+                    }:
+                    let
+                      prefixBinPath = prev.lib.makeBinPath prefix-deps;
+                      suffixBinPath = prev.lib.makeBinPath suffix-deps;
+                    in
+                    prev.symlinkJoin ({
+                      name = pkg.name + "-wrapped";
+                      paths = [ pkg ];
+                      buildInputs = [ final.makeWrapper ];
+                      postBuild = ''
+                        cd "$out"
+                        for p in ${builtins.toString pathsToWrap}
+                        do
+                          wrapProgram "$out/$p" \
+                            --prefix PATH : "${prefixBinPath}" \
+                            --suffix PATH : "${suffixBinPath}" \
+                            ${builtins.toString extraWrapProgramArgs}
+                        done
+                      '';
+                    } // otherArgs);
                 };
               };
             })
