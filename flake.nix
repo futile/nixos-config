@@ -133,7 +133,12 @@
         # to pass through arguments to home.nix
 
         # forward flake-inputs to module arguments
-        extraSpecialArgs = { flake-inputs = inputs; system = "aarch64-darwin"; };
+        extraSpecialArgs = {
+          flake-inputs = inputs;
+          system = "aarch64-darwin";
+          # absolute path to this flake, i.e., to break nix's isolation
+          thisFlakePath = "/Users/frath/nixos";
+        };
       };
     };
 }
