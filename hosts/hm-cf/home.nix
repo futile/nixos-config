@@ -35,55 +35,55 @@ in {
     [ ] ++
     # packages from pkgs
     (with pkgs; [
-      # compile stuff, for convenience I guess; but generally want to get rid of it
-      # ccache
-      # gcc
-      # gdb
+      # # compile stuff, for convenience I guess; but generally want to get rid of it
+      # # ccache
+      # # gcc
+      # # gdb
 
-      # rust & cargo tools
-      rustup
-      cargo-edit
-      cargo-udeps
-      cargo-feature
-      # cargo-audit # broken for now due to Rust 1.80/`time`-lib fallout, should (?) be fixed by v0.20.1 soon
+      # # rust & cargo tools
+      # rustup
+      # cargo-edit
+      # cargo-udeps
+      # cargo-feature
+      # # cargo-audit # broken for now due to Rust 1.80/`time`-lib fallout, should (?) be fixed by v0.20.1 soon
 
-      # misc
-      python3 # just for a quick shell, math etc.
-      # libreoffice # open word/excel/etc. files
+      # # misc
+      # python3 # just for a quick shell, math etc.
+      # # libreoffice # open word/excel/etc. files
 
-      # nix tools, so I can do some nixpkgs-stuff if I want to
-      nix-prefetch-git
-      nix-prefetch-github
-      nixpkgs-review
-      nixpkgs-fmt
-      nix-diff
+      # # nix tools, so I can do some nixpkgs-stuff if I want to
+      # nix-prefetch-git
+      # nix-prefetch-github
+      # nixpkgs-review
+      # nixpkgs-fmt
+      # nix-diff
 
-      # image editing
-      # inkscape
-      # gimp
+      # # image editing
+      # # inkscape
+      # # gimp
 
-      # useful cmdline-tools
-      just
-      dtrx
-      tokei
-      # trippy
-      # lazygit
-      # lazydocker
-      # dig
-      tldr
-      jq
-      kondo # for cleaning (old) build artifacts, cache folders etc. interactively
-      libtree # for checking nested deps for Nix builds etc.
+      # # useful cmdline-tools
+      # just
+      # dtrx
+      # tokei
+      # # trippy
+      # # lazygit
+      # # lazydocker
+      # # dig
+      # tldr
+      # jq
+      # kondo # for cleaning (old) build artifacts, cache folders etc. interactively
+      # libtree # for checking nested deps for Nix builds etc.
 
-      # development
-      # conda
-      # sublime-merge
-      # dbeaver-bin
-      # scala-cli
-      # earthly
+      # # development
+      # # conda
+      # # sublime-merge
+      # # dbeaver-bin
+      # # scala-cli
+      # # earthly
 
-      # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
-      measureme
+      # # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
+      # measureme
 
       # # It is sometimes useful to fine-tune packages, for example, by applying
       # # overrides. You can do that directly here, just don't forget the
