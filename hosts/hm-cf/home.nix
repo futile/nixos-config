@@ -91,6 +91,17 @@ in {
       # fonts?
       # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
 
+      (nerdfonts.override {
+        fonts = [
+          "JetBrainsMono" # wezterm default font
+          "LiberationMono" # I just like this font :)
+          "FiraCode"
+          "DroidSansMono"
+          "NerdFontsSymbolsOnly"
+          "FantasqueSansMono"
+        ];
+      })
+
       # You can also create simple shell scripts directly inside your
       # configuration. For example, this adds a command 'my-hello' to your
       # environment:
@@ -168,4 +179,6 @@ in {
       "punstable=${flake-inputs.nixpkgs-pkgs-unstable}"
     ];
   };
+
+  fonts.fontconfig.enable = true;
 }
