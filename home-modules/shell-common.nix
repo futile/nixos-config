@@ -31,10 +31,10 @@
   programs.nix-index.enable = true;
 
   # nnn; some file explorer I never used, now prefer `yazi`
-  programs.nnn = {
-    enable = false;
-    package = pkgs.nnn.override ({ withNerdIcons = true; });
-  };
+  # programs.nnn = {
+  #   enable = false;
+  #   package = pkgs.nnn.override ({ withNerdIcons = true; });
+  # };
 
   programs.htop.enable = true;
 
