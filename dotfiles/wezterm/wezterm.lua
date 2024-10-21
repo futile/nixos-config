@@ -1,4 +1,12 @@
 local wezterm = require("wezterm")
+local hostname = wezterm.hostname()
+
+local default_prog = nil
+
+if hostname == "H77QF74G0F" then
+	default_prog = { "fish" }
+end
+
 return {
 	-- color_scheme = "nord",
 	-- color_scheme = "Nord (base16)",
@@ -40,4 +48,6 @@ return {
 	colors = {
 		tab_bar = {},
 	},
+
+	default_prog = default_prog,
 }
