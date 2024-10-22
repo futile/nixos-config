@@ -72,6 +72,11 @@
     wezterm-git.url = "github:wez/wezterm?dir=nix";
 
     mac-app-util.url = "github:hraban/mac-app-util";
+
+    cf-engineering-nixpkgs = {
+      url = "git+ssh://git@bitbucket.cfdata.org/~terin/engineering-nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { self, nixpkgs, home-manager, ... }@inputs:

@@ -33,6 +33,26 @@
         "type": "github"
       }
     },
+    "cf-engineering-nixpkgs": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1722875439,
+        "narHash": "sha256-HEKFMW7o5oP9kZfjmf/uUMRloLyekBp4j/Gs+06/s34=",
+        "ref": "refs/heads/trunk",
+        "rev": "021f9379779dca6c08a13f164e089dfed3192baf",
+        "revCount": 72,
+        "type": "git",
+        "url": "ssh://git@bitbucket.cfdata.org/~terin/engineering-nixpkgs"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@bitbucket.cfdata.org/~terin/engineering-nixpkgs"
+      }
+    },
     "cl-nix-lite": {
       "locked": {
         "lastModified": 1717972076,
@@ -825,6 +845,7 @@
     },
     "root": {
       "inputs": {
+        "cf-engineering-nixpkgs": "cf-engineering-nixpkgs",
         "doom-emacs": "doom-emacs",
         "emacs-overlay": "emacs-overlay",
         "fish-foreign-env": "fish-foreign-env",
