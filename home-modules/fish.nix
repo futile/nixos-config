@@ -56,6 +56,51 @@
         '';
       };
     };
+
+    # adapted from https://discourse.nixos.org/t/using-fish-interactively-with-zsh-as-the-default-shell-on-macos/48402/7?u=futile
+    loginShellInit = pkgs.lib.mkIf pkgs.stdenv.isDarwin ''
+      # Nix
+      if test -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.fish'
+          source '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.fish'
+          # following is single user
+          # source '/nix/var/nix/profiles/default/etc/profile.d/nix.fish'
+      end
+      # End Nix
+
+      ################### Nix
+      # Essential workaround for clobbered `$PATH` with nix-darwin.
+      # Without this, both Nix and Homebrew paths are forced to the end of $PATH.
+      # <https://github.com/LnL7/nix-darwin/issues/122#issuecomment-1345383219>
+      # <https://github.com/LnL7/nix-darwin/issues/122#issuecomment-1030877541>
+      #
+      # A previous version of this snippet also included:
+      #   - /run/wrappers/bin
+      #   - /etc/profiles/per-user/$USER/bin # mwb needed if useGlobalPkgs used.
+      #
+      if test (uname) = Darwin
+          fish_add_path --move --prepend --global \
+            "${config.xdg.stateHome}/nix/profile/bin" \
+            "/etc/profiles/per-user/$USER/bin" \
+            /run/current-system/sw/bin \
+            /nix/var/nix/profiles/default/bin
+      end
+    '';
+
+    # adapted from https://github.com/orgs/Homebrew/discussions/4412#discussioncomment-8651316
+    shellInit = pkgs.lib.mkIf pkgs.stdenv.isDarwin ''
+      # if test -d /home/linuxbrew/.linuxbrew # Linux
+      #   set -gx HOMEBREW_PREFIX "/home/linuxbrew/.linuxbrew"
+      #   set -gx HOMEBREW_CELLAR "$HOMEBREW_PREFIX/Cellar"
+      #   set -gx HOMEBREW_REPOSITORY "$HOMEBREW_PREFIX/Homebrew"
+      if test -d /opt/homebrew # MacOS
+        set -gx HOMEBREW_PREFIX "/opt/homebrew"
+        set -gx HOMEBREW_CELLAR "$HOMEBREW_PREFIX/Cellar"
+        set -gx HOMEBREW_REPOSITORY "$HOMEBREW_PREFIX/homebrew"
+        fish_add_path -gP "$HOMEBREW_PREFIX/bin" "$HOMEBREW_PREFIX/sbin";
+        ! set -q MANPATH; and set MANPATH '''; set -gx MANPATH "$HOMEBREW_PREFIX/share/man" $MANPATH;
+        ! set -q INFOPATH; and set INFOPATH '''; set -gx INFOPATH "$HOMEBREW_PREFIX/share/info" $INFOPATH;
+      end
+    '';
   };
 
   # make sure these are enabled, without forcing a specific package
@@ -63,3 +108,4 @@
   programs.eza.enable = true;
   programs.bat.enable = true;
 }
+
