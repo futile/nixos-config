@@ -210,6 +210,8 @@
                 };
               };
             })
+
+            inputs.cf-engineering-nixpkgs.overlay
           ];
         };
 
