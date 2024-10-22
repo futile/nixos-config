@@ -183,5 +183,10 @@ in {
     ];
   };
 
+  # I want my fonts (:
   fonts.fontconfig.enable = true;
+
+  programs.fish.shellInit = ''
+    fenv "source /Users/frath/.local/share/cloudflare-warp-certs/config.sh"
+  '';
 }
