@@ -4,7 +4,7 @@ local hostname = wezterm.hostname()
 local default_prog = nil
 
 if hostname == "H77QF74G0F" then
-	default_prog = { "fish" }
+	default_prog = { "fish", "--login" }
 end
 
 return {
