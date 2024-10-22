@@ -88,8 +88,8 @@ in {
       # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
       # measureme
 
-      # cf stuff
-      cf-paste
+      # cf stuff, but I get these via homebrew 🙃
+      # cf-paste
 
       # It is sometimes useful to fine-tune packages, for example, by applying
       # overrides. You can do that directly here, just don't forget the
