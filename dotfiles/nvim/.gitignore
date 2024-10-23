@@ -12,3 +12,6 @@ data
 
 # I think I want this to be local for now
 /lazyvim.json
+
+# cf stuff
+/bookmarks_H77QF74G0F.db.json
