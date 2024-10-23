@@ -21,7 +21,7 @@ map("n", "]<space>", "<Cmd>call append(line('.'),     repeat([''], v:count1))<CR
 
 -- Fix M-Space with Neo + Darwin
 if vim.loop.os_uname().sysname == "Darwin" then
-  map("i", "<M-Space>", "<Space>")
+  map({ "i", "v", "n", "o", "c", "t" }, "<M-Space>", "<Space>")
 
   -- From https://neovide.dev/faq.html#how-can-i-use-cmd-ccmd-v-to-copy-and-paste
   if vim.g.neovide then
