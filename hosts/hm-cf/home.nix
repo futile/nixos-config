@@ -48,6 +48,8 @@ in {
       cargo-edit
       cargo-udeps
       cargo-feature
+      cargo-vet
+      cargo-nextest
       # cargo-audit # broken for now due to Rust 1.80/`time`-lib fallout, should (?) be fixed by v0.20.1 soon
 
       # misc
@@ -77,6 +79,7 @@ in {
       jq
       kondo # for cleaning (old) build artifacts, cache folders etc. interactively
       # libtree # broken on aarch-64! # for checking nested deps for Nix builds etc.
+      socat
 
       # development
       # conda
