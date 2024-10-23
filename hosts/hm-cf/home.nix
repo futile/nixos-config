@@ -33,6 +33,37 @@ in {
       "${home-modules}/nvim-lazy.nix"
     ];
 
+  programs.git = {
+    extraConfig = {
+      # rerere.enabled = true;
+
+      git-town = {
+        ship-delete-tracking-branch = "false";
+        sync-feature-strategy = "rebase";
+        sync-perennial-strategy = "rebase";
+        sync-upstream = "true";
+      };
+    };
+
+    # aliases = {
+    #   # aliases created by/for `git-town`
+    #   append = "town append";
+    #   compress = "town compress";
+    #   contribute = "town contribute";
+    #   diff-parent = "town diff-parent";
+    #   hack = "town hack";
+    #   kill = "town kill";
+    #   observe = "town observe";
+    #   park = "town park";
+    #   prepend = "town prepend";
+    #   propose = "town propose";
+    #   rename-branch = "town rename-branch";
+    #   repo = "town repo";
+    #   set-parent = "town set-parent";
+    #   sync = "town sync";
+    # };
+  };
+
   home.packages =
     # bound packages
     [ ] ++
@@ -80,6 +111,9 @@ in {
       kondo # for cleaning (old) build artifacts, cache folders etc. interactively
       # libtree # broken on aarch-64! # for checking nested deps for Nix builds etc.
       socat
+
+      # for now here manually, instead of "git-extra.nix"
+      git-town
 
       # development
       # conda
