@@ -83,6 +83,10 @@
             "/etc/profiles/per-user/$USER/bin" \
             /run/current-system/sw/bin \
             /nix/var/nix/profiles/default/bin
+
+          # bind neo's home and end (requires adding "com.github.wez.wezterm" to the Karabiner Elements list for Home&End in terminals)
+          bind \e\[H beginning-of-line
+          bind \e\[F end-of-line
       end
     '';
 

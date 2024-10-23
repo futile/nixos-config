@@ -2,9 +2,16 @@ local wezterm = require("wezterm")
 local hostname = wezterm.hostname()
 
 local default_prog = nil
+local set_environment_variables = nil
+local term = nil
 
 if hostname == "H77QF74G0F" then
 	default_prog = { "fish", "--login" }
+	set_environment_variables = {
+		TERMINFO_DIRS = "/Users/frath/.nix-profile/share/terminfo",
+		WSLENV = "TERMINFO_DIRS",
+	}
+	term = "wezterm"
 end
 
 return {
@@ -50,4 +57,6 @@ return {
 	},
 
 	default_prog = default_prog,
+	set_environment_variables = set_environment_variables,
+	term = term,
 }

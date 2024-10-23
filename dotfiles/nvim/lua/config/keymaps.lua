@@ -18,3 +18,8 @@ end
 -- Add empty lines before and after cursor line
 map("n", "[<space>", "<Cmd>call append(line('.') - 1, repeat([''], v:count1))<CR>", { desc = "Put empty line above" })
 map("n", "]<space>", "<Cmd>call append(line('.'),     repeat([''], v:count1))<CR>", { desc = "Put empty line below" })
+
+-- Fix M-Space with Neo + Darwin
+if vim.loop.os_uname().sysname == "Darwin" then
+  map("i", "<M-Space>", "<Space>")
+end
