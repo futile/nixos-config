@@ -25,7 +25,7 @@ if vim.loop.os_uname().sysname == "Darwin" then
 
   -- From https://neovide.dev/faq.html#how-can-i-use-cmd-ccmd-v-to-copy-and-paste
   if vim.g.neovide then
-    map({ "i", "v", "n", "o", "c", "t" }, "<D-Left>", "^")
-    map({ "i", "v", "n", "o", "c", "t" }, "<D-Right>", "$")
+    map({ "i", "v", "n", "o", "c", "t" }, "<D-Left>", "<Home>")
+    map({ "i", "v", "n", "o", "c", "t" }, "<D-Right>", "<End>")
   end
 end
