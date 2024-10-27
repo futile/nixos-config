@@ -87,6 +87,9 @@ in {
       python3 # just for a quick shell, math etc.
       # libreoffice # open word/excel/etc. files
 
+      # TESTING; stuff I want to test, throw back out if I don't use it!
+      oils-for-unix
+
       # nix tools, so I can do some nixpkgs-stuff if I want to
       nix-prefetch-git
       nix-prefetch-github

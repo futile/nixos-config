@@ -60,6 +60,7 @@
         dbeaver-bin
         scala-cli
         earthly
+        oils-for-unix
 
         # cargo tools
         cargo-udeps
