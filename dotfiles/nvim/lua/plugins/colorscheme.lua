@@ -11,8 +11,12 @@ return {
         opts.colorscheme = "embark"
       else
         -- colorscheme in terminal/otherwise
-        -- opts.colorscheme = "astrolight"
-        opts.colorscheme = "embark"
+        if vim.loop.os_gethostname() == "H77QF74G0F" then
+          opts.colorscheme = "nordic"
+        else
+          -- opts.colorscheme = "astrolight"
+          opts.colorscheme = "embark"
+        end
       end
       -- global override
       -- opts.colorscheme = "pinkmare"

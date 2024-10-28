@@ -4,6 +4,7 @@ local hostname = wezterm.hostname()
 local default_prog = nil
 local set_environment_variables = nil
 local term = nil
+local font_size = nil
 
 if hostname == "H77QF74G0F" then
 	default_prog = { "fish", "--login" }
@@ -12,6 +13,7 @@ if hostname == "H77QF74G0F" then
 		WSLENV = "TERMINFO_DIRS",
 	}
 	term = "wezterm"
+	font_size = 13.2
 end
 
 return {
@@ -21,7 +23,7 @@ return {
 	-- color_scheme = "nordfox",
 	-- color_scheme = "Seafoam Pastel",
 	-- color_scheme = "Solarized (light) (terminal.sexy)",
-	-- color_scheme = "kanagawabones",
+	color_scheme = "kanagawabones",
 	-- color_scheme = "onedark",
 	-- color_scheme = "everforest",
 	-- color_scheme = "Rosé Pine (base16)",
@@ -32,7 +34,7 @@ return {
 	-- color_scheme = "rose-pine-dawn",
 
 	-- color_scheme = "Sakura (base16)",
-	color_scheme = "embark",
+	-- color_scheme = "embark",
 
 	font = wezterm.font_with_fallback({
 		-- "FantasqueSansM Nerd Font Mono", -- I just can't use this, not pleasent enough xd
@@ -59,4 +61,5 @@ return {
 	default_prog = default_prog,
 	set_environment_variables = set_environment_variables,
 	term = term,
+	font_size = font_size,
 }

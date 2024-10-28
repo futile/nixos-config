@@ -3,7 +3,11 @@
 -- Add any additional options here
 
 -- for neovide Pog
-vim.o.guifont = "FiraCode Nerd Font Mono:h12"
+if vim.loop.os_gethostname() == "H77QF74G0F" then
+  vim.o.guifont = "FiraCode Nerd Font Mono:h14"
+else
+  vim.o.guifont = "FiraCode Nerd Font Mono:h12"
+end
 
 -- turn off relativenumbers, they make scrolling non-smooth
 vim.o.relativenumber = false
