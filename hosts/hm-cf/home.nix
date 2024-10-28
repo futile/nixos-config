@@ -81,6 +81,8 @@ in {
       cargo-feature
       cargo-vet
       cargo-nextest
+      cargo-release
+      git-cliff
       # cargo-audit # broken for now due to Rust 1.80/`time`-lib fallout, should (?) be fixed by v0.20.1 soon
 
       # misc
