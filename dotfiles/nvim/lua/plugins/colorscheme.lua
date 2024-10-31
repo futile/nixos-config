@@ -4,8 +4,17 @@ return {
     "LazyVim/LazyVim",
 
     opts = function(_, opts)
-      if vim.loop.os_gethostname() == "H77QF74G0F" then
+      local hostname = vim.loop.os_gethostname()
+      if hostname == "H77QF74G0F" then
         opts.colorscheme = "nordic"
+      elseif hostname == "nixos-home" then
+        if vim.g.neovide then
+          opts.colorscheme = "oh-lucy"
+        else
+          opts.colorscheme = "rose-pine-dawn"
+        end
+        -- override!
+        opts.colorscheme = "tokyonight"
       elseif vim.g.neovide then
         -- colorscheme in neovide
         -- opts.colorscheme = "nordic"
@@ -15,10 +24,15 @@ return {
       else
         -- colorscheme in terminal/otherwise
         -- opts.colorscheme = "astrolight"
+        -- opts.colorscheme = "onenord-light"
+        -- opts.colorscheme = "rose-pine-dawn"
         opts.colorscheme = "embark"
       end
       -- global override
-      -- opts.colorscheme = "pinkmare"
+      -- opts.colorscheme = "embark"
+      -- opts.colorscheme = "kanagawa"
+      -- opts.colorscheme = "oh-lucy" -- status line color not ideal atm. (2024-06-06)
+      -- opts.colorscheme = "tokyonight"
     end,
 
     -- opts = {
