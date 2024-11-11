@@ -11,6 +11,8 @@
       pull = { ff = "only"; prune = "true"; };
       rebase = { autoStash = "true"; };
       merge = { conflictstyle = "diff3"; };
+
+      rerere.enable = true;
     };
 
     lfs.enable = true;
