@@ -590,7 +590,8 @@ if true then
             -- rust-analyzer language server configuration
             ["rust-analyzer"] = {
               cargo = {
-                extraArgs = { "--profile", "rust-analyzer" },
+                targetDir = true, -- causes a subdirectory in `target` to be used
+                -- extraArgs = { "--profile", "rust-analyzer" },
               },
             },
           },
