@@ -104,4 +104,7 @@
 
   # for rtl8192ee (wifi) firmware
   hardware.enableRedistributableFirmware = true;
+
+  # for Monitor-KVM stuff, let's hope 🙏
+  hardware.i2c.enable = true;
 }
