@@ -132,6 +132,14 @@
       homeConfigurations."frath" = home-manager.lib.homeManagerConfiguration {
         pkgs = import nixpkgs {
           system = "aarch64-darwin";
+
+          config = {
+            # explicitly manage which unfree packages I allow in this config
+            allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
+              "spotify" # allowed + need music
+            ];
+          };
+
           overlays = [
             (final: prev: {
               lib = prev.lib // {
@@ -221,7 +229,6 @@
 
         # Optionally use extraSpecialArgs
         # to pass through arguments to home.nix
-
         # forward flake-inputs to module arguments
         extraSpecialArgs = {
           flake-inputs = inputs;
