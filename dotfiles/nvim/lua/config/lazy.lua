@@ -7,9 +7,9 @@ end
 vim.opt.rtp:prepend(vim.env.LAZY or lazypath)
 
 local hostname = vim.loop.os_gethostname()
-local goConfig = nil
+local goConfig = { import = "lazyvim.plugins.extras.lang.go", enabled = false }
 if hostname == "H77QF74G0F" then
-  goConfig = { import = "lazyvim.plugins.extras.lang.go" }
+  goConfig.enabled = true
 end
 
 require("lazy").setup({
@@ -26,11 +26,11 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.lang.rust" },
     { import = "lazyvim.plugins.extras.lsp.neoconf" },
     { import = "lazyvim.plugins.extras.coding.mini-surround" },
-    goConfig,
     -- { import = "lazyvim.plugins.extras.coding.codeium" }, -- just wasn't very good :(
     -- { import = "lazyvim.plugins.extras.coding.copilot" },
     -- import/override with your plugins
     { import = "plugins" },
+    goConfig,
   },
   defaults = {
     -- By default, only LazyVim plugins will be lazy-loaded. Your custom plugins will load during startup.
