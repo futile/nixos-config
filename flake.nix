@@ -167,6 +167,13 @@
                     nixpkgs-fmt
                     # nixfmt # don't want this for now, nixpkgs-fmt is superior :)
 
+                    # go
+                    gopls
+                    gotools
+                    gofumpt
+                    gomodifytags
+                    impl
+
                     # tex
                     # texlab
 
