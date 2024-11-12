@@ -106,5 +106,6 @@
   hardware.enableRedistributableFirmware = true;
 
   # for Monitor-KVM stuff, let's hope 🙏
+  # see also, for some reverse-engineered commands: https://gist.github.com/lainosantos/06d233f6c586305cde67489c2e4a764d
   hardware.i2c.enable = true;
 }

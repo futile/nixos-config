@@ -78,7 +78,7 @@ in {
       rustup
       cargo-edit
       cargo-udeps
-      cargo-feature
+      # cargo-feature # broken for now maybe
       cargo-vet
       cargo-nextest
       cargo-release
