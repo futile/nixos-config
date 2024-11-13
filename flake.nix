@@ -9,6 +9,9 @@
     # nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
     # nixpkgs-unstable = nixpkgs; # requires `inputs = rec {`. works, but duplicates the input, doesn't reference it
 
+    # see below, shouldn't need this for long
+    nixpkgs-staging-next = { url = "github:nixos/nixpkgs/staging-next"; };
+
     nixpkgs-pkgs-unstable = { url = "github:nixos/nixpkgs/nixpkgs-unstable"; };
 
     # disabling this cause I don't need it currently (and it uses storage/network DL)
@@ -224,6 +227,11 @@
                     } // otherArgs);
                 };
               };
+            })
+
+            (_: _: {
+              # override until https://nixpk.gs/pr-tracker.html?pr=354914 is in nixos-unstable
+              neovide = inputs.nixpkgs-staging-next.legacyPackages.aarch64-darwin.neovide;
             })
 
             # inputs.cf-engineering-nixpkgs.overlay
