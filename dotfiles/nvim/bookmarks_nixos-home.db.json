@@ -30,7 +30,7 @@
             "relative_path": "compiler/rustc_expand/src/expand.rs"
           },
           "name": "expand_invoc",
-          "visited_at": 1725876296
+          "visited_at": 1731770768
         },
         {
           "content": "use std::cell::Cell;",
@@ -45,7 +45,7 @@
             "relative_path": "compiler/rustc_expand/src/derive_macro_expansion.rs"
           },
           "name": "derive_macro_expansion.rs",
-          "visited_at": 1725879713
+          "visited_at": 1731770784
         }
       ],
       "collapse": false,
