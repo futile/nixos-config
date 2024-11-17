@@ -9,9 +9,6 @@
     # nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
     # nixpkgs-unstable = nixpkgs; # requires `inputs = rec {`. works, but duplicates the input, doesn't reference it
 
-    # see below, shouldn't need this for long
-    nixpkgs-staging-next = { url = "github:nixos/nixpkgs/staging-next"; };
-
     nixpkgs-pkgs-unstable = { url = "github:nixos/nixpkgs/nixpkgs-unstable"; };
 
     # disabling this cause I don't need it currently (and it uses storage/network DL)
@@ -110,6 +107,17 @@
         specialArgs = { flake-inputs = inputs; inherit system; };
 
         modules = baseModules ++ [
+          # keeping around for when I need to override 1 or more packages again
+          ({ config, flake-inputs, system, ... }: {
+            nixpkgs.overlays =
+              [
+                (_: _: {
+                  # override until https://nixpk.gs/pr-tracker.html?pr=356292 is in nixos-unstable
+                  neovide = flake-inputs.nixpkgs-pkgs-unstable.legacyPackages.${system}.neovide;
+                })
+              ];
+          })
+
           # "draw the rest of the owl"
           ./hosts/nixos-home
         ];
@@ -227,11 +235,6 @@
                     } // otherArgs);
                 };
               };
-            })
-
-            (_: _: {
-              # override until https://nixpk.gs/pr-tracker.html?pr=354914 is in nixos-unstable
-              neovide = inputs.nixpkgs-staging-next.legacyPackages.aarch64-darwin.neovide;
             })
 
             # inputs.cf-engineering-nixpkgs.overlay

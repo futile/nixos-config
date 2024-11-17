@@ -33,7 +33,8 @@ in {
       "${modules}/home-manager.nix"
 
       # cosmic desktop - https://github.com/lilyinstarlight/nixos-cosmic
-      flake-inputs.nixos-cosmic.nixosModules.default
+      # causing too much rebuilding for now.
+      # flake-inputs.nixos-cosmic.nixosModules.default
     ];
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -164,7 +165,7 @@ in {
   };
 
   # enable cosmic desktop
-  services.desktopManager.cosmic.enable = true;
+  # services.desktopManager.cosmic.enable = true;
 
   # cosmic greeter; doesn't allow gnome session I think, but works with cosmic.
   # services.displayManager.cosmic-greeter.enable = true;
