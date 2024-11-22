@@ -52,7 +52,7 @@
       fish_user_key_bindings = {
         body = ''
           # '\a' is ctrl+g according to `fish_key_reader`
-          bind \a 'nvim +Dashboard +Neogit'
+          bind \a 'nvim -c ":lua Snacks.dashboard()" -c Neogit'
         '';
       };
     };
