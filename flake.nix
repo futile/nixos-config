@@ -148,6 +148,7 @@
             # explicitly manage which unfree packages I allow in this config
             allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
               "spotify" # allowed + need music
+              "sublime-merge" # unfree license, but explicitly has an "unrestricted evaluation period", i.e., no time limit
             ];
           };
 

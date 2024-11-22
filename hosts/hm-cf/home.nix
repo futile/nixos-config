@@ -122,7 +122,7 @@ in {
 
       # development
       # conda
-      # sublime-merge
+      # sublime-merge # license allows "unrestricted evaluation period"; but not available for aarch64 :(
       # dbeaver-bin
       # scala-cli
       # earthly
