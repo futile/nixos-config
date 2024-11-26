@@ -19,40 +19,40 @@ if true then
           mode = { "n", "v" },
         },
       },
-      opts = function(_, opts)
-        opts.gitbrowse = vim.tbl_deep_extend("error", opts.gitbrowse or {}, {
-          remote_patterns = {
-            -- cf bitbucket
-            --   ssh://git@bitbucket.cfdata.org:7999/devops/salt.git
-            --   https://bitbucket.cfdata.org/projects/OXY/repos/oxy/browse/integration-tests/tests/http2.rs?at=0f5a4f702da88ef6e671521fd82b497b3ac7fa75
-            {
-              "^ssh://git@bitbucket%.cfdata%.org:7999/(.*)/(.*)%.git$",
-              "https://bitbucket.cfdata.org/projects/%1/repos/%2",
-            },
-            {
-              "^ssh://git@bitbucket%.cfdata%.org:7999/(.*)/(.*)$",
-              "https://bitbucket.cfdata.org/projects/%1/repos/%2",
-            },
-            -- cf gitlab
-            --   git@gitlab.cfdata.org:cloudflare/ares/oxy-teams
-            --   https://gitlab.cfdata.org/cloudflare/ares/gateway-rule-engine/-/blob/iain/GFI-502/Cargo.toml?ref_type=heads#L47
-            {
-              "^git@gitlab%.cfdata%.org:cloudflare/(.*)/(.*)%.git$",
-              "https://gitlab.cfdata.org/cloudflare/%1/%2",
-            },
-            { "^git@gitlab%.cfdata%.org:cloudflare/(.*)/(.*)$", "https://gitlab.cfdata.org/cloudflare/%1/%2" },
+      -- https://github.com/folke/snacks.nvim/issues/164
+      opts_extend = { "gitbrowse.remote_patterns" },
+      opts = {
+        remote_patterns = {
+          -- cf bitbucket
+          --   ssh://git@bitbucket.cfdata.org:7999/devops/salt.git
+          --   https://bitbucket.cfdata.org/projects/OXY/repos/oxy/browse/integration-tests/tests/http2.rs?at=0f5a4f702da88ef6e671521fd82b497b3ac7fa75
+          {
+            "^ssh://git@bitbucket%.cfdata%.org:7999/(.*)/(.*)%.git$",
+            "https://bitbucket.cfdata.org/projects/%1/repos/%2",
           },
-          url_patterns = {
-            ["bitbucket%.cfdata%.org"] = {
-              file = "/browse/{file}?at={branch}#{line}",
-            },
-            ["gitlab%.cfdata%.org"] = {
-              branch = "/-/tree/{branch}",
-              file = "/-/blob/{branch}/{file}#L{line}",
-            },
+          {
+            "^ssh://git@bitbucket%.cfdata%.org:7999/(.*)/(.*)$",
+            "https://bitbucket.cfdata.org/projects/%1/repos/%2",
           },
-        })
-      end,
+          -- cf gitlab
+          --   git@gitlab.cfdata.org:cloudflare/ares/oxy-teams
+          --   https://gitlab.cfdata.org/cloudflare/ares/gateway-rule-engine/-/blob/iain/GFI-502/Cargo.toml?ref_type=heads#L47
+          {
+            "^git@gitlab%.cfdata%.org:cloudflare/(.*)/(.*)%.git$",
+            "https://gitlab.cfdata.org/cloudflare/%1/%2",
+          },
+          { "^git@gitlab%.cfdata%.org:cloudflare/(.*)/(.*)$", "https://gitlab.cfdata.org/cloudflare/%1/%2" },
+        },
+        url_patterns = {
+          ["bitbucket%.cfdata%.org"] = {
+            file = "/browse/{file}?at={branch}#{line}",
+          },
+          ["gitlab%.cfdata%.org"] = {
+            branch = "/-/tree/{branch}",
+            file = "/-/blob/{branch}/{file}#L{line}",
+          },
+        },
+      },
     },
     -- Opening/Yanking links to current file
     -- https://github.com/linrongbin16/gitlinker.nvim
@@ -641,6 +641,7 @@ if true then
             -- rust-analyzer language server configuration
             ["rust-analyzer"] = {
               cargo = {
+                allFeatures = false, -- set to `true` by lazyvim, but not good for (some) projects
                 targetDir = true, -- causes a subdirectory in `target` to be used
                 -- extraArgs = { "--profile", "rust-analyzer" },
               },
