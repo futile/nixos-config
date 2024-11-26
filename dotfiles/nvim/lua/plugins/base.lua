@@ -3,15 +3,66 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
-
+    -- Snacks.nvim config
+    -- https://github.com/folke/snacks.nvim/tree/main?tab=readme-ov-file#-usage
+    {
+      "folke/snacks.nvim",
+      priority = 1000,
+      lazy = false,
+      keys = {
+        {
+          "<leader>gB",
+          function()
+            Snacks.gitbrowse()
+          end,
+          desc = "Git Browse",
+          mode = { "n", "v" },
+        },
+      },
+      opts = function(_, opts)
+        opts.gitbrowse = vim.tbl_deep_extend("error", opts.gitbrowse or {}, {
+          remote_patterns = {
+            -- cf bitbucket
+            --   ssh://git@bitbucket.cfdata.org:7999/devops/salt.git
+            --   https://bitbucket.cfdata.org/projects/OXY/repos/oxy/browse/integration-tests/tests/http2.rs?at=0f5a4f702da88ef6e671521fd82b497b3ac7fa75
+            {
+              "^ssh://git@bitbucket%.cfdata%.org:7999/(.*)/(.*)%.git$",
+              "https://bitbucket.cfdata.org/projects/%1/repos/%2",
+            },
+            {
+              "^ssh://git@bitbucket%.cfdata%.org:7999/(.*)/(.*)$",
+              "https://bitbucket.cfdata.org/projects/%1/repos/%2",
+            },
+            -- cf gitlab
+            --   git@gitlab.cfdata.org:cloudflare/ares/oxy-teams
+            --   https://gitlab.cfdata.org/cloudflare/ares/gateway-rule-engine/-/blob/iain/GFI-502/Cargo.toml?ref_type=heads#L47
+            {
+              "^git@gitlab%.cfdata%.org:cloudflare/(.*)/(.*)%.git$",
+              "https://gitlab.cfdata.org/cloudflare/%1/%2",
+            },
+            { "^git@gitlab%.cfdata%.org:cloudflare/(.*)/(.*)$", "https://gitlab.cfdata.org/cloudflare/%1/%2" },
+          },
+          url_patterns = {
+            ["bitbucket%.cfdata%.org"] = {
+              file = "/browse/{file}?at={branch}#{line}",
+            },
+            ["gitlab%.cfdata%.org"] = {
+              branch = "/-/tree/{branch}",
+              file = "/-/blob/{branch}/{file}#L{line}",
+            },
+          },
+        })
+      end,
+    },
     -- Opening/Yanking links to current file
     -- https://github.com/linrongbin16/gitlinker.nvim
     {
       "linrongbin16/gitlinker.nvim",
+      enable = false,
       cmd = "GitLink",
       keys = {
-        { "<leader>gy", "<cmd>GitLink<cr>", mode = { "n", "v" }, desc = "Yank git link" },
-        { "<leader>gB", "<cmd>GitLink!<cr>", mode = { "n", "v" }, desc = "Open git link" },
+        -- { "<leader>gy", "<cmd>GitLink<cr>", mode = { "n", "v" }, desc = "Yank git link" },
+        -- { "<leader>gB", "<cmd>GitLink!<cr>", mode = { "n", "v" }, desc = "Open git link" },
       },
       opts = function(_, opts)
         --- @param s string
