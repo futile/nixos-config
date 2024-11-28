@@ -647,7 +647,7 @@ if true then
             -- rust-analyzer language server configuration
             ["rust-analyzer"] = {
               cargo = {
-                allFeatures = false, -- set to `true` by lazyvim, but not good for (some) projects
+                allFeatures = true, -- not good for (some) projects, disable with a `.vscode/settings.json` then, like here: https://github.com/rust-analyzer/rust-project.json-example/blob/master/.vscode/settings.json
                 targetDir = true, -- causes a subdirectory in `target` to be used
                 -- extraArgs = { "--profile", "rust-analyzer" },
               },
