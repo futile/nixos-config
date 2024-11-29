@@ -87,3 +87,7 @@ nix-gc-force:
 prune-old-zfs-snapshots:
     # To list them first: `zfs list -t snapshot`
     nix run unstable#zfs-prune-snapshots -- -Rvn 1y
+
+# Print when the last flake.lock update was pushed (very heuristic)
+last-update-when:
+    git log --grep="[Uu]pdate" -1
