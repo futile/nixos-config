@@ -116,6 +116,8 @@ in {
       kondo # for cleaning (old) build artifacts, cache folders etc. interactively
       # libtree # broken on aarch-64! # for checking nested deps for Nix builds etc.
       socat
+      duf # better du & df
+      nvtopPackages.apple # video/gpu stats
 
       # for now here manually, instead of "git-extra.nix"
       git-town
