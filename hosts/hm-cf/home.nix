@@ -135,16 +135,24 @@ in {
       # cf stuff, but I get these via homebrew 🙃
       # cf-paste
 
-      (nerdfonts.override {
-        fonts = [
-          "JetBrainsMono" # wezterm default font
-          "LiberationMono" # I just like this font :)
-          "FiraCode"
-          "DroidSansMono"
-          "NerdFontsSymbolsOnly"
-          "FantasqueSansMono"
-        ];
-      })
+      nerd-fonts.jetbrains-mono
+      nerd-fonts.liberation # no mono version of this?
+      nerd-fonts.fira-code # `fira-mono` also exists
+      nerd-fonts.droid-sans-mono
+      nerd-fonts.symbols-only
+      nerd-fonts.fantasque-sans-mono
+
+      # old list: (also see `modules/fonts.nix`)
+      # (nerdfonts.override {
+      #   fonts = [
+      #     "JetBrainsMono" # wezterm default font
+      #     "LiberationMono" # I just like this font :)
+      #     "FiraCode"
+      #     "DroidSansMono"
+      #     "NerdFontsSymbolsOnly"
+      #     "FantasqueSansMono"
+      #   ];
+      # })
 
       # el music
       spotify
