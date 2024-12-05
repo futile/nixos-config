@@ -5,12 +5,13 @@
     userName = "Felix Rath";
 
     extraConfig = {
-      init = { defaultBranch = "main"; };
       core = { editor = "nvim"; };
       fetch = { prune = "true"; pruneTags = "true"; };
-      pull = { ff = "only"; prune = "true"; };
-      rebase = { autoStash = "true"; };
+      init = { defaultBranch = "main"; };
       merge = { conflictstyle = "diff3"; };
+      pull = { ff = "only"; prune = "true"; };
+      push = { autoSetupRemote = true; };
+      rebase = { autoStash = "true"; };
 
       rerere.enable = true;
     };
