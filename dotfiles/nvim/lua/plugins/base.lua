@@ -535,29 +535,6 @@ if true then
     -- typescript lsp & config
     { import = "lazyvim.plugins.extras.lang.typescript" },
 
-    -- rust lsp
-    -- {
-    --   "simrat39/rust-tools.nvim",
-    --   opts = {
-    --     server = {
-    --       settings = {
-    --         ["rust-analyzer"] = {
-    --           cargo = {
-    --             extraArgs = { "--profile", "rust-analyzer" },
-    --           },
-    --           -- need to specify it for all `cargo`-invocations (as above), it seems
-    --           -- check = {
-    --           --   extraArgs = { "--profile", "rust-analyzer" }
-    --           -- },
-    --           -- checkOnSave = {
-    --           --   extraArgs = { "--profile", "rust-analyzer" }
-    --           -- },
-    --         },
-    --       },
-    --     },
-    --   },
-    -- },
-
     -- rustaceanvim
     {
       "mrcjkb/rustaceanvim",
