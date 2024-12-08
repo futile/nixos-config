@@ -532,12 +532,6 @@ if true then
     -- syntax highlighting etc. for `Earthfile`s
     { "earthly/earthly.vim" },
 
-    -- open files on github/gitlab
-    {
-      "Almo7aya/openingh.nvim",
-      opts = {},
-    },
-
     -- typescript lsp & config
     { import = "lazyvim.plugins.extras.lang.typescript" },
 
