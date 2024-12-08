@@ -631,13 +631,6 @@ if true then
       opts = {},
     },
 
-    -- for neovide, otherwise it crashes when entering cmd mode with ":" :(
-    -- fixed! :D
-    {
-      "folke/noice.nvim",
-      enabled = true,
-    },
-
     -- Metals setup with the official plugin
     {
       "scalameta/nvim-metals",
