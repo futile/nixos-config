@@ -561,6 +561,9 @@ if true then
                 targetDir = true, -- causes a subdirectory in `target` to be used
                 -- extraArgs = { "--profile", "rust-analyzer" },
               },
+              files = {
+                excludeDirs = { ".direnv" },
+              },
             },
           },
         },
