@@ -52,9 +52,11 @@ if true then
             ["bitbucket%.cfdata%.org"] = {
               file = "/browse/{file}?at={branch}#{line}",
             },
+            -- see https://github.com/folke/snacks.nvim/blob/main/docs/gitbrowse.md
             ["gitlab%.cfdata%.org"] = {
               branch = "/-/tree/{branch}",
-              file = "/-/blob/{branch}/{file}#L{line}",
+              file = "/-/blob/{branch}/{file}#L{line_start}-L{line_end}",
+              commit = "/-/commit/{commit}",
             },
           },
         },
