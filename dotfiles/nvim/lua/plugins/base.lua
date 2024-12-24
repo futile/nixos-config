@@ -69,6 +69,7 @@ if true then
       "LintaoAmons/bookmarks.nvim",
       -- tag = "v0.5.4", -- optional, pin the plugin at specific version for stability
       dependencies = {
+        { "kkharji/sqlite.lua" },
         { "nvim-telescope/telescope.nvim" },
         { "stevearc/dressing.nvim" }, -- optional: to have the same UI shown in the GIF
       },
@@ -131,15 +132,6 @@ if true then
           "<cmd>BookmarksTree<cr>",
           desc = "Open Bookmarks Tree View",
         },
-      },
-    },
-
-    -- indent blankline config (already part of LazyVim)
-    -- https://github.com/lukas-reineke/indent-blankline.nvim
-    {
-      "lukas-reineke/indent-blankline.nvim",
-      opts = {
-        scope = { show_start = true, show_end = true, char = "▏" },
       },
     },
 

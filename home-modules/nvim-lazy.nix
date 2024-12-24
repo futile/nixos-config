@@ -19,6 +19,8 @@ in
     enable = true;
     extraPackages = pkgs.lib.my.editorTools ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.xsel ]);
 
+    extraLuaPackages = luaPkgs: with luaPkgs; [ sqlite ];
+
     # dunno how to do this together with lazyvim :/
     # extraLuaConfig = ''
     #   -- bootstrap lazy.nvim, LazyVim and your plugins
