@@ -18,12 +18,12 @@
       contribute = "town contribute";
       diff-parent = "town diff-parent";
       hack = "town hack";
-      kill = "town kill";
+      delete = "town delete";
       observe = "town observe";
       park = "town park";
       prepend = "town prepend";
       propose = "town propose";
-      rename-branch = "town rename-branch";
+      rename = "town rename";
       repo = "town repo";
       set-parent = "town set-parent";
       sync = "town sync";
