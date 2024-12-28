@@ -203,6 +203,9 @@
                     # lua
                     stylua
                     lua-language-server
+
+                    # jsonls
+                    nodePackages.vscode-json-languageserver
                   ]);
 
                   # TODO: put `mkWrappedWithDeps` into its own file, so we can import/use it here

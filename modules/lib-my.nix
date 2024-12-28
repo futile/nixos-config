@@ -44,6 +44,9 @@ let
 
       # copilot
       nodejs
+
+      # jsonls
+      nodePackages.vscode-json-languageserver
     ];
 
   # reference: https://discourse.nixos.org/t/wrapping-packages/4431

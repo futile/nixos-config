@@ -258,6 +258,9 @@ if true then
           lua_ls = {
             mason = false,
           },
+          jsonls = {
+            cmd = { "vscode-json-languageserver", "--stdio" },
+          },
         },
       },
     },
