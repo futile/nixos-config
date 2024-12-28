@@ -530,6 +530,7 @@ if true then
     { import = "lazyvim.plugins.extras.lang.typescript" },
 
     -- rustaceanvim
+    -- just needed to stash this somewhere (from a .vscode/settings.json) "commented-out.rust-analyzer.cargo.buildScripts.invocationLocation": "root",
     {
       "mrcjkb/rustaceanvim",
       version = "^5",
