@@ -58,6 +58,8 @@ return {
 
 	-- anti_alias_custom_block_glyphs = false,
 
+	max_fps = 120,
+
 	colors = {
 		tab_bar = {},
 	},
