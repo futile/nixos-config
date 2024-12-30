@@ -6,3 +6,5 @@ email = "felixm.rath@gmail.com"
 paginate = "auto"
 default-command = "log"
 pager = "less -FRX"
+# diff.format = "git"
+diff.tool = ["difft", "--color=always", "$left", "$right"]

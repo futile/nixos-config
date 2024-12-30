@@ -560,7 +560,7 @@ if true then
                 -- extraArgs = { "--profile", "rust-analyzer" },
               },
               files = {
-                excludeDirs = { ".direnv" },
+                excludeDirs = { ".direnv", ".jj" },
               },
             },
           },

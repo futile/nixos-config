@@ -1,6 +1,7 @@
 { config, pkgs, ... }: {
-  home.packages = [
-    pkgs.jujutsu
+  home.packages = with pkgs; [
+    jujutsu
+    difftastic
   ];
 
   xdg = {
