@@ -17,6 +17,7 @@
     "usb_storage"
     "sd_mod"
     "sr_mod"
+    "btusb" # for bluetooth keyboard, i.e., my Glove80 :)
   ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-intel" ]
