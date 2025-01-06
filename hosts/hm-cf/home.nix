@@ -78,7 +78,7 @@ in {
       rustup
       cargo-edit
       cargo-udeps
-      cargo-vet
+      # cargo-vet # sadly broken for now, see https://github.com/NixOS/nixpkgs/pull/370510
       cargo-nextest
       cargo-release
       git-cliff
