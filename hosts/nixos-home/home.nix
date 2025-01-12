@@ -49,7 +49,10 @@ in {
         # rust tools
         rustup
         cargo-edit
-        # rust-analyzer # conflicts with rustup, probably provided by rustup now?
+        cargo-nextest
+        # conflicts with rustup, probably provided by rustup now? -- yes, but
+        # the nixos version can be newer, so might be nice instead :)
+        # rust-analyzer
 
         # misc
         texlive.combined.scheme-full
