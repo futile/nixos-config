@@ -120,6 +120,7 @@ in {
 
       # for now here manually, instead of "git-extra.nix"
       git-town
+      mergiraf
 
       # development
       # conda
