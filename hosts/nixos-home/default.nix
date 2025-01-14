@@ -18,7 +18,8 @@ in {
       "${modules}/audio-pipewire.nix"
 
       # neo layout
-      "${modules}/neo-layout.nix"
+      # see below
+      # "${modules}/neo-layout.nix"
 
       # my fonts
       "${modules}/fonts.nix"
@@ -42,6 +43,19 @@ in {
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" ];
     shell = pkgs.fish;
+  };
+
+  # console keymap
+  # while I still use my other keyboard for my zfs boot pw
+  console.keyMap = "neo";
+
+  # Configure keymap in X11
+  services.xserver.xkb = {
+    layout = "de,de";
+    # no neo by default, since I'm using my Glove80 now, which encodes
+    # its layout via firmware, which is currently basic on regular `de`
+    variant = "basic,neo";
+    # xkbOptions = "grp:menu_toggle"; # 'menu_toggle' -> context-menu key
   };
 
   # Shell must also be in `/etc/shells` or it might not work
