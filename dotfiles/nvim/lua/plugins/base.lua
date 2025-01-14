@@ -575,16 +575,17 @@ if true then
                 -- list of all r-a diagnostics: https://rust-analyzer.github.io/manual.html#diagnostics
                 disabled = {
                   -- don't make explicitly disabled proc-macros with squiggly lines everywhere
-                  "proc-macro-disabled",
-                  -- ?? this shouldn't be necessary, but is? ?? should be split already, see:
-                  -- https://github.com/rust-lang/rust-analyzer/pull/18418
-                  -- ^ this should already be in my version, which is 1.83.0 (90b35a62 2024-11-26)
-                  -- or maybe not, because release cycle is different? no idea oO
-                  -- -> will be fixed in 1.84, see https://github.com/rust-lang/rust-analyzer/issues/18414#issuecomment-2580059882
-                  "macro-error",
+                  -- actually, please do, because these can lead to r-a showing errors, in which case I want to see (:
+                  -- "proc-macro-disabled",
                 },
                 experimental = {
                   enable = true,
+                },
+              },
+              procMacro = {
+                ignored = {
+                  -- just do it, otherwise causes errors that aren't errors
+                  ["async-trait"] = {},
                 },
               },
               files = {
