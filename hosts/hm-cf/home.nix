@@ -31,6 +31,8 @@ in {
       # "${home-modules}/desktop-common.nix"
       "${home-modules}/wezterm.nix"
       "${home-modules}/nvim-lazy.nix"
+
+      "${home-modules}/mac-fix-home-end.nix"
     ];
 
   programs.git = {
