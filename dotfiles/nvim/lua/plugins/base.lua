@@ -190,6 +190,22 @@ if true then
       -- dependencies = {
       --   "nvim-telescope/telescope-fzf-native.nvim",
       -- },
+      opts = {
+        sources = {
+          path = {
+            relative_to = function(_, win)
+              -- Workaround for Vim:E5002: Cannot find window number
+              local ok, win_cwd = pcall(vim.fn.getcwd, win)
+              local cwd = ok and win_cwd or vim.fn.getcwd()
+
+              local is_subdir_of_home = vim.fn.fnamemodify(cwd, ":~") ~= cwd
+
+              -- this allows me to see `~/.cargo/...` paths (:
+              return is_subdir_of_home and vim.env.HOME or "/"
+            end,
+          },
+        },
+      },
     },
 
     -- Project local (and global) LSP settings
