@@ -47,14 +47,14 @@ in {
 
   # console keymap
   # while I still use my other keyboard for my zfs boot pw
-  console.keyMap = "neo";
+  console.keyMap = "de";
 
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "de,de";
     # no neo by default, since I'm using my Glove80 now, which encodes
     # its layout via firmware, which is currently basic on regular `de`
-    variant = "basic,neo";
+    variant = ",neo";
     # xkbOptions = "grp:menu_toggle"; # 'menu_toggle' -> context-menu key
   };
 
