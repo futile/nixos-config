@@ -124,6 +124,9 @@ in {
       git-town
       mergiraf
 
+      # see https://tableplus.com/, free with tab-/window-count limitations
+      tableplus
+
       # development
       # conda
       # sublime-merge # license allows "unrestricted evaluation period"; but not available for aarch64 :(
