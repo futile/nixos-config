@@ -73,6 +73,12 @@
 
     mac-app-util.url = "github:hraban/mac-app-util";
 
+    # https://isd-project.github.io/isd/
+    isd = {
+      url = "github:isd-project/isd";
+      inputs = { nixpkgs.follows = "nixpkgs"; };
+    };
+
     # cf-engineering-nixpkgs = {
     #   url = "git+ssh://git@bitbucket.cfdata.org/~terin/engineering-nixpkgs";
     #   inputs.nixpkgs.follows = "nixpkgs";

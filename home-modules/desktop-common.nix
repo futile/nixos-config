@@ -1,5 +1,4 @@
 { pkgs, config, thisFlakePath, flake-inputs, system, ... }:
-
 {
   home = {
     packages =
@@ -91,6 +90,7 @@
       # packages from other sources/nixpkgs branches
       [
         flake-inputs.nix-alien.packages.${system}.nix-alien
+        flake-inputs.isd.packages.${system}.default
       ];
 
     file = {
