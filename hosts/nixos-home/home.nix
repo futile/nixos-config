@@ -32,8 +32,6 @@ in {
       [ ] ++
       # packages from stable
       (with pkgs; [
-        element-desktop # temp stable, until bug resolved
-
         # compile stuff, for convenience I guess; but generally want to get rid of it
         ccache
         gcc
@@ -44,7 +42,7 @@ in {
         tdesktop
         discord
         slack
-        # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
+        # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228 # don't use it currently
 
         # rust tools
         rustup
@@ -55,9 +53,9 @@ in {
         # rust-analyzer
 
         # misc
-        texlive.combined.scheme-full
+        # texlive.combined.scheme-full
         # zotero # disable due to CVE-2023-5217 in ‘zotero-6.0.27’ 
-        protonvpn-cli
+        # protonvpn-cli
 
         # hardware stuff
         v4l-utils # webcam utils
