@@ -54,7 +54,7 @@ in {
     layout = "de,de";
     # no neo by default, since I'm using my Glove80 now, which encodes
     # its layout via firmware, which is currently basic on regular `de`
-    variant = ",neo";
+    variant = "nodeadkeys,neo";
     # xkbOptions = "grp:menu_toggle"; # 'menu_toggle' -> context-menu key
   };
 
