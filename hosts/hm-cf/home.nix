@@ -114,6 +114,7 @@ in {
       # dig
       tldr
       jq
+      yq
       kondo # for cleaning (old) build artifacts, cache folders etc. interactively
       # libtree # broken on aarch-64! # for checking nested deps for Nix builds etc.
       socat
