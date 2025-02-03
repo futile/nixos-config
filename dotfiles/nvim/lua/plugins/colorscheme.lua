@@ -6,7 +6,11 @@ return {
     opts = function(_, opts)
       local hostname = vim.loop.os_gethostname()
       if hostname == "H77QF74G0F" then
-        opts.colorscheme = "nordic"
+        -- ^^^ THIS VERY GOOD vvv
+        -- opts.colorscheme = "nordic"
+        -- ^^^ THIS VERY GOOD ^^^
+
+        opts.colorscheme = "oldworld"
       elseif hostname == "nixos-home" then
         if vim.g.neovide then
           opts.colorscheme = "oh-lucy"
