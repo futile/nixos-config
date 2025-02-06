@@ -605,7 +605,7 @@ if true then
                 },
               },
               files = {
-                excludeDirs = { ".direnv", ".jj" },
+                excludeDirs = { ".direnv", ".jj", "node_modules" },
               },
             },
           },
