@@ -557,9 +557,6 @@ if true then
     -- syntax highlighting etc. for `Earthfile`s
     { "earthly/earthly.vim" },
 
-    -- typescript lsp & config
-    { import = "lazyvim.plugins.extras.lang.typescript" },
-
     -- rustaceanvim
     -- just needed to stash this somewhere (from a .vscode/settings.json) "commented-out.rust-analyzer.cargo.buildScripts.invocationLocation": "root",
     {
@@ -614,7 +611,6 @@ if true then
     },
 
     -- yank-ring etc.
-    { import = "lazyvim.plugins.extras.coding.yanky" },
     {
       "gbprod/yanky.nvim",
       opts = {
@@ -638,7 +634,6 @@ if true then
     },
 
     -- projects for neovim
-    { import = "lazyvim.plugins.extras.util.project" },
     {
       "ahmedkhalf/project.nvim",
       keys = {
