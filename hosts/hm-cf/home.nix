@@ -91,7 +91,7 @@ in {
       # libreoffice # open word/excel/etc. files
 
       # TESTING; stuff I want to test, throw back out if I don't use it!
-      oils-for-unix
+      # oils-for-unix # currently broken (2025-02-10)
 
       # nix tools, so I can do some nixpkgs-stuff if I want to
       nix-prefetch-git
