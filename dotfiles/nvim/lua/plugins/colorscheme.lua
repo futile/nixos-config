@@ -10,7 +10,11 @@ return {
         -- opts.colorscheme = "nordic"
         -- ^^^ THIS VERY GOOD ^^^
 
-        opts.colorscheme = "oldworld"
+        -- THIS TOO:
+        -- opts.colorscheme = "oldworld"
+        -- ^^^ THIS VERY GOOD ^^^
+
+        opts.colorscheme = "shadow"
       elseif hostname == "nixos-home" then
         if vim.g.neovide then
           opts.colorscheme = "oh-lucy"
@@ -50,6 +54,14 @@ return {
 
   -- -- Grouped Colorschemes below --
 
+  {
+    "rjshkhr/shadow.nvim",
+    priority = 1000,
+    -- config = function()
+    --   vim.opt.termguicolors = true
+    --   vim.cmd.colorscheme("shadow")
+    -- end,
+  },
   -- these I haven't tried out/sorted yet
 
   -- OldWorld

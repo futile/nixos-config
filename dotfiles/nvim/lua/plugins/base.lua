@@ -3,6 +3,14 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- https://github.com/HiPhish/jinja.vim
+    {
+      -- needs manual "syntax=on" (website has AutoCmd instructions), but then its sloow
+      -- actually seems fine, but needs that extra setup; website only has vim-style instructions >.>
+      "HiPhish/jinja.vim",
+      -- opts = {},
+    },
+
     -- fzf-lua, new Telescope-like on the block 😎
     -- https://github.com/ibhagwan/fzf-lua
     {
@@ -604,6 +612,13 @@ if true then
               files = {
                 excludeDirs = { ".direnv", ".jj", "node_modules" },
               },
+              -- this no worky, think the option doesn't exist anymore :/
+              -- server = {
+              --   extraEnv = {
+              --     -- use nightly r-a by default (let's try this out :shrug:)
+              --     RUSTUP_TOOLCHAIN = "nightly",
+              --   },
+              -- },
             },
           },
         },
