@@ -213,7 +213,7 @@ in {
     # gnomeExtensions.pop-launcher-super-key # gone :(
     gnomeExtensions.vitals
     # gnomeExtensions.topicons-plus # package broken
-    (nordic.overrideAttrs { dontCheckForBrokenSymlinks = true; }) # manual fix until https://nixpk.gs/pr-tracker.html?pr=380464 is merged
+    nordic
 
     # monitoring
     lm_sensors
