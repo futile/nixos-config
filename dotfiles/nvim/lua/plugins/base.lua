@@ -645,6 +645,15 @@ if true then
       keys = {
         -- this respects tab-cwd better in my experience.
         { "<leader><space>", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
+        -- sadly doesn't work :( getting some error about marks not set
+        -- should allow searching the command history (useful for `:'<,'> s//``
+        -- commands) while in visual mode
+        -- {
+        --   "<leader>sc",
+        --   "<cmd>Telescope command_history<cr>",
+        --   desc = "Telescope Command History",
+        --   mode = { "v" },
+        -- },
       },
     },
 
