@@ -592,6 +592,11 @@ if true then
                 targetDir = true, -- causes a subdirectory in `target` to be used
                 -- extraArgs = { "--profile", "rust-analyzer" },
               },
+              -- also the default from LazyVim, but I like having it here explicitly
+              check = {
+                command = "clippy",
+                extraArgs = { "--no-deps" },
+              },
               diagnostics = {
                 -- list of all r-a diagnostics: https://rust-analyzer.github.io/manual.html#diagnostics
                 disabled = {
@@ -610,7 +615,20 @@ if true then
                 },
               },
               files = {
-                excludeDirs = { ".direnv", ".jj", "node_modules" },
+                -- sadly relative to workspace root, so if any of these are in a nested dir, it needs per-project config
+                -- should be able to not set this explicitly with https://github.com/LazyVim/LazyVim/pull/5664, if I want
+                exclude = {
+                  ".direnv",
+                  ".git",
+                  ".jj",
+                  ".github",
+                  ".gitlab",
+                  "bin",
+                  "node_modules",
+                  "target",
+                  "venv",
+                  ".venv",
+                },
               },
               -- this no worky, think the option doesn't exist anymore :/
               -- server = {
