@@ -8,7 +8,7 @@
       core = { editor = "nvim"; };
       fetch = { prune = "true"; pruneTags = "true"; };
       init = { defaultBranch = "main"; };
-      merge = { conflictstyle = "diff3"; };
+      merge = { conflictstyle = "zdiff3"; };
       pull = { ff = "only"; prune = "true"; };
       push = { autoSetupRemote = true; };
       rebase = { autoStash = "true"; };
