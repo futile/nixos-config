@@ -24,7 +24,7 @@
         gimp
 
         # screenshots
-        spectacle
+        kdePackages.spectacle
 
         # organization/todos etc.
         obsidian
