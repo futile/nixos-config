@@ -71,6 +71,9 @@ in {
     [ ] ++
     # packages from pkgs
     (with pkgs; [
+      # let's try out brave, since chromium is blocking uBlock now :)
+      brave
+
       # compile stuff, for convenience I guess; but generally want to get rid of it
       # ccache
       # gcc
