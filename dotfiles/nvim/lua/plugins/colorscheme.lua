@@ -11,10 +11,11 @@ return {
         -- ^^^ THIS VERY GOOD ^^^
 
         -- THIS TOO:
-        -- opts.colorscheme = "oldworld"
+        opts.colorscheme = "oldworld"
         -- ^^^ THIS VERY GOOD ^^^
 
-        opts.colorscheme = "shadow"
+        -- Also good, but not the one I want (for now) I think :)
+        -- opts.colorscheme = "shadow"
       elseif hostname == "nixos-home" then
         if vim.g.neovide then
           opts.colorscheme = "oh-lucy"
