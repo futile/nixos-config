@@ -28,12 +28,12 @@
 
     shellAbbrs = {
       n = "nvim";
+
       g = "git";
-      # blocked on "command" not yet being supported. tracked here: https://github.com/nix-community/home-manager/issues/6601
-      # "s" = {
-      #   command = "git";
-      #   expansion = "status";
-      # };
+      "s" = {
+        command = "git";
+        expansion = "status";
+      };
     };
 
     shellAliases = {
