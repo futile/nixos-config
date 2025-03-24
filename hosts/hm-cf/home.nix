@@ -123,6 +123,7 @@ in {
       socat
       duf # better du & df
       nvtopPackages.apple # video/gpu stats
+      unixtools.watch
 
       # for now here manually, instead of "git-extra.nix"
       git-town
