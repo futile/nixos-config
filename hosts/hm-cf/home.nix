@@ -129,6 +129,8 @@ in {
       git-town
       mergiraf
 
+      # gitbutler # currently broken build (on macos), something about "permission denied" (some folder permissions in downloaded sources maybe? but dunno) - waiting for new version
+
       # see https://tableplus.com/, free with tab-/window-count limitations
       tableplus
 

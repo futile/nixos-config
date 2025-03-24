@@ -156,6 +156,7 @@
               "spotify" # allowed + need music
               "sublime-merge" # unfree license, but explicitly has an "unrestricted evaluation period", i.e., no time limit
               "tableplus" # unfree, but has tab-/window-limit in the free version, that's it
+              "gitbutler" # unfree, but free for individual developers, plus no pricing exists yet (2025-03-24)
             ];
           };
 
