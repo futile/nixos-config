@@ -3,6 +3,12 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- SudaWrite (& SudaRead)
+    -- https://github.com/lambdalisue/vim-suda
+    {
+      "lambdalisue/vim-suda",
+    },
+
     -- https://github.com/HiPhish/jinja.vim
     {
       -- needs manual "syntax=on" (website has AutoCmd instructions), but then its sloow
