@@ -715,7 +715,8 @@ if true then
         -- "pattern" before "lsp", to avoid "subprojects"
         detection_methods = { "pattern", "lsp" },
         -- don't want stuff like "package.json" in here, also to avoid subprojects
-        patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn" },
+        -- .project_nvim_root as an escape-hatch for me
+        patterns = { ".project_nvim_root", ".git", "_darcs", ".hg", ".bzr", ".svn", ".jj" },
       },
     },
 
