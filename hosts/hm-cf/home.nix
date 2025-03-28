@@ -130,7 +130,9 @@ in {
       git-town
       mergiraf
 
-      gitbutler # currently broken build (on macos), something about "permission denied" (some folder permissions in downloaded sources maybe? but dunno) - waiting for new version
+      # currently broken build (on macos (only?)), something about "permission denied" (some folder permissions in downloaded sources maybe? but dunno)
+      # issue: https://github.com/NixOS/nixpkgs/issues/394068
+      # gitbutler
 
       # see https://tableplus.com/, free with tab-/window-count limitations
       tableplus
