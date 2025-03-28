@@ -214,6 +214,9 @@
 
                     # jsonls
                     nodePackages.vscode-json-languageserver
+
+                    # js/ts (:
+                    vtsls
                   ]);
 
                   # TODO: put `mkWrappedWithDeps` into its own file, so we can import/use it here

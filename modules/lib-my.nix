@@ -47,6 +47,9 @@ let
 
       # jsonls
       nodePackages.vscode-json-languageserver
+
+      # js/ts (:
+      vtsls
     ];
 
   # reference: https://discourse.nixos.org/t/wrapping-packages/4431
