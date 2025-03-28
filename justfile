@@ -27,7 +27,7 @@ update:
 
 # Update the packages in the current `nix profile`
 update-profile:
-    NIXPKGS_ALLOW_UNFREE=1 nix profile upgrade '.*' --impure
+    NIXPKGS_ALLOW_UNFREE=1 nix profile upgrade --all --impure
 
 # Show available inputs (can be used for `update-input`)
 show-inputs:
