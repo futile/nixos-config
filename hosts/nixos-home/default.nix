@@ -226,7 +226,18 @@ in {
 
     # for steam etc.
     protontricks
+
+    # for gaming
+    # tried installing Battle.net, but didn't work
+    # lutris
+    # umu-launcher
+    # vulkan-tools
   ];
+
+  # for Battle.net installation, but didn't get it to work in the end
+  # networking.extraHosts = ''
+  #   127.0.0.1 localhost.localdomain
+  # '';
 
   services.udev.packages = with pkgs; [ gnome-settings-daemon ];
 
