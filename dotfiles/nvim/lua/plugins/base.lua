@@ -3,6 +3,19 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- {
+    --   "saghen/blink.cmp",
+    --   opts = function(_, opts)
+    --     opts.completion = vim.tbl_deep_extend("error", opts.completion or {}, {
+    --       accept = {
+    --         -- should be default, but neither default nor this works :/
+    --         dot_repeat = true,
+    --       },
+    --     })
+    --     -- print(vim.inspect(opts))
+    --   end,
+    -- },
+
     -- SudaWrite (& SudaRead)
     -- https://github.com/lambdalisue/vim-suda
     {
