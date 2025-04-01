@@ -55,5 +55,6 @@
     pkgs.git-filter-repo # powerful history re-writing tool, use with care! https://github.com/newren/git-filter-repo
     pkgs.git-town # git-town, see https://www.git-town.com/introduction
     pkgs.mergiraf # lang-aware merges, see https://mergiraf.org/
+    pkgs.pre-commit # pre-commit, for (nicer) pre-commit checking, see https://pre-commit.com
   ];
 }
