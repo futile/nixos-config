@@ -2,9 +2,13 @@ let
   mkEditorTools = pkgs:
     with pkgs; [
       # misc
-      multimarkdown
       jq
       editorconfig-core-c
+
+      # markdown
+      multimarkdown
+      markdownlint-cli2
+      marksman
 
       # shell
       shfmt
