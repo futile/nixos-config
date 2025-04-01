@@ -224,6 +224,9 @@ in {
   # };
   # sessionPath = [ "$HOME/.npm-packages/bin" ];
 
+  # PATH for golang go install'd binaries
+  home.sessionPath = [ "$HOME/go/bin" ];
+
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
