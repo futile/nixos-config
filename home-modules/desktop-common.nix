@@ -44,6 +44,7 @@
         dig
         tldr
         jq
+        dyff # semantic yaml diffing
         kondo # for cleaning (old) build artifacts, cache folders etc. interactively
         libtree # for checking nested deps for Nix builds etc.
         duf # (much) better du & df

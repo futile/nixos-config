@@ -119,6 +119,7 @@ in {
       tldr
       jq
       yq
+      dyff # semantic yaml diffing
       kondo # for cleaning (old) build artifacts, cache folders etc. interactively
       # libtree # broken on aarch-64! # for checking nested deps for Nix builds etc.
       socat
