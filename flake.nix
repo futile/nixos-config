@@ -157,6 +157,8 @@
               "sublime-merge" # unfree license, but explicitly has an "unrestricted evaluation period", i.e., no time limit
               "tableplus" # unfree, but has tab-/window-limit in the free version, that's it
               "gitbutler" # unfree, but free for individual developers, plus no pricing exists yet (2025-03-24)
+              "vault" # unfree, but we use this at CF (2025-04-09)
+              "vault-bin" # unfree, but we use this at CF (2025-04-09)
             ];
           };
 

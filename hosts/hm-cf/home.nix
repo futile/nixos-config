@@ -137,7 +137,7 @@ in {
       # gitbutler
 
       # see https://tableplus.com/, free with tab-/window-count limitations
-      tableplus
+      # tableplus # getting this through brew instead, more up-to-date + postgresql:// links work
 
       # development
       # conda
@@ -151,6 +151,8 @@ in {
 
       # cf stuff, but I get these via homebrew 🙃
       # cf-paste
+      # vault # vault for secrets, needed for `dbmgr`
+      vault-bin # with ui, conflicts with `vault`
 
       nerd-fonts.jetbrains-mono
       nerd-fonts.liberation # no mono version of this?
