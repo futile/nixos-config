@@ -155,7 +155,7 @@ in {
     adwaita-icon-theme
     gnomeExtensions.appindicator
     gnomeExtensions.pop-shell
-    gnomeExtensions.pop-launcher-super-key
+    #    gnomeExtensions.pop-launcher-super-key
     gnomeExtensions.vitals
     # gnomeExtensions.topicons-plus # package broken
     nordic

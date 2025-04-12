@@ -54,8 +54,8 @@
     graphics = {
       extraPackages = with pkgs; [
         amdvlk
-        rocm-opencl-icd
-        rocm-opencl-runtime
+        # rocm-opencl-icd
+        # rocm-opencl-runtime
       ];
     };
   };

@@ -6,7 +6,7 @@ in {
     in [
       "${home-modules}/base.nix"
       "${home-modules}/shell-common.nix"
-      "${home-modules}/helix.nix"
+      # "${home-modules}/helix.nix"
       "${home-modules}/git.nix"
       "${home-modules}/git-extra.nix"
       "${home-modules}/jj.nix"
