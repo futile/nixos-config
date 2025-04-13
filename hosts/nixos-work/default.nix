@@ -9,7 +9,7 @@ in {
       ./hardware-configuration.nix
 
       # nixos-hardware module
-      flake-inputs.nixos-hardware.nixosModules.lenovo-thinkpad-p14s-amd-gen2
+      # flake-inputs.nixos-hardware.nixosModules.lenovo-thinkpad-p14s-amd-gen2
 
       # ZFS with common settings
       "${modules}/zfs.nix"
@@ -36,7 +36,7 @@ in {
       "${modules}/home-manager.nix"
 
       # hyprland
-      flake-inputs.hyprland.nixosModules.default
+      # flake-inputs.hyprland.nixosModules.default
     ];
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -95,7 +95,7 @@ in {
   # 2024-10-01 `latestCompatibleLinuxPackages` was deprecated, need to hardcode now..
   # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
   # ... but 6.11 broken with zfs for now (:
-  boot.kernelPackages = pkgs.linuxPackages_6_6;
+  # boot.kernelPackages = pkgs.linuxPackages_6_6;
 
   # Enable the X11 windowing system.
   services.xserver = {
@@ -138,7 +138,7 @@ in {
   services.libinput.enable = true;
 
   # also enable hyprand
-  programs.hyprland.enable = true;
+  # programs.hyprland.enable = true;
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget

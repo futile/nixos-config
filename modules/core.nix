@@ -43,7 +43,7 @@ in
   # nix base config
   nix = {
     # for unstable/more recent nix:
-    # package = pkgs.unstable.nix;
+    # package = pkgs.nixVersions.latest;
 
     extraOptions = ''
       experimental-features = nix-command flakes
