@@ -8,7 +8,7 @@
         python3 # just for a quick shell, math etc.
         libreoffice # open word/excel/etc. files
 
-        # music/sound
+        # music/sound/video
         spotify
         pavucontrol
 
