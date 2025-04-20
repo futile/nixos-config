@@ -31,6 +31,7 @@ in {
       "${home-modules}/zellij.nix"
       # "${home-modules}/sbt.nix"
       "${home-modules}/yazi.nix"
+      "${home-modules}/mpv.nix"
     ];
 
   xdg = {

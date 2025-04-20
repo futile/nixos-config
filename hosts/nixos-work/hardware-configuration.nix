@@ -49,6 +49,8 @@
   hardware = {
     enableAllFirmware = true;
     cpu.amd.updateMicrocode = true;
+    enableRedistributableFirmware = true;
+    # enableAllHardware = true;
 
     # from https://github.com/NixOS/nixpkgs/issues/111189#issuecomment-932985131
     graphics = {
@@ -57,6 +59,24 @@
         # rocm-opencl-icd
         # rocm-opencl-runtime
       ];
+    };
+
+    bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+
+      # from https://discourse.nixos.org/t/bluetooth-not-working/27812
+      settings = {
+        General = {
+          # Name = "Hello";
+          # FastConnectable = "true";
+          ControllerMode = "dual";
+          Experimental = "true";
+        };
+        Policy = {
+          AutoEnable = "true";
+        };
+      };
     };
   };
 
@@ -75,6 +95,7 @@
       };
     };
   };
+
   # have to disable this, as the two conflict.
   services.power-profiles-daemon.enable = false;
 }

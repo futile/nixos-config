@@ -9,7 +9,7 @@ in {
       ./hardware-configuration.nix
 
       # nixos-hardware module
-      # flake-inputs.nixos-hardware.nixosModules.lenovo-thinkpad-p14s-amd-gen2
+      flake-inputs.nixos-hardware.nixosModules.lenovo-thinkpad-p14s-amd-gen3
 
       # ZFS with common settings
       "${modules}/zfs.nix"
@@ -95,7 +95,9 @@ in {
   # 2024-10-01 `latestCompatibleLinuxPackages` was deprecated, need to hardcode now..
   # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
   # ... but 6.11 broken with zfs for now (:
-  # boot.kernelPackages = pkgs.linuxPackages_6_6;
+  # boot.kernelPackages = pkgs.linuxPackages_latest;
+
+  services.fwupd.enable = true;
 
   # Enable the X11 windowing system.
   services.xserver = {
