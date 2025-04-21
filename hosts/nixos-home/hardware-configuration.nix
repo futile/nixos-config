@@ -60,6 +60,10 @@
     # - Sadly did not fix it, I think :( let's observe for now - 2024-07-14
     # Let's try stable/whatever the default is again..
     # package = config.boot.kernelPackages.nvidiaPackages.legacy_535;
+
+    # prevents screen tearing, but might ("drastically") impair performance
+    # see https://nixos.wiki/wiki/Nvidia#Screen_Tearing_Issues
+    forceFullCompositionPipeline = true;
   };
 
   # nvidia let's go
