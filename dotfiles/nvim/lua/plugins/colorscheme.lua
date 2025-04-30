@@ -11,7 +11,8 @@ return {
         -- ^^^ THIS VERY GOOD ^^^
 
         -- THIS TOO:
-        opts.colorscheme = "oldworld"
+        -- opts.colorscheme = "oldworld"
+        opts.colorscheme = "onenord-light"
         -- ^^^ THIS VERY GOOD ^^^
 
         -- Also good, but not the one I want (for now) I think :)
