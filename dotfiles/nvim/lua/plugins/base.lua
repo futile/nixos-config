@@ -763,6 +763,7 @@ if true then
 
         local metals = require("metals")
         local metals_config = metals.bare_config()
+
         metals_config.settings = {
           showImplicitArguments = true,
           showInferredType = true,
@@ -778,11 +779,11 @@ if true then
           -- inlineDecorationProvider = true,
         }
 
-        metals_config.capabilities = require("cmp_nvim_lsp").default_capabilities()
+        metals_config.capabilities = require("blink.cmp").get_lsp_capabilities(metals_config.capabilities or {})
 
-        metals_config.on_attach = function(client, bufnr)
-          require("lsp-format").on_attach(client, bufnr)
-        end
+        -- metals_config.on_attach = function(client, bufnr)
+        --   require("lsp-format").on_attach(client, bufnr)
+        -- end
 
         -- Autocmd that will actually be in charge of starting the whole thing
         local nvim_metals_group = vim.api.nvim_create_augroup("nvim-metals", { clear = true })

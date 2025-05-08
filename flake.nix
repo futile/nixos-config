@@ -209,7 +209,7 @@
                     # typst-live
 
                     # scala
-                    # metals
+                    metals
 
                     # dhall
                     # dhall-lsp-server # currently (2023-08-19) broken

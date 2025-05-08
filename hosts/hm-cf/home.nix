@@ -28,6 +28,7 @@ in {
       "${home-modules}/shell-common.nix"
       "${home-modules}/git.nix"
       "${home-modules}/fish.nix"
+      "${home-modules}/sbt.nix"
       # "${home-modules}/desktop-common.nix"
       "${home-modules}/wezterm.nix"
       "${home-modules}/nvim-lazy.nix"
@@ -143,7 +144,7 @@ in {
       # conda
       # sublime-merge # license allows "unrestricted evaluation period"; but not available for aarch64 :(
       # dbeaver-bin
-      # scala-cli
+      scala-cli
       # earthly
 
       # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
