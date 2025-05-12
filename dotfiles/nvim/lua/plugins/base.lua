@@ -3,6 +3,21 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+
+    -- Setup markdownlint-cli2 config to adjust some lints
+    -- see https://github.com/LazyVim/LazyVim/discussions/4094
+    {
+      "mfussenegger/nvim-lint",
+      optional = true,
+      opts = {
+        linters = {
+          ["markdownlint-cli2"] = {
+            args = { "--config", os.getenv("HOME") .. "/nixos/dotfiles/.markdownlint.yaml", "--" },
+          },
+        },
+      },
+    },
+
     -- {
     --   "saghen/blink.cmp",
     --   opts = function(_, opts)
