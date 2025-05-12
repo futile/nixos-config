@@ -94,6 +94,7 @@ in {
       python3 # just for a quick shell, math etc.
       # libreoffice # open word/excel/etc. files
       yarn-berry # looks like I might just need this sometimes. -berry is the 4.x version, while just yarn is 1.x
+      nodejs
 
       # TESTING; stuff I want to test, throw back out if I don't use it!
       # oils-for-unix # currently broken (2025-02-10)
