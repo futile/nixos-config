@@ -90,7 +90,9 @@
       ]) ++
       # packages from other sources/nixpkgs branches
       [
-        flake-inputs.nix-alien.packages.${system}.nix-alien
+        # currently broken?
+        # flake-inputs.nix-alien.packages.${system}.nix-alien
+
         flake-inputs.isd.packages.${system}.default
       ];
 

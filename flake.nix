@@ -184,7 +184,6 @@
                     black
                     python3Packages.pyflakes
                     python3Packages.isort
-                    # ruff-lsp # gone?
                     pyright
 
                     # nix

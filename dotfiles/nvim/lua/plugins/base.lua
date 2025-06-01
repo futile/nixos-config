@@ -498,14 +498,14 @@ if true then
     -- },
 
     -- codeium config, to support the downloaded LSP
-    {
-      "Exafunction/codeium.nvim",
-      opts = {
-        -- see ~/bin/wrap-codeium-nix-alien
-        wrapper = "wrap-codeium-nix-alien",
-      },
-      enabled = false,
-    },
+    -- {
+    --   "Exafunction/codeium.nvim",
+    --   opts = {
+    --     -- see ~/bin/wrap-codeium-nix-alien
+    --     wrapper = "wrap-codeium-nix-alien",
+    --   },
+    --   enabled = false,
+    -- },
 
     -- nu support
     -- required a manual `:TSInstall nu` once
