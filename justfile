@@ -61,14 +61,14 @@ build-throttled:
 check:
     nix flake check
 
-# Format everything (using `nixpkgs-fmt` and `just --fmt`).
+# Format everything (using `nix fmt` and `just --fmt`).
 format:
-    nixpkgs-fmt .
+    nix fmt
     just --unstable --fmt
 
 # Check if everything is formatted correctly.
 format-check:
-    nixpkgs-fmt . --check
+    nix fmt -- --check
     just --unstable --fmt --check
 
 # Show a diff of changes using `nix-diff`
