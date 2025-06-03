@@ -37,6 +37,7 @@ in
       # "${home-modules}/base.nix"
       "${home-modules}/shell-common.nix"
       "${home-modules}/git.nix"
+      "${home-modules}/gitbutler.nix"
       "${home-modules}/fish.nix"
       "${home-modules}/sbt.nix"
       # "${home-modules}/desktop-common.nix"
@@ -144,10 +145,6 @@ in
         git-town
         mergiraf
         pre-commit
-
-        # currently broken build (on macos (only?)), something about "permission denied" (some folder permissions in downloaded sources maybe? but dunno)
-        # issue: https://github.com/NixOS/nixpkgs/issues/394068
-        gitbutler
 
         # see https://tableplus.com/, free with tab-/window-count limitations
         # tableplus # getting this through brew instead, more up-to-date + postgresql:// links work

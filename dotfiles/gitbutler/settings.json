@@ -1,0 +1,5 @@
+{
+  "extraCsp": {
+    "hosts": ["https://gitlab.cfdata.org"]
+  }
+}
