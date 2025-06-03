@@ -66,9 +66,9 @@ format:
     nix fmt
     just --unstable --fmt
 
-# Check if everything is formatted correctly.
+# Check if everything is formatted correctly (depends on `nixfmt-tree` cmdline option).
 format-check:
-    nix fmt -- --check
+    nix fmt -- --fail-on-check
     just --unstable --fmt --check
 
 # Show a diff of changes using `nix-diff`
