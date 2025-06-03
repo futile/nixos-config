@@ -9,8 +9,10 @@
     gitbutler
   ];
 
-  home.file."Library/Application Support/gitbutler/settings.json".source =
-    config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/gitbutler/settings.json";
+  # link the full directory, because otherwise gitbutler replaces the symlink
+  # with a regular file when writing out `settings.json` (>.>)
+  home.file."Library/Application Support/gitbutler".source =
+    config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/gitbutler";
 
   # let's try this out a bit
   programs.fish.shellAbbrs = {

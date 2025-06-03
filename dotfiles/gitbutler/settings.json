@@ -1,5 +1,10 @@
 {
   "extraCsp": {
-    "hosts": ["https://gitlab.cfdata.org"]
+    "hosts": [
+      "https://gitlab.cfdata.org"
+    ]
+  },
+  "featureFlags": {
+    "v3": false
   }
 }
