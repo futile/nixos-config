@@ -136,7 +136,7 @@ in {
 
       # currently broken build (on macos (only?)), something about "permission denied" (some folder permissions in downloaded sources maybe? but dunno)
       # issue: https://github.com/NixOS/nixpkgs/issues/394068
-      # gitbutler
+      gitbutler
 
       # see https://tableplus.com/, free with tab-/window-count limitations
       # tableplus # getting this through brew instead, more up-to-date + postgresql:// links work
