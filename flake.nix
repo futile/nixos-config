@@ -189,8 +189,7 @@
                     # nix
                     nil # nix lsp
                     nixd # better nix lsp?
-                    nixpkgs-fmt
-                    # nixfmt # don't want this for now, nixpkgs-fmt is superior :)
+                    nixfmt-rfc-style
 
                     # go
                     gopls

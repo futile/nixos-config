@@ -320,7 +320,7 @@ if true then
             settings = {
               ["nil"] = {
                 formatting = {
-                  command = { "nixpkgs-fmt" },
+                  command = { "nixfmt" },
                 },
               },
             },
