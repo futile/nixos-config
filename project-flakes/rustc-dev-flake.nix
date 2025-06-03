@@ -7,7 +7,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
-  outputs = { nixpkgs, ... }:
+  outputs =
+    { nixpkgs, ... }:
     let
       system = "x86_64-linux";
       overlays = [ ];
@@ -48,9 +49,12 @@
 
         # Provide `libstdc++.so.6` for the self-contained lld.
         # also see https://discourse.nixos.org/t/how-to-solve-libstdc-not-found-in-shell-nix/25458/6
-        LD_LIBRARY_PATH = "${with pkgs; lib.makeLibraryPath [
+        LD_LIBRARY_PATH = "${
+          with pkgs;
+          lib.makeLibraryPath [
             stdenv.cc.cc.lib
-          ]}";
+          ]
+        }";
       };
     };
 }

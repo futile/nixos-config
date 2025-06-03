@@ -92,7 +92,6 @@ prune-old-zfs-snapshots:
 last-update-when:
     git log --grep="[Uu]pdate" -1
 
-# Restart nix-daemon, reloads config at /etc/nix/nix.conf
-# ref https://github.com/NixOS/nix/issues/8939
+# Restart nix-daemon, reloads config at /etc/nix/nix.conf. ref https://github.com/NixOS/nix/issues/8939
 macos-restart-daemon:
     sudo launchctl kickstart -k  system/org.nixos.nix-daemon

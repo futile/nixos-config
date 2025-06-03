@@ -1,4 +1,5 @@
-{ ... }: {
+{ ... }:
+{
   # console keymap
   console.keyMap = "neo";
 

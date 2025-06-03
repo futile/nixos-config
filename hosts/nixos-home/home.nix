@@ -1,9 +1,19 @@
-{ config, pkgs, flake-inputs, thisFlakePath, ... }:
-let flakeRoot = flake-inputs.self.outPath;
-in {
+{
+  config,
+  pkgs,
+  flake-inputs,
+  thisFlakePath,
+  ...
+}:
+let
+  flakeRoot = flake-inputs.self.outPath;
+in
+{
   imports =
-    let home-modules = "${flakeRoot}/home-modules";
-    in [
+    let
+      home-modules = "${flakeRoot}/home-modules";
+    in
+    [
       "${home-modules}/base.nix"
       "${home-modules}/shell-common.nix"
       "${home-modules}/helix.nix"
@@ -30,42 +40,46 @@ in {
   home = {
     packages =
       # bound packages
-      [ ] ++
-      # packages from stable
-      (with pkgs; [
-        # compile stuff, for convenience I guess; but generally want to get rid of it
-        ccache
-        gcc
-        gdb
+      [ ]
+      ++
+        # packages from stable
+        (with pkgs; [
+          # compile stuff, for convenience I guess; but generally want to get rid of it
+          ccache
+          gcc
+          gdb
 
-        # messengers
-        signal-desktop
-        tdesktop
-        discord
-        slack
-        hexchat
-        # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228 # don't use it currently
+          # messengers
+          signal-desktop
+          tdesktop
+          discord
+          slack
+          hexchat
+          # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228 # don't use it currently
 
-        # rust tools
-        rustup
-        cargo-edit
-        cargo-nextest
-        # conflicts with rustup, probably provided by rustup now? -- yes, but
-        # the nixos version can be newer, so might be nice instead :)
-        # rust-analyzer
+          # rust tools
+          rustup
+          cargo-edit
+          cargo-nextest
+          # conflicts with rustup, probably provided by rustup now? -- yes, but
+          # the nixos version can be newer, so might be nice instead :)
+          # rust-analyzer
 
-        # misc
-        # texlive.combined.scheme-full
-        # zotero # disable due to CVE-2023-5217 in ‘zotero-6.0.27’ 
-        protonvpn-gui # official GUI that has to be used now (:
+          # misc
+          # texlive.combined.scheme-full
+          # zotero # disable due to CVE-2023-5217 in ‘zotero-6.0.27’
+          protonvpn-gui # official GUI that has to be used now (:
 
-        # hardware stuff
-        v4l-utils # webcam utils
-      ]) ++
-      # packages from other nixpkgs branches
-      [ ];
+          # hardware stuff
+          v4l-utils # webcam utils
+        ])
+      ++
+        # packages from other nixpkgs branches
+        [ ];
 
-    sessionVariables = { EDITOR = "nvim"; };
+    sessionVariables = {
+      EDITOR = "nvim";
+    };
 
     stateVersion = "22.05";
   };
@@ -101,6 +115,8 @@ in {
       RemainAfterExit = true;
     };
 
-    Install = { WantedBy = [ "graphical-session.target" ]; };
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
   };
 }

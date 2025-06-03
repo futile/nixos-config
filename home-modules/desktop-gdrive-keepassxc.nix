@@ -1,7 +1,10 @@
 { pkgs, ... }:
 # google-drive and keepassxc are currently intertwined, so set them up together
 {
-  home.packages = with pkgs; [ keepassxc rclone ];
+  home.packages = with pkgs; [
+    keepassxc
+    rclone
+  ];
 
   # NOTE: requires a normal module, here for documentation!
   # required for `--allow-other` with rclone, see below
@@ -22,14 +25,18 @@
           "${pkgs.rclone}/bin/rclone mount --allow-other --vfs-cache-mode=full gdrive: %h/GoogleDrive";
       };
 
-      Install = { WantedBy = [ "default.target" ]; };
+      Install = {
+        WantedBy = [ "default.target" ];
+      };
     };
 
     keepassxc = {
       Unit = {
         Description = "Autostart Keepassxc";
-        After =
-          [ "graphical-session-pre.target" "rclone-gdrive.service" ];
+        After = [
+          "graphical-session-pre.target"
+          "rclone-gdrive.service"
+        ];
         Wants = [ "rclone-gdrive.service" ];
       };
 
@@ -38,7 +45,9 @@
         ExecStart = "${pkgs.keepassxc}/bin/keepassxc";
       };
 
-      Install = { WantedBy = [ "graphical-session.target" ]; };
+      Install = {
+        WantedBy = [ "graphical-session.target" ];
+      };
     };
   };
 }

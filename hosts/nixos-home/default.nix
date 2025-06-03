@@ -1,10 +1,20 @@
-{ config, pkgs, lib, flake-inputs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  flake-inputs,
+  ...
+}:
 
-let flakeRoot = flake-inputs.self.outPath;
-in {
+let
+  flakeRoot = flake-inputs.self.outPath;
+in
+{
   imports =
-    let modules = "${flakeRoot}/modules";
-    in [
+    let
+      modules = "${flakeRoot}/modules";
+    in
+    [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
 
@@ -41,7 +51,10 @@ in {
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.felix = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "docker" ];
+    extraGroups = [
+      "wheel"
+      "docker"
+    ];
     shell = pkgs.fish;
   };
 

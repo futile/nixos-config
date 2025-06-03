@@ -18,10 +18,9 @@ in
 
   xdg = {
     enable = true;
-    configFile."helix/config.toml".source = config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/nixos/dotfiles/helix/config.toml";
+    configFile."helix/config.toml".source =
+      config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/dotfiles/helix/config.toml";
     configFile."helix/languages.toml".source =
-      config.lib.file.mkOutOfStoreSymlink
-        "${config.home.homeDirectory}/nixos/dotfiles/helix/languages.toml";
+      config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/dotfiles/helix/languages.toml";
   };
 }

@@ -1,9 +1,19 @@
-{ config, pkgs, flake-inputs, thisFlakePath, ... }:
-let flakeRoot = flake-inputs.self.outPath;
-in {
+{
+  config,
+  pkgs,
+  flake-inputs,
+  thisFlakePath,
+  ...
+}:
+let
+  flakeRoot = flake-inputs.self.outPath;
+in
+{
   imports =
-    let home-modules = "${flakeRoot}/home-modules";
-    in [
+    let
+      home-modules = "${flakeRoot}/home-modules";
+    in
+    [
       "${home-modules}/base.nix"
       "${home-modules}/shell-common.nix"
       # "${home-modules}/helix.nix"
@@ -37,69 +47,75 @@ in {
   xdg = {
     enable = true;
     configFile =
-      let dotdir = "${config.home.homeDirectory}/nixos/dotfiles/hyprland";
-      in {
-        "hypr/local.conf".source =
-          config.lib.file.mkOutOfStoreSymlink "${dotdir}/local.conf";
+      let
+        dotdir = "${config.home.homeDirectory}/nixos/dotfiles/hyprland";
+      in
+      {
+        "hypr/local.conf".source = config.lib.file.mkOutOfStoreSymlink "${dotdir}/local.conf";
       };
   };
 
   home = {
     packages =
       # bound packages
-      [ ] ++
-      # packages from stable
-      (with pkgs; [
-        # compile stuff, for convenience I guess; but generally want to get rid of it
-        ccache
-        gcc
-        gdb
+      [ ]
+      ++
+        # packages from stable
+        (with pkgs; [
+          # compile stuff, for convenience I guess; but generally want to get rid of it
+          ccache
+          gcc
+          gdb
 
-        # messengers
-        signal-desktop
-        tdesktop
-        discord
-        # slack
-        # fix for screen sharing (hopefully), from https://discourse.nixos.org/t/slack-screensharing-gnome-wayland/35585/8
-        # (slack.overrideAttrs (oldAttrs: rec {
-        #   # version = "4.35.126";
-        #   # src = pkgs.fetchurl {
-        #   #   url =
-        #   #     "https://downloads.slack-edge.com/releases/linux/${version}/prod/x64/slack-desktop-${version}-amd64.deb";
-        #   #   sha256 = "sha256-ldFASntF8ygu657WXwk/XlpHzB+S9x8SjAOjjDKsvCs=";
-        #   # };
-        #
-        #   fixupPhase = ''
-        #     sed -i -e 's/,"WebRTCPipeWireCapturer"/,"LebRTCPipeWireCapturer"/' $out/lib/slack/resources/app.asar
-        #
-        #     rm $out/bin/slack
-        #     makeWrapper $out/lib/slack/slack $out/bin/slack \
-        #       --prefix XDG_DATA_DIRS : $GSETTINGS_SCHEMAS_PATH \
-        #       --suffix PATH : ${lib.makeBinPath [ pkgs.xdg-utils ]} \
-        #       --add-flags "--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer"
-        #   '';
-        # }))
-        # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
+          # messengers
+          signal-desktop
+          tdesktop
+          discord
+          # slack
+          # fix for screen sharing (hopefully), from https://discourse.nixos.org/t/slack-screensharing-gnome-wayland/35585/8
+          # (slack.overrideAttrs (oldAttrs: rec {
+          #   # version = "4.35.126";
+          #   # src = pkgs.fetchurl {
+          #   #   url =
+          #   #     "https://downloads.slack-edge.com/releases/linux/${version}/prod/x64/slack-desktop-${version}-amd64.deb";
+          #   #   sha256 = "sha256-ldFASntF8ygu657WXwk/XlpHzB+S9x8SjAOjjDKsvCs=";
+          #   # };
+          #
+          #   fixupPhase = ''
+          #     sed -i -e 's/,"WebRTCPipeWireCapturer"/,"LebRTCPipeWireCapturer"/' $out/lib/slack/resources/app.asar
+          #
+          #     rm $out/bin/slack
+          #     makeWrapper $out/lib/slack/slack $out/bin/slack \
+          #       --prefix XDG_DATA_DIRS : $GSETTINGS_SCHEMAS_PATH \
+          #       --suffix PATH : ${lib.makeBinPath [ pkgs.xdg-utils ]} \
+          #       --add-flags "--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer"
+          #   '';
+          # }))
+          # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
 
-        # rust tools
-        rustup
-        cargo-edit
+          # rust tools
+          rustup
+          cargo-edit
 
-        # misc
-        # texlive.combined.scheme-full
-        # zotero
-        # protonvpn-cli
+          # misc
+          # texlive.combined.scheme-full
+          # zotero
+          # protonvpn-cli
 
-        # hardware stuff
-        # v4l-utils # webcam utils
-        radeontop
-      ]) ++
-      # packages from master
-      (with pkgs.master; [ ]) ++
-      # packages from other nixpkgs branches
-      [ ];
+          # hardware stuff
+          # v4l-utils # webcam utils
+          radeontop
+        ])
+      ++
+        # packages from master
+        (with pkgs.master; [ ])
+      ++
+        # packages from other nixpkgs branches
+        [ ];
 
-    sessionVariables = { EDITOR = "nvim"; };
+    sessionVariables = {
+      EDITOR = "nvim";
+    };
 
     stateVersion = "22.11";
   };

@@ -1,4 +1,9 @@
-{ config, pkgs, thisFlakePath, ... }:
+{
+  config,
+  pkgs,
+  thisFlakePath,
+  ...
+}:
 
 {
   # starship prompt: https://starship.rs
@@ -10,7 +15,7 @@
     enable = true;
 
     # symlink `starship.toml` directly into this repo
-    configFile."starship.toml".source = config.lib.file.mkOutOfStoreSymlink
-      "${thisFlakePath}/dotfiles/starship.toml";
+    configFile."starship.toml".source =
+      config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/starship.toml";
   };
 }

@@ -1,4 +1,5 @@
-{ ... }: {
+{ ... }:
+{
   # Set-up pipewire for audio.
   # Mostly from https://discourse.nixos.org/t/headphone-volume-resets-itself-to-100/13866/2
   services.pulseaudio.enable = false;

@@ -1,11 +1,25 @@
-{ flake-inputs, lib, pkgs, config, ... }:
+{
+  flake-inputs,
+  lib,
+  pkgs,
+  config,
+  ...
+}:
 let
-  mkNixpkgsOverlay = { attrName, over, extraImportArgs ? { } }:
+  mkNixpkgsOverlay =
+    {
+      attrName,
+      over,
+      extraImportArgs ? { },
+    }:
     final: prev: {
-      ${attrName} = import over ({
-        system = final.system;
-        config.allowUnfree = true;
-      } // extraImportArgs);
+      ${attrName} = import over (
+        {
+          system = final.system;
+          config.allowUnfree = true;
+        }
+        // extraImportArgs
+      );
     };
   # nixos-unstable-overlay = mkNixpkgsOverlay
   #   {
@@ -59,14 +73,13 @@ in
   };
 
   # add overlays for the different nixpkgs-versions
-  nixpkgs.overlays =
-    [
-      # nixos-unstable-overlay
-      # nixpkgs-master-overlay
-      # nixpkgs-local-overlay
-      custom-packages-overlay
-      flake-inputs.emacs-overlay.overlay
-    ];
+  nixpkgs.overlays = [
+    # nixos-unstable-overlay
+    # nixpkgs-master-overlay
+    # nixpkgs-local-overlay
+    custom-packages-overlay
+    flake-inputs.emacs-overlay.overlay
+  ];
 
   # registry entries
   nix.registry = {
@@ -83,4 +96,3 @@ in
     "unstable=${flake-inputs.nixpkgs-pkgs-unstable}"
   ];
 }
-

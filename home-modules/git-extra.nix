@@ -1,4 +1,5 @@
-{ config, pkgs, ... }: {
+{ config, pkgs, ... }:
+{
   programs.git = {
     extraConfig = {
       rerere.enabled = true;

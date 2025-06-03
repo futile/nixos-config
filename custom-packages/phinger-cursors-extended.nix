@@ -21,10 +21,11 @@
 #   package = pkgs.lib.mkForce pkgs.gnome.adwaita-icon-theme;
 #   name = pkgs.lib.mkForce "Adwaita";
 # };
-{ lib
-, runCommandLocal
-, coreutils
-, phinger-cursors
+{
+  lib,
+  runCommandLocal,
+  coreutils,
+  phinger-cursors,
 }:
 let
   defaultCursor = "rock-n-roll";
@@ -81,15 +82,13 @@ let
     "X_cursor" = defaultCursor;
   };
 
-  genSymlinkCursors =
-    lib.concatLines (lib.mapAttrsToList
-      (newCursorName: existingCursorName:
-        ''ln -s "${existingCursorName}" "${newCursorName}"''
-      )
-      extraSymlinkedCursors);
+  genSymlinkCursors = lib.concatLines (
+    lib.mapAttrsToList (
+      newCursorName: existingCursorName: ''ln -s "${existingCursorName}" "${newCursorName}"''
+    ) extraSymlinkedCursors
+  );
 in
-runCommandLocal "phinger-cursors-extended"
-{ } ''
+runCommandLocal "phinger-cursors-extended" { } ''
   set -Eeuo pipefail
   set -o xtrace
 

@@ -1,4 +1,5 @@
-{ pkgs, ... }: {
+{ pkgs, ... }:
+{
   # Keep a maximum of 10 generations, so our /boot partition doesn't run full
   boot.loader.systemd-boot.configurationLimit = 10;
 
@@ -6,7 +7,9 @@
   boot.supportedFilesystems = [ "ntfs" ];
 
   # enable REISUB etc.: https://www.kernel.org/doc/html/latest/admin-guide/sysrq.html
-  boot.kernel.sysctl = { "kernel.sysrq" = 1; };
+  boot.kernel.sysctl = {
+    "kernel.sysrq" = 1;
+  };
 
   # Select internationalisation properties; en-US by default
   i18n.defaultLocale = "en_US.UTF-8";
@@ -25,7 +28,7 @@
 
   # These two settings (try to) increase `ulimit -Sn`, aka max number of open fd's per process (thread?).
   # Not even sure I want this, while it might make stuff work more out-of-the-box for me, it might hide
-  # problems other people run into from me. Also, `ulimit -Sn` can be run without sudo, as long as the 
+  # problems other people run into from me. Also, `ulimit -Sn` can be run without sudo, as long as the
   # hard limit, i.e., `ulimit -Hn`, is high enough (this requires root to change).
   # But maybe once I have it in my config I will actually remember it, and maybe think of it when other
   # people run into problems I don't run into.

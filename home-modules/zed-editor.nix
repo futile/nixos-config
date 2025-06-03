@@ -5,7 +5,11 @@ let
     pkg = base-zed;
     pathsToWrap = [ "bin/zeditor" ];
     extraWrapProgramArgs = [ ];
-    prefix-deps = with pkgs; [ ripgrep findutils fd ];
+    prefix-deps = with pkgs; [
+      ripgrep
+      findutils
+      fd
+    ];
     suffix-deps = pkgs.lib.my.editorTools;
   };
 in
@@ -17,7 +21,8 @@ in
   xdg = {
     enable = true;
     configFile = {
-      "zed".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/dotfiles/zed";
+      "zed".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/dotfiles/zed";
     };
   };
 }

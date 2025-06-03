@@ -1,4 +1,10 @@
-{ config, pkgs, flake-inputs, thisFlakePath, ... }:
+{
+  config,
+  pkgs,
+  flake-inputs,
+  thisFlakePath,
+  ...
+}:
 {
   wayland.windowManager.hyprland = {
     enable = true;

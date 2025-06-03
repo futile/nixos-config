@@ -1,4 +1,10 @@
-{ config, pkgs, flake-inputs, ... }: {
+{
+  config,
+  pkgs,
+  flake-inputs,
+  ...
+}:
+{
   programs.fish = {
     enable = true;
     package = pkgs.fish;
@@ -122,4 +128,3 @@
   programs.eza.enable = true;
   programs.bat.enable = true;
 }
-

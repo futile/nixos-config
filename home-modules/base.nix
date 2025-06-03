@@ -1,4 +1,11 @@
-{ config, lib, pkgs, thisFlakePath, ... }: {
+{
+  config,
+  lib,
+  pkgs,
+  thisFlakePath,
+  ...
+}:
+{
   programs.home-manager.enable = true;
 
   home = {

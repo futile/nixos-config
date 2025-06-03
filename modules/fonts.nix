@@ -1,4 +1,5 @@
-{ pkgs, ... }: {
+{ pkgs, ... }:
+{
   # fonts, mainly for starship-prompt at the time of writing
   # also for "tide" prompt (fish)
   fonts.packages = with pkgs; [

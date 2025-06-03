@@ -1,4 +1,9 @@
-{ config, pkgs, thisFlakePath, ... }:
+{
+  config,
+  pkgs,
+  thisFlakePath,
+  ...
+}:
 let
   my-neovide = pkgs.symlinkJoin {
     name = "neovide";
@@ -35,8 +40,7 @@ in
 
   xdg = {
     enable = true;
-    configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink
-      "${thisFlakePath}/dotfiles/nvim";
+    configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/nvim";
   };
 
   # home.file = {

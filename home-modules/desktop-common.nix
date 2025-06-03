@@ -1,4 +1,11 @@
-{ pkgs, config, thisFlakePath, flake-inputs, system, ... }:
+{
+  pkgs,
+  config,
+  thisFlakePath,
+  flake-inputs,
+  system,
+  ...
+}:
 {
   home = {
     packages =
@@ -87,7 +94,8 @@
         # valgrind
         # tilix
 
-      ]) ++
+      ])
+      ++
       # packages from other sources/nixpkgs branches
       [
         # currently broken?
@@ -98,8 +106,8 @@
 
     file = {
       ".npmrc".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/npmrc";
-      ".cargo/config.toml".source = config.lib.file.mkOutOfStoreSymlink
-        "${thisFlakePath}/dotfiles/cargo/config.toml";
+      ".cargo/config.toml".source =
+        config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/cargo/config.toml";
     };
 
     sessionPath = [ "$HOME/.npm-packages/bin" ];

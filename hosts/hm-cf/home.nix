@@ -1,7 +1,15 @@
-{ config, pkgs, flake-inputs, thisFlakePath, ... }:
+{
+  config,
+  pkgs,
+  flake-inputs,
+  thisFlakePath,
+  ...
+}:
 
-let flakeRoot = flake-inputs.self.outPath;
-in {
+let
+  flakeRoot = flake-inputs.self.outPath;
+in
+{
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
   home.username = "frath";
@@ -19,8 +27,10 @@ in {
   # The home.packages option allows you to install Nix packages into your
   # environment.
   imports =
-    let home-modules = "${flakeRoot}/home-modules";
-    in [
+    let
+      home-modules = "${flakeRoot}/home-modules";
+    in
+    [
       # fix apps not showing in spotlight etc.
       flake-inputs.mac-app-util.homeManagerModules.default
 
@@ -69,125 +79,126 @@ in {
 
   home.packages =
     # bound packages
-    [ ] ++
-    # packages from pkgs
-    (with pkgs; [
-      # let's try out brave, since chromium is blocking uBlock now :)
-      brave
+    [ ]
+    ++
+      # packages from pkgs
+      (with pkgs; [
+        # let's try out brave, since chromium is blocking uBlock now :)
+        brave
 
-      # compile stuff, for convenience I guess; but generally want to get rid of it
-      # ccache
-      # gcc
-      # gdb
+        # compile stuff, for convenience I guess; but generally want to get rid of it
+        # ccache
+        # gcc
+        # gdb
 
-      # rust & cargo tools
-      rustup
-      cargo-edit
-      cargo-udeps
-      # cargo-vet # sadly broken for now, see https://github.com/NixOS/nixpkgs/pull/370510
-      cargo-nextest
-      cargo-release
-      git-cliff
-      # cargo-audit # broken for now due to Rust 1.80/`time`-lib fallout, should (?) be fixed by v0.20.1 soon
+        # rust & cargo tools
+        rustup
+        cargo-edit
+        cargo-udeps
+        # cargo-vet # sadly broken for now, see https://github.com/NixOS/nixpkgs/pull/370510
+        cargo-nextest
+        cargo-release
+        git-cliff
+        # cargo-audit # broken for now due to Rust 1.80/`time`-lib fallout, should (?) be fixed by v0.20.1 soon
 
-      # misc
-      python3 # just for a quick shell, math etc.
-      # libreoffice # open word/excel/etc. files
-      yarn-berry # looks like I might just need this sometimes. -berry is the 4.x version, while just yarn is 1.x
-      nodejs
+        # misc
+        python3 # just for a quick shell, math etc.
+        # libreoffice # open word/excel/etc. files
+        yarn-berry # looks like I might just need this sometimes. -berry is the 4.x version, while just yarn is 1.x
+        nodejs
 
-      # TESTING; stuff I want to test, throw back out if I don't use it!
-      # oils-for-unix # currently broken (2025-02-10)
+        # TESTING; stuff I want to test, throw back out if I don't use it!
+        # oils-for-unix # currently broken (2025-02-10)
 
-      # nix tools, so I can do some nixpkgs-stuff if I want to
-      nix-prefetch-git
-      nix-prefetch-github
-      nixpkgs-review
-      nixpkgs-fmt
-      nix-diff
+        # nix tools, so I can do some nixpkgs-stuff if I want to
+        nix-prefetch-git
+        nix-prefetch-github
+        nixpkgs-review
+        nixpkgs-fmt
+        nix-diff
 
-      # image editing
-      # inkscape
-      # gimp
+        # image editing
+        # inkscape
+        # gimp
 
-      # useful cmdline-tools
-      just
-      # dtrx # broken on aarch-64!
-      tokei
-      # trippy
-      # lazygit
-      # lazydocker
-      # dig
-      tldr
-      jq
-      yq
-      dyff # semantic yaml diffing
-      kondo # for cleaning (old) build artifacts, cache folders etc. interactively
-      # libtree # broken on aarch-64! # for checking nested deps for Nix builds etc.
-      socat
-      duf # better du & df
-      nvtopPackages.apple # video/gpu stats
-      unixtools.watch
+        # useful cmdline-tools
+        just
+        # dtrx # broken on aarch-64!
+        tokei
+        # trippy
+        # lazygit
+        # lazydocker
+        # dig
+        tldr
+        jq
+        yq
+        dyff # semantic yaml diffing
+        kondo # for cleaning (old) build artifacts, cache folders etc. interactively
+        # libtree # broken on aarch-64! # for checking nested deps for Nix builds etc.
+        socat
+        duf # better du & df
+        nvtopPackages.apple # video/gpu stats
+        unixtools.watch
 
-      # for now here manually, instead of "git-extra.nix"
-      git-town
-      mergiraf
-      pre-commit
+        # for now here manually, instead of "git-extra.nix"
+        git-town
+        mergiraf
+        pre-commit
 
-      # currently broken build (on macos (only?)), something about "permission denied" (some folder permissions in downloaded sources maybe? but dunno)
-      # issue: https://github.com/NixOS/nixpkgs/issues/394068
-      gitbutler
+        # currently broken build (on macos (only?)), something about "permission denied" (some folder permissions in downloaded sources maybe? but dunno)
+        # issue: https://github.com/NixOS/nixpkgs/issues/394068
+        gitbutler
 
-      # see https://tableplus.com/, free with tab-/window-count limitations
-      # tableplus # getting this through brew instead, more up-to-date + postgresql:// links work
+        # see https://tableplus.com/, free with tab-/window-count limitations
+        # tableplus # getting this through brew instead, more up-to-date + postgresql:// links work
 
-      # development
-      # conda
-      # sublime-merge # license allows "unrestricted evaluation period"; but not available for aarch64 :(
-      # dbeaver-bin
-      scala-cli
-      # earthly
+        # development
+        # conda
+        # sublime-merge # license allows "unrestricted evaluation period"; but not available for aarch64 :(
+        # dbeaver-bin
+        scala-cli
+        # earthly
 
-      # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
-      # measureme
+        # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
+        # measureme
 
-      # cf stuff, but I get these via homebrew 🙃
-      # cf-paste
-      # vault # vault for secrets, needed for `dbmgr`
-      vault-bin # with ui, conflicts with `vault`
+        # cf stuff, but I get these via homebrew 🙃
+        # cf-paste
+        # vault # vault for secrets, needed for `dbmgr`
+        vault-bin # with ui, conflicts with `vault`
 
-      nerd-fonts.jetbrains-mono
-      nerd-fonts.liberation # no mono version of this?
-      nerd-fonts.fira-code # `fira-mono` also exists
-      nerd-fonts.droid-sans-mono
-      nerd-fonts.symbols-only
-      nerd-fonts.fantasque-sans-mono
+        nerd-fonts.jetbrains-mono
+        nerd-fonts.liberation # no mono version of this?
+        nerd-fonts.fira-code # `fira-mono` also exists
+        nerd-fonts.droid-sans-mono
+        nerd-fonts.symbols-only
+        nerd-fonts.fantasque-sans-mono
 
-      # old list: (also see `modules/fonts.nix`)
-      # (nerdfonts.override {
-      #   fonts = [
-      #     "JetBrainsMono" # wezterm default font
-      #     "LiberationMono" # I just like this font :)
-      #     "FiraCode"
-      #     "DroidSansMono"
-      #     "NerdFontsSymbolsOnly"
-      #     "FantasqueSansMono"
-      #   ];
-      # })
+        # old list: (also see `modules/fonts.nix`)
+        # (nerdfonts.override {
+        #   fonts = [
+        #     "JetBrainsMono" # wezterm default font
+        #     "LiberationMono" # I just like this font :)
+        #     "FiraCode"
+        #     "DroidSansMono"
+        #     "NerdFontsSymbolsOnly"
+        #     "FantasqueSansMono"
+        #   ];
+        # })
 
-      # el music
-      spotify
+        # el music
+        spotify
 
-      # el video
-      mpv
+        # el video
+        mpv
 
-      # You can also create simple shell scripts directly inside your
-      # configuration. For example, this adds a command 'my-hello' to your
-      # environment:
-      # (pkgs.writeShellScriptBin "my-hello" ''
-      #   echo "Hello, ${config.home.username}!"
-      # '')
-    ]);
+        # You can also create simple shell scripts directly inside your
+        # configuration. For example, this adds a command 'my-hello' to your
+        # environment:
+        # (pkgs.writeShellScriptBin "my-hello" ''
+        #   echo "Hello, ${config.home.username}!"
+        # '')
+      ]);
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
@@ -203,8 +214,8 @@ in {
     #   org.gradle.daemon.idletimeout=3600000
     # '';
 
-    ".cargo/config.toml".source = config.lib.file.mkOutOfStoreSymlink
-      "${thisFlakePath}/dotfiles/cargo/config.toml";
+    ".cargo/config.toml".source =
+      config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/cargo/config.toml";
   };
 
   # Home Manager can also manage your environment variables through

@@ -1,12 +1,20 @@
-{ config, pkgs, flake-inputs, ... }@ha:
+{
+  config,
+  pkgs,
+  flake-inputs,
+  ...
+}@ha:
 let
   base-emacs = pkgs.emacs-unstable;
-  emacs-with-pkgs =
-    (pkgs.emacsPackagesFor base-emacs).emacsWithPackages
-      (epkgs: (with epkgs; [ vterm ]));
+  emacs-with-pkgs = (pkgs.emacsPackagesFor base-emacs).emacsWithPackages (
+    epkgs: (with epkgs; [ vterm ])
+  );
   emacs-wrapped-for-doom = pkgs.lib.my.mkWrappedWithDeps {
     pkg = emacs-with-pkgs;
-    pathsToWrap = [ "bin/emacs" "bin/emacs-*" ];
+    pathsToWrap = [
+      "bin/emacs"
+      "bin/emacs-*"
+    ];
     extraWrapProgramArgs = [
       "--set"
       "DOOMDIR"
@@ -15,7 +23,11 @@ let
       "DOOMLOCALDIR"
       ''"${config.home.sessionVariables.DOOMLOCALDIR}"''
     ];
-    prefix-deps = with pkgs; [ ripgrep findutils fd ];
+    prefix-deps = with pkgs; [
+      ripgrep
+      findutils
+      fd
+    ];
     suffix-deps = pkgs.lib.my.editorTools;
   };
 
@@ -36,8 +48,7 @@ in
     sessionPath = [ "$HOME/${emacs-path}/bin" ];
     sessionVariables = {
       DOOMDIR = "${config.xdg.configHome}/doom-emacs";
-      DOOMPROFILELOADFILE =
-        "${config.xdg.configHome}/doom-emacs/profiles/load.el";
+      DOOMPROFILELOADFILE = "${config.xdg.configHome}/doom-emacs/profiles/load.el";
       DOOMLOCALDIR = "${config.xdg.cacheHome}/doom-emacs";
     };
   };
@@ -45,14 +56,13 @@ in
   xdg = {
     enable = true;
     configFile =
-      let dotdir = "${config.home.homeDirectory}/nixos/dotfiles/doom-emacs";
-      in {
-        "doom-emacs/config.el".source =
-          config.lib.file.mkOutOfStoreSymlink "${dotdir}/config.el";
-        "doom-emacs/init.el".source =
-          config.lib.file.mkOutOfStoreSymlink "${dotdir}/init.el";
-        "doom-emacs/packages.el".source =
-          config.lib.file.mkOutOfStoreSymlink "${dotdir}/packages.el";
+      let
+        dotdir = "${config.home.homeDirectory}/nixos/dotfiles/doom-emacs";
+      in
+      {
+        "doom-emacs/config.el".source = config.lib.file.mkOutOfStoreSymlink "${dotdir}/config.el";
+        "doom-emacs/init.el".source = config.lib.file.mkOutOfStoreSymlink "${dotdir}/init.el";
+        "doom-emacs/packages.el".source = config.lib.file.mkOutOfStoreSymlink "${dotdir}/packages.el";
       };
   };
 
