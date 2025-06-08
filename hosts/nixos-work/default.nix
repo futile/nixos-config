@@ -185,6 +185,9 @@ in
 
   services.udev.packages = with pkgs; [ gnome-settings-daemon ];
 
+  # NOTE: required for `--allow-other` with rclone, see `home-modules/desktop-gdrive-keepassxc.nix`
+  programs.fuse.userAllowOther = true;
+
   # Since we run docker on an zfs partition
   virtualisation.docker.storageDriver = "zfs";
 
