@@ -821,10 +821,10 @@ if true then
         -- want this for now, let's see how it works out :)
         opts.sections.lualine_c[#opts.sections.lualine_c - 1] = { LazyVim.lualine.pretty_path({ length = 0 }) }
 
-        table.remove(opts.sections.lualine_x, 1) -- remove command
-        table.remove(opts.sections.lualine_x, 3) -- remove lazy update count
+        -- table.remove(opts.sections.lualine_x, 1) -- remove command
+        -- table.remove(opts.sections.lualine_x, 3) -- remove lazy update count
         table.insert(opts.sections.lualine_x, "g:metals_status")
-        table.insert(opts.sections.lualine_x, "overseer")
+        -- table.insert(opts.sections.lualine_x, "overseer")
       end,
     },
 
