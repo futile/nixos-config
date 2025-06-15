@@ -39,7 +39,7 @@
 
             # from https://bevyengine.org/learn/book/getting-started/setup/#enable-fast-compiles-optional
             mold-wrapped
-            clang_16
+            clang
 
             # rust-toolchain
 
