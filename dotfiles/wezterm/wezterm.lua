@@ -5,6 +5,7 @@ local default_prog = nil
 local set_environment_variables = nil
 local term = nil
 local font_size = nil
+local use_ime = nil
 
 if hostname == "H77QF74G0F" then
 	default_prog = { "fish", "--login" }
@@ -14,6 +15,11 @@ if hostname == "H77QF74G0F" then
 	}
 	term = "wezterm"
 	font_size = 13.2
+elseif hostname == "nixos-work" then
+	-- I  think this might fix/help with my key-repeat problem on this laptop..
+	-- https://www.reddit.com/r/commandline/comments/1621suy/help_issue_with_wezterm_and_vim_key_repeat/
+	-- it sadly did not :(
+	-- use_ime = false
 end
 
 return {
@@ -68,4 +74,5 @@ return {
 	set_environment_variables = set_environment_variables,
 	term = term,
 	font_size = font_size,
+	use_ime = use_ime,
 }
