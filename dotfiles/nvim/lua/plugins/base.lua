@@ -627,14 +627,14 @@ if true then
                 -- extraArgs = { "--profile", "rust-analyzer" },
               },
               -- also the default from LazyVim, but I like having it here explicitly
-              -- check = {
-              --   command = "clippy",
-              --   extraArgs = { "--no-deps" },
-              -- },
               check = {
-                command = "check",
-                -- extraArgs = { "--no-deps" },
+                command = "clippy",
+                extraArgs = { "--no-deps" },
               },
+              -- check = {
+              --   command = "check",
+              --   -- extraArgs = { "--no-deps" },
+              -- },
               diagnostics = {
                 -- list of all r-a diagnostics: https://rust-analyzer.github.io/manual.html#diagnostics
                 disabled = {
