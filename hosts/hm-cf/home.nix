@@ -151,7 +151,7 @@ in
 
         # development
         # conda
-        # sublime-merge # license allows "unrestricted evaluation period"; but not available for aarch64 :(
+        # sublime-merge # license allows "unrestricted evaluation period"; but not available for darwin :( https://search.nixos.org/packages?channel=unstable&show=sublime-merge&from=0&size=50&sort=relevance&type=packages&query=sublime-merge
         # dbeaver-bin
         scala-cli
         # earthly
