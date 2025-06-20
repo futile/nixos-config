@@ -33,6 +33,7 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.lang.nix" },
     { import = "lazyvim.plugins.extras.lang.toml" },
     { import = "lazyvim.plugins.extras.lang.git" },
+    { import = "lazyvim.plugins.extras.test.core" },
     goConfig,
     -- { import = "lazyvim.plugins.extras.coding.codeium" }, -- just wasn't very good :(
     -- { import = "lazyvim.plugins.extras.coding.copilot" },
