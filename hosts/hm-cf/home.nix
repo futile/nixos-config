@@ -37,6 +37,7 @@ in
       # "${home-modules}/base.nix"
       "${home-modules}/shell-common.nix"
       "${home-modules}/git.nix"
+      "${home-modules}/jj.nix"
       "${home-modules}/gitbutler.nix"
       "${home-modules}/fish.nix"
       "${home-modules}/sbt.nix"

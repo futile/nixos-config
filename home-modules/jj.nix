@@ -3,6 +3,7 @@
   home.packages = with pkgs; [
     jujutsu
     difftastic
+    gg-jj # nice gui for jj, https://github.com/gulbanana/gg
   ];
 
   xdg = {
