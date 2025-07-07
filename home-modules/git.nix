@@ -8,6 +8,7 @@
     extraConfig = {
       core = {
         editor = "nvim";
+        autocrlf = "input";
       };
       fetch = {
         prune = "true";
