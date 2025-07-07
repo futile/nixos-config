@@ -8,7 +8,7 @@ local font_size = nil
 local use_ime = nil
 
 if hostname == "H77QF74G0F" then
-	default_prog = { "fish", "--login" }
+	default_prog = { "/Users/frath/.nix-profile/bin/fish", "--login" }
 	set_environment_variables = {
 		TERMINFO_DIRS = "/Users/frath/.nix-profile/share/terminfo",
 		WSLENV = "TERMINFO_DIRS",
