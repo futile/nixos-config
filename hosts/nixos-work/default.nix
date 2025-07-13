@@ -116,15 +116,31 @@ in
   services.xserver = {
     enable = true;
 
+    # fast(er) key repeat
+    # seem not to work!
+    autoRepeatDelay = 190;
+    autoRepeatInterval = 30;
+  };
+
+  services.displayManager = {
     # Enable gdm & GNOME 3 Desktop Environment.
-    displayManager = {
-      gdm = {
-        enable = true;
-        wayland = true;
-      };
+    gdm = {
+      enable = true;
+      wayland = true;
     };
 
-    desktopManager.gnome = {
+    # disabling this for now, not using it anyway.
+    # windowManager.qtile.enable = true;
+
+    # because we have encrypted ZFS, and thus already enter a password during boot
+    autoLogin = {
+      enable = false; # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
+      user = "felix";
+    };
+  };
+
+  services.desktopManager = {
+    gnome = {
       enable = true;
       extraGSettingsOverridePackages = [ pkgs.mutter ];
       extraGSettingsOverrides = ''
@@ -132,20 +148,6 @@ in
         experimental-features = ['scale-monitor-framebuffer']
       '';
     };
-
-    # disabling this for now, not using it anyway.
-    # windowManager.qtile.enable = true;
-
-    # fast(er) key repeat
-    # seem not to work!
-    autoRepeatDelay = 190;
-    autoRepeatInterval = 30;
-  };
-
-  # because we have encrypted ZFS, and thus already enter a password during boot
-  services.displayManager.autoLogin = {
-    enable = false; # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
-    user = "felix";
   };
 
   # Enable touchpad support (enabled default in most desktopManager).

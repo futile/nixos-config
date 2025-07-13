@@ -158,26 +158,6 @@ in
   services.xserver = {
     enable = true;
 
-    # Enable gdm & GNOME 3 Desktop Environment.
-    displayManager = {
-      gdm = {
-        enable = true;
-        # We don't want wayland for now; e.g. screensharing doesn't work (well)
-        wayland = false;
-        # When we want wayland, we also want to run with nvidia.
-        # This requires some other options (`nixos-rebuild` will tell us which),
-        # so disable for now.
-        # nvidiaWayland = true;
-      };
-
-      # try 34679 at making auto key repeat work..
-      sessionCommands = ''
-        xset r rate 150 30
-      '';
-    };
-
-    desktopManager.gnome.enable = true;
-
     # disabling this for now, not using it anyway.
     # windowManager.qtile.enable = true;
 
@@ -189,6 +169,28 @@ in
 
     # Enable touchpad support (enabled default in most desktopManager).
     # libinput.enable = true;
+  };
+
+  # Enable gdm & GNOME 3 Desktop Environment.
+  services.desktopManager = {
+    gnome.enable = true;
+  };
+
+  services.displayManager = {
+    gdm = {
+      enable = true;
+      # We don't want wayland for now; e.g. screensharing doesn't work (well)
+      wayland = false;
+      # When we want wayland, we also want to run with nvidia.
+      # This requires some other options (`nixos-rebuild` will tell us which),
+      # so disable for now.
+      # nvidiaWayland = true;
+    };
+
+    # try 34679 at making auto key repeat work..
+    sessionCommands = ''
+      xset r rate 150 30
+    '';
   };
 
   # enable cosmic desktop
