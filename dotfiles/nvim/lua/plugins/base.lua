@@ -3,6 +3,28 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    -- setup neotest with jest for ts
+    -- https://github.com/nvim-neotest/neotest-jest
+    {
+      "nvim-neotest/neotest",
+      dependencies = {
+        { "nvim-neotest/neotest-jest" },
+      },
+      -- optional = true,
+      opts = {
+        adapters = {
+          -- adapted from here:
+          -- https://github.com/LeonardsonCC/nvim/blob/70c1e53f67d0e453aff9c4c58b011a8b0586d99d/lua/plugins/neotest-jest.lua#L3
+          ["neotest-jest"] = {},
+          --   jestCommand = "npm test --",
+          --   jestConfigFile = "custom.jest.config.ts",
+          --   env = { CI = true },
+          --   cwd = function(path)
+          --     return vim.fn.getcwd()
+          --   end,
+        },
+      },
+    },
 
     -- Setup markdownlint-cli2 config to adjust some lints
     -- see https://github.com/LazyVim/LazyVim/discussions/4094

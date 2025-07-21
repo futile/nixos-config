@@ -4,6 +4,7 @@ let
       # misc
       jq
       editorconfig-core-c
+      prettier
 
       # markdown
       multimarkdown
