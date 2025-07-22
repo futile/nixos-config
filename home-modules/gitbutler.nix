@@ -17,9 +17,4 @@ in
   # with a regular file when writing out `settings.json` (>.>)
   home.file."${configDirPath}".source =
     config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/gitbutler";
-
-  # let's try this out a bit
-  programs.fish.shellAbbrs = {
-    nn = "jj";
-  };
 }

@@ -19,7 +19,7 @@ in
       "${home-modules}/helix.nix"
       "${home-modules}/git.nix"
       "${home-modules}/git-extra.nix"
-      "${home-modules}/gitbutler.nix"
+      # "${home-modules}/gitbutler.nix" # always builds from scratch, too annoying
       "${home-modules}/jj.nix"
       "${home-modules}/fish.nix"
       "${home-modules}/nushell.nix"

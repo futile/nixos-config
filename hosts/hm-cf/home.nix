@@ -38,7 +38,7 @@ in
       "${home-modules}/shell-common.nix"
       "${home-modules}/git.nix"
       "${home-modules}/jj.nix"
-      "${home-modules}/gitbutler.nix"
+      # "${home-modules}/gitbutler.nix" # always builds from scratch, too annoying
       "${home-modules}/fish.nix"
       "${home-modules}/sbt.nix"
       # "${home-modules}/desktop-common.nix"
