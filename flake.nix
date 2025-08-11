@@ -174,19 +174,19 @@
           # "draw the rest of the owl"
           ./hosts/nixos-work
           # use wezterm from git, because unstable currently fails to start on wayland
-          (
-            {
-              config,
-              flake-inputs,
-              system,
-              ...
-            }:
-            {
-              nixpkgs.overlays = [
-                (final: prev: { wezterm = flake-inputs.wezterm-git.packages.${prev.system}.default; })
-              ];
-            }
-          )
+          # (
+          #   {
+          #     config,
+          #     flake-inputs,
+          #     system,
+          #     ...
+          #   }:
+          #   {
+          #     nixpkgs.overlays = [
+          #       (final: prev: { wezterm = flake-inputs.wezterm-git.packages.${prev.system}.default; })
+          #     ];
+          #   }
+          # )
         ];
       };
 

@@ -58,7 +58,10 @@ return {
 	hide_tab_bar_if_only_one_tab = true,
 
 	-- fix completely broken rendering on NixOS unstable: https://github.com/NixOS/nixpkgs/issues/336069
+	-- front_end = "Software",
 	front_end = "WebGpu",
+
+	-- enable_wayland = true,
 
 	-- force_reverse_video_cursor = true,
 
