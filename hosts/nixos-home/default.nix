@@ -186,12 +186,12 @@ in
       # so disable for now.
       # nvidiaWayland = true;
     };
-
-    # try 34679 at making auto key repeat work..
-    sessionCommands = ''
-      xset r rate 150 30
-    '';
   };
+
+  # try 34679 at making auto key repeat work..
+  services.xserver.displayManager.sessionCommands = ''
+    xset r rate 150 30
+  '';
 
   # enable cosmic desktop
   # services.desktopManager.cosmic.enable = true;
