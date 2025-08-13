@@ -17,9 +17,17 @@ switch:
 switch-boot:
     sudo nixos-rebuild boot
 
+# Build using home-manager (only)
+hm-build:
+    home-manager build --flake .
+
 # Switch using home-manager (only)
 hm-switch:
     home-manager switch --flake .
+
+# Show news using home-manager (only)
+hm-news:
+    home-manager news --flake .
 
 # Update all flake inputs (i.e., package repos, doom-emacs version, etc.)
 update:
