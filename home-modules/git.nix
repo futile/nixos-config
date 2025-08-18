@@ -2,7 +2,9 @@
 {
   programs.git = {
     enable = true;
-    package = pkgs.gitAndTools.gitFull;
+    # fix for https://github.com/NixOS/nixpkgs/issues/208951#issuecomment-3196225149
+    package = pkgs.git;
+    # package = pkgs.gitAndTools.gitFull;
     userName = "Felix Rath";
 
     extraConfig = {

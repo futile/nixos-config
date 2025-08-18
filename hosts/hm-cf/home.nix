@@ -141,6 +141,7 @@ in
         duf # better du & df
         nvtopPackages.apple # video/gpu stats
         unixtools.watch
+        sshuttle
 
         # for now here manually, instead of "git-extra.nix"
         git-town
