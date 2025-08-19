@@ -14,6 +14,7 @@
         # misc
         python3 # just for a quick shell, math etc.
         libreoffice # open word/excel/etc. files
+        pdfarranger # create PDF file from multiple images/PDFs (very nice!!)
 
         # music/sound/video
         spotify
