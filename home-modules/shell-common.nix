@@ -11,8 +11,21 @@
     enable = true;
     nix-direnv.enable = true;
 
+    enableBashIntegration = true;
+    enableZshIntegration = true;
+
+    # this is automatically always on, and the option is read-only, so setting
+    # it causes an error.
+    # enableFishIntegration = true;
+
     # can't just symlink it, because `nix-direnv` also writes to it.
     stdlib = "source ${thisFlakePath}/dotfiles/direnv/direnvrc.sh";
+  };
+
+  programs.bash = {
+    # need to enable bash so that `.enableBashIntegration` works for other
+    # settings.
+    enable = true;
   };
 
   programs.fzf = {

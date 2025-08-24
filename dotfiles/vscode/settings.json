@@ -6,5 +6,22 @@
         "**/.jj": true
     },
     "editor.formatOnPaste": true,
-    "editor.autoIndentOnPaste": true
+    "editor.autoIndentOnPaste": true,
+    "editor.inlineSuggest.syntaxHighlightingEnabled": true,
+    "zencoder.displayDebugInfo": true,
+    "terminal.integrated.automationProfile.linux": {
+        "path": "bash",
+        "args": [
+            // "-i"
+        ]
+    },
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.profiles.linux": {
+        "bash": {
+            "path": "bash",
+            "args": [
+                // "-i"
+            ]
+        }
+    }
 }
