@@ -28,24 +28,27 @@
         nix-diff
 
         # image editing
-        inkscape
-        gimp
+        # inkscape
+        # gimp
 
         # screenshots
         kdePackages.spectacle
 
         # organization/todos etc.
-        obsidian
+        # obsidian
 
         # useful gui tools
-        wofi
+        # wofi
 
         # useful cmdline-tools
         just
         dtrx
         tokei
-        # magic-wormhole # broken atm, due to python 3.12 bump; I opened https://github.com/NixOS/nixpkgs/issues/325854
-        magic-wormhole-rs
+
+        # not using this/these atm
+        # magic-wormhole-rs
+        # magic-wormhole
+
         trippy
         lazygit
         lazydocker
@@ -66,9 +69,9 @@
         # development
         conda
         sublime-merge
-        dbeaver-bin
+        # dbeaver-bin
         scala-cli
-        earthly
+        # earthly
         oils-for-unix
 
         # cargo tools
