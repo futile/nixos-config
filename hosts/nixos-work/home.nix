@@ -42,6 +42,9 @@ in
       # "${home-modules}/sbt.nix"
       "${home-modules}/yazi.nix"
       "${home-modules}/mpv.nix"
+
+      # for Zencoder.ai.. (:
+      "${home-modules}/vscode.nix"
     ];
 
   xdg = {

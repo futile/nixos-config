@@ -73,6 +73,7 @@ let
     prev.symlinkJoin (
       {
         name = pkg.name + "-wrapped";
+        pname = pkg.pname;
         paths = [ pkg ];
         buildInputs = [ final.makeWrapper ];
         postBuild = ''
