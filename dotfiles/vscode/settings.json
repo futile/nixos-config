@@ -1,0 +1,10 @@
+{
+    "editor.formatOnSave": true,
+    "files.autoSave": "onFocusChange",
+    "files.exclude": {
+        "**/.direnv": true,
+        "**/.jj": true
+    },
+    "editor.formatOnPaste": true,
+    "editor.autoIndentOnPaste": true
+}

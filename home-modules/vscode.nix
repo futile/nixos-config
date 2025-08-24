@@ -32,4 +32,12 @@ in
     enable = true;
     package = vscode-fhs-with-editor-tools;
   };
+
+  xdg = {
+    enable = true;
+
+    # symlink directly to this repo, for easier iteration/changes
+    configFile."Code/User/settings.json".source =
+      config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/vscode/settings.json";
+  };
 }
