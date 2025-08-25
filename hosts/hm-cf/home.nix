@@ -217,6 +217,10 @@ in
       config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/cargo/config.toml";
   };
 
+  programs.bash.bashrcExtra = ''
+    . /Users/frath/.local/share/cloudflare-warp-certs/config.sh
+  '';
+
   # Home Manager can also manage your environment variables through
   # 'home.sessionVariables'. These will be explicitly sourced when using a
   # shell provided by Home Manager. If you don't want to manage your shell
