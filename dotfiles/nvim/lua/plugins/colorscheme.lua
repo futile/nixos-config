@@ -29,12 +29,14 @@ return {
         opts.colorscheme = "tokyonight"
       elseif vim.g.neovide then
         -- colorscheme in neovide
+
         -- opts.colorscheme = "nordic"
         -- opts.colorscheme = "astrolight"
-        -- opts.colorscheme = "astrolight"
-        opts.colorscheme = "embark"
+        -- opts.colorscheme = "embark"
+        opts.colorscheme = "oh-lucy-evening"
       else
         -- colorscheme in terminal/otherwise
+
         -- opts.colorscheme = "astrolight"
         -- opts.colorscheme = "onenord-light"
         -- opts.colorscheme = "rose-pine-dawn"
