@@ -60,15 +60,19 @@ return {
 
   -- -- Grouped Colorschemes below --
 
-  {
-    "rjshkhr/shadow.nvim",
-    priority = 1000,
-    -- config = function()
-    --   vim.opt.termguicolors = true
-    --   vim.cmd.colorscheme("shadow")
-    -- end,
-  },
   -- these I haven't tried out/sorted yet
+
+  -- gruvdark
+  -- https://github.com/darianmorat/gruvdark.nvim
+  {
+    "darianmorat/gruvdark.nvim",
+    lazy = false,
+    priority = 1000,
+    opts = {},
+  },
+
+  -- most fav (but probably not always lol)
+  -- (somewhat ordered from most to least liked)
 
   -- OldWorld
   -- https://github.com/dgox16/oldworld.nvim
@@ -80,18 +84,6 @@ return {
 
   -- oh-lucy
   { "Yazeed1s/oh-lucy.nvim" },
-
-  -- mellifluous
-  -- `set background=dark/light` for dark/light variant
-  {
-    "ramojus/mellifluous.nvim",
-    config = true,
-  },
-
-  -- < none atm. >
-
-  -- most fav (but probably not always lol)
-  -- (somewhat ordered from most to least liked)
 
   -- pinkmare
   { "Matsuuu/pinkmare" },
@@ -117,6 +109,13 @@ return {
     },
   },
 
+  -- mellifluous
+  -- `set background=dark/light` for dark/light variant
+  {
+    "ramojus/mellifluous.nvim",
+    config = true,
+  },
+
   -- catppuccin-{mocha,macchiato}
 
   -- https://github.com/rmehri01/onenord.nvim
@@ -139,6 +138,15 @@ return {
   {
     "AstroNvim/astrotheme",
     opts = {},
+  },
+
+  {
+    "rjshkhr/shadow.nvim",
+    priority = 1000,
+    -- config = function()
+    --   vim.opt.termguicolors = true
+    --   vim.cmd.colorscheme("shadow")
+    -- end,
   },
 
   -- look good with (lazy-)nvim, but I just don't like them :(
