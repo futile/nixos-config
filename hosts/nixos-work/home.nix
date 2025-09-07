@@ -70,6 +70,9 @@ in
           gcc
           gdb
 
+          # AI etc.
+          claude-code
+
           # messengers
           signal-desktop
           tdesktop

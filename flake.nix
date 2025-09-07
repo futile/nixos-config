@@ -22,9 +22,9 @@
     # nixpkgs-local = { url = "/home/felix/gits/nixpkgs"; };
 
     # for emacsGcc; see https://gist.github.com/mjlbach/179cf58e1b6f5afcb9a99d4aaf54f549
-    emacs-overlay = {
-      url = "github:nix-community/emacs-overlay";
-    };
+    # emacs-overlay = {
+    #   url = "github:nix-community/emacs-overlay";
+    # };
 
     nixos-hardware = {
       url = "github:NixOS/nixos-hardware";
@@ -42,19 +42,19 @@
       url = "github:thiagokokada/nix-alien";
     };
 
-    hyprland = {
-      url = "git+https://github.com/hyprwm/Hyprland?submodules=1";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-      };
-    };
+    # hyprland = {
+    #   url = "git+https://github.com/hyprwm/Hyprland?submodules=1";
+    #   inputs = {
+    #     nixpkgs.follows = "nixpkgs";
+    #   };
+    # };
 
-    nixos-cosmic = {
-      url = "github:lilyinstarlight/nixos-cosmic";
-      # Should be the other way around (according to README.md), but don't wanna for now.
-      # Also, this causes local rebuilds :)
-      # inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # nixos-cosmic = {
+    #   url = "github:lilyinstarlight/nixos-cosmic";
+    #   # Should be the other way around (according to README.md), but don't wanna for now.
+    #   # Also, this causes local rebuilds :)
+    #   # inputs.nixpkgs.follows = "nixpkgs";
+    # };
 
     fish-foreign-env = {
       url = "github:oh-my-fish/plugin-foreign-env";
@@ -71,21 +71,21 @@
       flake = false;
     };
 
-    doom-emacs = {
-      url = "github:hlissner/doom-emacs";
-      flake = false;
-    };
+    # doom-emacs = {
+    #   url = "github:hlissner/doom-emacs";
+    #   flake = false;
+    # };
 
     wezterm-embark = {
       url = "github:dmshvetsov/wezterm-embark-theme";
       flake = false;
     };
 
-    wezterm-git.url = "github:wez/wezterm?dir=nix";
+    # wezterm-git.url = "github:wez/wezterm?dir=nix";
 
     mac-app-util.url = "github:hraban/mac-app-util";
 
-    # https://isd-project.github.io/isd/
+    # https://kainctl.github.io/isd/
     isd = {
       url = "github:isd-project/isd";
       inputs = {

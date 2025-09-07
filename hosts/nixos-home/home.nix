@@ -29,7 +29,7 @@ in
       "${home-modules}/firefox.nix"
       "${home-modules}/zoom.nix"
       "${home-modules}/wezterm.nix"
-      "${home-modules}/doom-emacs.nix"
+      # "${home-modules}/doom-emacs.nix"
       "${home-modules}/nvim-lazy.nix"
       "${home-modules}/sbt.nix"
       "${home-modules}/yazi.nix"
@@ -49,6 +49,9 @@ in
           ccache
           gcc
           gdb
+
+          # AI etc.
+          claude-code
 
           # messengers
           signal-desktop

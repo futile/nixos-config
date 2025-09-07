@@ -78,7 +78,7 @@ in
     # nixpkgs-master-overlay
     # nixpkgs-local-overlay
     custom-packages-overlay
-    flake-inputs.emacs-overlay.overlay
+    # flake-inputs.emacs-overlay.overlay
   ];
 
   # registry entries
