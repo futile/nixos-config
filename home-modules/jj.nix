@@ -3,7 +3,9 @@
   home.packages = with pkgs; [
     jujutsu
     difftastic
-    gg-jj # nice gui for jj, https://github.com/gulbanana/gg
+
+    # gg broken until https://nixpk.gs/pr-tracker.html?pr=439100 is in nixos-unstable
+    # gg-jj # nice gui for jj, https://github.com/gulbanana/gg
   ];
 
   xdg = {
