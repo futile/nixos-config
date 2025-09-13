@@ -23,6 +23,26 @@
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
+  boot.kernelParams = [
+    # 2025-09-13: Trying to fix the errors below, got the param from here: https://bbs.archlinux.org/viewtopic.php?id=302499 - seems to work so far
+    #
+    # ```console
+    # $ journalctl -b -2
+    # Sep 11 19:10:20 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:20 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:20 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:20 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:21 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:21 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:21 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:21 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:21 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:22 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:22 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # Sep 11 19:10:22 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
+    # ```
+    "amdgpu.dcdebugmask=0x10"
+  ];
 
   fileSystems."/" = {
     device = "rpool/root/nixos";
