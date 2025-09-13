@@ -639,7 +639,7 @@ if true then
     -- just needed to stash this somewhere (from a .vscode/settings.json) "commented-out.rust-analyzer.cargo.buildScripts.invocationLocation": "root",
     {
       "mrcjkb/rustaceanvim",
-      version = "^5",
+      version = "^6",
       opts = {
         server = {
           -- this replaces the default keybindings, see https://www.lazyvim.org/extras/lang/rust#rustaceanvim
