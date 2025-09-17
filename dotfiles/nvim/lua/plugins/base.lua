@@ -373,11 +373,11 @@ if true then
 
     -- disable these, I use Nix
     {
-      "williamboman/mason-lspconfig.nvim",
+      "mason-org/mason-lspconfig.nvim",
       enabled = false,
     },
     {
-      "williamboman/mason.nvim",
+      "mason-org/mason.nvim",
       enabled = false,
     },
 
@@ -1144,7 +1144,7 @@ return {
 
   -- add any tools you want to have installed below
   {
-    "williamboman/mason.nvim",
+    "mason-org/mason.nvim",
     opts = {
       ensure_installed = {
         "stylua",

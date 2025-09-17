@@ -36,7 +36,12 @@ in
     # ];
   };
 
-  home.packages = [ my-neovide ];
+  home.packages = [
+    my-neovide
+
+    # required since LazyVim 15
+    pkgs.tree-sitter
+  ];
 
   xdg = {
     enable = true;
