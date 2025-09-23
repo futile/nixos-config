@@ -27,6 +27,9 @@ return {
         end
         -- override!
         opts.colorscheme = "tokyonight"
+      elseif hostname == "nixos-work" then
+        vim.opt.background = "light"
+        opts.colorscheme = "gruvdark-light"
       elseif vim.g.neovide then
         -- colorscheme in neovide
 
