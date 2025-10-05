@@ -4,8 +4,11 @@
     jujutsu
     difftastic
 
-    # gg broken until https://nixpk.gs/pr-tracker.html?pr=439100 is in nixos-unstable
-    # gg-jj # nice gui for jj, https://github.com/gulbanana/gg
+    # TUI, really good
+    lazyjj
+
+    # nice gui for jj, https://github.com/gulbanana/gg
+    gg-jj
   ];
 
   xdg = {
