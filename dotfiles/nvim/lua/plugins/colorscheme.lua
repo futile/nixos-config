@@ -74,6 +74,16 @@ return {
     opts = {},
   },
 
+  -- oxocarbon
+  -- https://github.com/nyoom-engineering/oxocarbon.nvim
+  {
+    "nyoom-engineering/oxocarbon.nvim",
+    -- Add in any other configuration;
+    --   event = foo,
+    --   config = bar
+    --   end,
+  },
+
   -- most fav (but probably not always lol)
   -- (somewhat ordered from most to least liked)
 
