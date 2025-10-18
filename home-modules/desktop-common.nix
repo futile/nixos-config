@@ -62,7 +62,7 @@
 
         # system(d) management
         systemctl-tui # TUI for systemd services
-        systemdgenie # GUI for systemd services
+        # systemdgenie # GUI for systemd services # 2025-10-18: currently broken, see
         qjournalctl # GUI for journal viewing & filtering
         # ksystemlog # seems very cool, but sadly seems to not work without more/full KDE
 
