@@ -78,15 +78,6 @@
     enableRedistributableFirmware = true;
     # enableAllHardware = true;
 
-    # from https://github.com/NixOS/nixpkgs/issues/111189#issuecomment-932985131
-    graphics = {
-      extraPackages = with pkgs; [
-        amdvlk
-        # rocm-opencl-icd
-        # rocm-opencl-runtime
-      ];
-    };
-
     bluetooth = {
       enable = true;
       powerOnBoot = true;
