@@ -134,7 +134,9 @@ in
 
     # because we have encrypted ZFS, and thus already enter a password during boot
     autoLogin = {
-      enable = false; # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
+      # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
+      # 2025-10-19: testing enabling, should be fixed: https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-3419081665
+      enable = true;
       user = "felix";
     };
   };

@@ -143,6 +143,9 @@ in
     ConditionVirtualization=none
   '';
 
+  # TODO: Remove this workaround when using the system again, it should no longer be needed.
+  # See https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-3419081665
+
   # NOTE: workaround to prevent auto-login from crashing, see https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-945091229
   systemd.services."getty@tty1".enable = false;
   systemd.services."autovt@tty1".enable = false;
