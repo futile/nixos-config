@@ -59,7 +59,7 @@ return {
 
 	-- fix completely broken rendering on NixOS unstable: https://github.com/NixOS/nixpkgs/issues/336069
 	-- front_end = "Software",
-	front_end = "WebGpu",
+	-- front_end = "WebGpu",
 
 	-- enable_wayland = true,
 
