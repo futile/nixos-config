@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 {
   programs.git = {
-    extraConfig = {
+    settings = {
       rerere.enabled = true;
 
       git-town = {
@@ -10,37 +10,40 @@
         sync-perennial-strategy = "rebase";
         sync-upstream = "true";
       };
-    };
 
-    aliases = {
-      # aliases created by/for `git-town`
-      append = "town append";
-      compress = "town compress";
-      contribute = "town contribute";
-      diff-parent = "town diff-parent";
-      hack = "town hack";
-      delete = "town delete";
-      observe = "town observe";
-      park = "town park";
-      prepend = "town prepend";
-      propose = "town propose";
-      rename = "town rename";
-      repo = "town repo";
-      set-parent = "town set-parent";
-      sync = "town sync";
+      alias = {
+        # aliases created by/for `git-town`
+        append = "town append";
+        compress = "town compress";
+        contribute = "town contribute";
+        diff-parent = "town diff-parent";
+        hack = "town hack";
+        delete = "town delete";
+        observe = "town observe";
+        park = "town park";
+        prepend = "town prepend";
+        propose = "town propose";
+        rename = "town rename";
+        repo = "town repo";
+        set-parent = "town set-parent";
+        sync = "town sync";
+      };
     };
+  };
 
-    delta = {
-      enable = false;
-      # options = {
-      #   syntax-theme = "GitHub";
-      # };
-    };
+  programs.delta = {
+    enable = false;
 
-    difftastic = {
-      enable = true;
-      # display = "inline"; # default is better imo, I think
-    };
+    # options = {
+    #   syntax-theme = "GitHub";
+    # };
+  };
+
+  programs.difftastic = {
+    enable = true;
+    git.enable = true;
+
+    # display = "inline"; # default is better imo, I think
   };
 
   programs.gh = {
