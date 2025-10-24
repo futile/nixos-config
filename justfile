@@ -98,7 +98,7 @@ prune-old-zfs-snapshots:
 
 # Print when the last flake.lock update was pushed (very heuristic)
 last-update-when:
-    git log --grep="[Uu]pdate" -1
+    git log -1 -- './flake.lock'
 
 # Restart nix-daemon, reloads config at /etc/nix/nix.conf. ref https://github.com/NixOS/nix/issues/8939
 macos-restart-daemon:
