@@ -26,6 +26,9 @@
     ];
   };
 
+  # system tools that are generally useful
+  environment.systemPackages = with pkgs; [ pciutils ];
+
   # These two settings (try to) increase `ulimit -Sn`, aka max number of open fd's per process (thread?).
   # Not even sure I want this, while it might make stuff work more out-of-the-box for me, it might hide
   # problems other people run into from me. Also, `ulimit -Sn` can be run without sudo, as long as the
