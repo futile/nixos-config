@@ -32,7 +32,7 @@ in
     in
     [
       # fix apps not showing in spotlight etc.
-      flake-inputs.mac-app-util.homeManagerModules.default
+      # flake-inputs.mac-app-util.homeManagerModules.default
 
       # "${home-modules}/base.nix"
       "${home-modules}/shell-common.nix"
@@ -47,6 +47,12 @@ in
 
       "${home-modules}/mac-fix-home-end.nix"
     ];
+
+  targets.darwin = {
+    # fix apps not showing in spotlight etc.
+    copyApps.enable = true;
+    linkApps.enable = false;
+  };
 
   programs.git = {
     settings = {

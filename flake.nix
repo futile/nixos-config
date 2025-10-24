@@ -83,7 +83,7 @@
 
     # wezterm-git.url = "github:wez/wezterm?dir=nix";
 
-    mac-app-util.url = "github:hraban/mac-app-util";
+    # mac-app-util.url = "github:hraban/mac-app-util";
 
     # https://kainctl.github.io/isd/
     isd = {
