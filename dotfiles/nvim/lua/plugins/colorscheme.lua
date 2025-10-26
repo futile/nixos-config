@@ -29,6 +29,9 @@ return {
         opts.colorscheme = "tokyonight"
       elseif hostname == "nixos-work" then
         -- vim.opt.background = "light"
+        -- opts.colorscheme = "gruvdark"
+
+        vim.opt.background = "dark"
         opts.colorscheme = "mapledark"
       elseif vim.g.neovide then
         -- colorscheme in neovide
