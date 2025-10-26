@@ -23,6 +23,8 @@
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
+
+  # need to escape spaces in strings: https://github.com/NixOS/nixpkgs/issues/254331
   boot.kernelParams = [
     # 2025-09-13: Trying to fix the errors below, got the param from here: https://bbs.archlinux.org/viewtopic.php?id=302499 - seems to work so far
     #
@@ -42,6 +44,17 @@
     # Sep 11 19:10:22 nixos-work kernel: amdgpu 0000:03:00.0: [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error - collecting diagnostic data
     # ```
     "amdgpu.dcdebugmask=0x10"
+
+    # 2025-10-26: None of this helped, sadly :(
+
+    # Let's not announce ourselves as Linux, so maybe we get to have Wifi 🙃
+    # https://bbs.archlinux.org/viewtopic.php?pid=1190086
+    # "acpi_osi=\"!Linux\""
+    # "acpi_osi="
+    # "acpi_osi=\"Windows 2021\""
+
+    # "acpi_osi=!"
+    # "acpi_osi=\"Windows 2021\""
   ];
 
   fileSystems."/" = {
