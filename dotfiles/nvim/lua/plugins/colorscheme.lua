@@ -28,8 +28,8 @@ return {
         -- override!
         opts.colorscheme = "tokyonight"
       elseif hostname == "nixos-work" then
-        vim.opt.background = "light"
-        opts.colorscheme = "gruvdark-light"
+        -- vim.opt.background = "light"
+        opts.colorscheme = "mapledark"
       elseif vim.g.neovide then
         -- colorscheme in neovide
 
@@ -46,6 +46,7 @@ return {
         opts.colorscheme = "embark"
       end
       -- global override
+
       -- opts.colorscheme = "embark"
       -- opts.colorscheme = "kanagawa"
       -- opts.colorscheme = "oh-lucy" -- status line color not ideal atm. (2024-06-06)
@@ -65,8 +66,20 @@ return {
 
   -- these I haven't tried out/sorted yet
 
+  -- mapledark
+  -- https://github.com/abhilash26/mapledark.nvim
+  {
+    "abhilash26/mapledark.nvim",
+    lazy = false,
+    priority = 1000,
+    -- config = function()
+    --   vim.cmd.colorscheme('mapledark')
+    -- end,
+  },
+
   -- gruvdark
   -- https://github.com/darianmorat/gruvdark.nvim
+  -- The background=light variant of this is really nice
   {
     "darianmorat/gruvdark.nvim",
     lazy = false,
@@ -74,18 +87,15 @@ return {
     opts = {},
   },
 
-  -- oxocarbon
-  -- https://github.com/nyoom-engineering/oxocarbon.nvim
-  {
-    "nyoom-engineering/oxocarbon.nvim",
-    -- Add in any other configuration;
-    --   event = foo,
-    --   config = bar
-    --   end,
-  },
-
   -- most fav (but probably not always lol)
   -- (somewhat ordered from most to least liked)
+
+  -- embark-theme
+  {
+    "embark-theme/vim",
+    name = "embark",
+    opts = {},
+  },
 
   -- OldWorld
   -- https://github.com/dgox16/oldworld.nvim
@@ -100,13 +110,6 @@ return {
 
   -- pinkmare
   { "Matsuuu/pinkmare" },
-
-  -- embark-theme
-  {
-    "embark-theme/vim",
-    name = "embark",
-    opts = {},
-  },
 
   -- https://github.com/rose-pine/neovim
   { "rose-pine/neovim" },
@@ -143,6 +146,16 @@ return {
   { "rebelot/kanagawa.nvim" },
 
   -- are okay-ish, but the others are better.
+
+  -- oxocarbon
+  -- https://github.com/nyoom-engineering/oxocarbon.nvim
+  {
+    "nyoom-engineering/oxocarbon.nvim",
+    -- Add in any other configuration;
+    --   event = foo,
+    --   config = bar
+    --   end,
+  },
 
   -- https://github.com/cocopon/iceberg.vim
   { "cocopon/iceberg.vim" },
