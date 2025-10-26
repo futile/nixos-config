@@ -83,15 +83,15 @@ if true then
 
     -- fzf-lua, new Telescope-like on the block 😎
     -- https://github.com/ibhagwan/fzf-lua
-    {
-      "ibhagwan/fzf-lua",
-      opts = function(_, opts)
-        local defaults = require("fzf-lua").config.defaults
-
-        opts.files.rg_opts = (opts.files.rg_opts or defaults.files.rg_opts) .. ' -g "!.jj"'
-        opts.files.fd_opts = (opts.files.fd_opts or defaults.files.fd_opts) .. " --no-require-git --exclude .jj"
-      end,
-    },
+    -- {
+    --   "ibhagwan/fzf-lua",
+    --   opts = function(_, opts)
+    --     local defaults = require("fzf-lua").config.defaults
+    --
+    --     opts.files.rg_opts = (opts.files.rg_opts or defaults.files.rg_opts) .. ' -g "!.jj"'
+    --     opts.files.fd_opts = (opts.files.fd_opts or defaults.files.fd_opts) .. " --no-require-git --exclude .jj"
+    --   end,
+    -- },
 
     -- Snacks.nvim config
     -- https://github.com/folke/snacks.nvim/tree/main?tab=readme-ov-file#-usage

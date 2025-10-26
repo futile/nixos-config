@@ -12,6 +12,9 @@ end
 -- turn off relativenumbers, they make scrolling non-smooth
 vim.o.relativenumber = false
 
+-- try out Snacks!
+vim.g.lazyvim_picker = "snacks"
+
 -- neovide-only settings
 if vim.g.neovide then
 end
