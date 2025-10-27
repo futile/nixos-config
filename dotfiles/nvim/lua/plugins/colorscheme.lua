@@ -15,7 +15,9 @@ return {
         -- opts.colorscheme = "onenord-light"
         -- ^^^ THIS VERY GOOD ^^^
 
-        opts.colorscheme = "embark"
+        -- opts.colorscheme = "embark"
+
+        opts.colorscheme = "mapledark"
 
         -- Also good, but not the one I want (for now) I think :)
         -- opts.colorscheme = "shadow"
