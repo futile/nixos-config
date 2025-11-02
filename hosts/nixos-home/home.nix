@@ -55,7 +55,7 @@ in
 
           # messengers
           signal-desktop
-          tdesktop
+          telegram-desktop
           discord
           slack
           hexchat

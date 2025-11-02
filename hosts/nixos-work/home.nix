@@ -75,7 +75,7 @@ in
 
           # messengers
           signal-desktop
-          tdesktop
+          telegram-desktop
           discord
           # slack
           # fix for screen sharing (hopefully), from https://discourse.nixos.org/t/slack-screensharing-gnome-wayland/35585/8

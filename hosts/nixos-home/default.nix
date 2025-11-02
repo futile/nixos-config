@@ -220,7 +220,7 @@ in
 
     wget
     bash
-    vimHugeX
+    vim-full
     coreutils
     git
     rsync
