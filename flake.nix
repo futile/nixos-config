@@ -239,6 +239,7 @@
                       nil # nix lsp
                       nixd # better nix lsp?
                       nixfmt-rfc-style
+                      statix
 
                       # go
                       gopls
@@ -246,6 +247,7 @@
                       gofumpt
                       gomodifytags
                       impl
+                      golangci-lint
 
                       # tex
                       # texlab
