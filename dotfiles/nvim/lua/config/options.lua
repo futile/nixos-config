@@ -15,6 +15,13 @@ vim.o.relativenumber = false
 -- try out Snacks!
 vim.g.lazyvim_picker = "snacks"
 
+vim.filetype.add({
+  extension = {
+    ["edge-plan"] = "json5",
+    ["edge-test"] = "json5",
+  },
+})
+
 -- neovide-only settings
 if vim.g.neovide then
 end
