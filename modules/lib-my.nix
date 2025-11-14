@@ -32,7 +32,7 @@ let
 
       # typst
       # typst-lsp # currently broken due to Rust 1.80 `time`-fallout
-      typstfmt
+      typstyle
       # typst-live
 
       # scala
