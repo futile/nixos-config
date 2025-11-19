@@ -108,6 +108,18 @@
         };
       };
     };
+
+    # according to this wiki, because my GPU is a bit old apparently: https://wiki.nixos.org/wiki/AMD_GPU#AMDVLK
+    # graphics = {
+    #   extraPackages = with pkgs; [
+    #     amdvlk
+    #   ];
+    #   # graphics.extraPackages32 = with pkgs; [
+    #   #   driversi686Linux.amdvlk
+    #   # ];
+    # };
+
+    amdgpu.legacySupport.enable = true;
   };
 
   # from https://nixos.wiki/wiki/Laptop and https://github.com/AdnanHodzic/auto-cpufreq/blob/v1.9.9/auto-cpufreq.conf-example
