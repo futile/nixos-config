@@ -18,7 +18,8 @@ vim.g.lazyvim_picker = "snacks"
 vim.filetype.add({
   extension = {
     ["edge-plan"] = "json5",
-    ["edge-test"] = "json5",
+    -- this is not correct 🙃
+    -- ["edge-test"] = "json5",
   },
 })
 
