@@ -660,7 +660,6 @@ if true then
               cargo = {
                 allFeatures = true, -- not good for (some) projects, disable with a `.vscode/settings.json` then, like here: https://github.com/rust-analyzer/rust-project.json-example/blob/master/.vscode/settings.json
                 targetDir = true, -- causes a subdirectory in `target` to be used
-                -- extraArgs = { "--profile", "rust-analyzer" },
               },
               -- also the default from LazyVim, but I like having it here explicitly
               check = {

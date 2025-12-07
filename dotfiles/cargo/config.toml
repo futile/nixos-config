@@ -1,8 +1,3 @@
-# make rust-analyzer use its own directory in target/, to not block other `cargo`-invocations
-# from: https://github.com/rust-lang/rust-analyzer/issues/6007#issuecomment-1379342831
-[profile.rust-analyzer]
-inherits = "dev"
-
 # from https://rust.cfdata.org/manage-deps/cloudflare-registry/fetching#local-setup-via-cargo-config
 [registries.cf]
 credential-provider = ["cargo:token-from-stdout", "cloudflared", "access", "login", "--app=access.rust.cfdata.org"]
