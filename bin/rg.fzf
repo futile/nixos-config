@@ -34,10 +34,10 @@ OPENER='if [[ $FZF_SELECT_COUNT -eq 0 ]]; then
         fi'
 
 fzf --no-height --tmux 100% --disabled --ansi --multi --query "${*:-}" \
-    --bind "start,change:$RELOAD" \
-    --bind "enter:become:$OPENER" \
-    --bind "ctrl-o:execute:$OPENER" \
-    --bind 'alt-a:select-all,alt-d:deselect-all,ctrl-/:toggle-preview' \
-    --delimiter : \
-    --preview 'bat --color=always --highlight-line {2} {1}' \
-    --preview-window 'up,border-bottom,~3,+{2}+3/3'
+	--bind "start,change:$RELOAD" \
+	--bind "enter:become:bash -c '$OPENER'" \
+	--bind "ctrl-o:execute:bash -c '$OPENER'" \
+	--bind 'alt-a:select-all,alt-d:deselect-all,ctrl-/:toggle-preview' \
+	--delimiter : \
+	--preview 'bat --color=always --highlight-line {2} {1}' \
+	--preview-window 'up,border-bottom,~3,+{2}+3/3'
