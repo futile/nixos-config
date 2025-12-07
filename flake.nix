@@ -238,7 +238,7 @@
                       # nix
                       nil # nix lsp
                       nixd # better nix lsp?
-                      nixfmt-rfc-style
+                      nixfmt
                       statix
 
                       # go
