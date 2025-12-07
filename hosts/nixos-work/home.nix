@@ -103,6 +103,7 @@ in
           rustup
           cargo-edit
           cargo-nextest
+          sccache
 
           # misc
           # texlive.combined.scheme-full
@@ -122,6 +123,10 @@ in
 
     sessionVariables = {
       EDITOR = "nvim";
+
+      # can also put this into ~/.cargo/config.toml, but I don't have this on all systems atm.
+      # ref: https://github.com/mozilla/sccache?tab=readme-ov-file#usage
+      RUSTC_WRAPPER = "sccache";
     };
 
     stateVersion = "22.11";
