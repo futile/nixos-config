@@ -102,6 +102,7 @@ in
           # rust tools
           rustup
           cargo-edit
+          cargo-nextest
 
           # misc
           # texlive.combined.scheme-full
