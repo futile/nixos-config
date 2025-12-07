@@ -40,6 +40,8 @@
         command = "git";
         expansion = "status";
       };
+
+      r = "rg.fzf";
     };
 
     shellAliases = {
