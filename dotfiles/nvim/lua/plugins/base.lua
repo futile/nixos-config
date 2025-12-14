@@ -367,6 +367,7 @@ if true then
           jsonls = {
             cmd = { "vscode-json-languageserver", "--stdio" },
           },
+          bashls = {},
         },
       },
     },

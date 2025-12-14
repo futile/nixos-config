@@ -12,8 +12,9 @@ let
       marksman
 
       # shell
-      shfmt
+      bash-language-server
       shellcheck
+      shfmt
 
       # python
       # python-language-server # outdated, have to use the other one instead
