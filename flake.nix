@@ -97,6 +97,11 @@
     #   url = "git+ssh://git@bitbucket.cfdata.org/~terin/engineering-nixpkgs";
     #   inputs.nixpkgs.follows = "nixpkgs";
     # };
+
+    waybar-WaybarTheme = {
+      url = "github:soaddevgit/WaybarTheme";
+      flake = false;
+    };
   };
 
   outputs =

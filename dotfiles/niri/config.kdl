@@ -23,6 +23,10 @@ input {
             // localectl set-x11-keymap.
         }
 
+        // nice key repeat settings <3
+        repeat-delay 200
+        repeat-rate 30
+
         // Enable numlock on startup, omitting this setting disables it.
         numlock
     }

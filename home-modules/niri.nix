@@ -9,8 +9,11 @@
 {
   xdg = {
     enable = true;
+
     configFile."niri".source =
       config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/dotfiles/niri/";
+
+    configFile."waybar".source = flake-inputs.waybar-WaybarTheme;
   };
 
   home.packages = with pkgs; [
@@ -19,6 +22,7 @@
     swaylock
     brightnessctl
     xwayland-satellite
+    wlogout
   ];
 
   programs.waybar = {
