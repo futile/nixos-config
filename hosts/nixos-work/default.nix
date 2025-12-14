@@ -171,11 +171,18 @@ in
     rsync
     dconf-editor
     adwaita-icon-theme
+
+    # how to declaratively configure dconf/gnome extensions:
+    # https://github.com/willmcpherson2/willos/blob/a6fe74f71886c18a08de16a348e66b08f4e0debf/will/home.nix#L206-L225
+
     gnomeExtensions.appindicator
     gnomeExtensions.pop-shell
     #    gnomeExtensions.pop-launcher-super-key
     gnomeExtensions.vitals
     # gnomeExtensions.topicons-plus # package broken
+    # hot corners in other corners than top-left (to mimic macos better)
+    gnomeExtensions.custom-hot-corners-extended
+
     nordic
 
     # monitoring
