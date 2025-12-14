@@ -82,9 +82,6 @@ in
   # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
   environment.shellAliases = lib.mkForce { };
 
-  # we like our fish-shell
-  programs.fish.enable = true;
-
   networking.hostId = "3168bba2"; # Just a unique ID (for ZFS)
   networking.hostName = "nixos-work"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -98,65 +95,68 @@ in
     hardwareClockInLocalTime = true;
   };
 
-  # Use the systemd-boot EFI boot loader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  boot = {
+    # Use the systemd-boot EFI boot loader.
+    loader.systemd-boot.enable = true;
+    loader.efi.canTouchEfiVariables = true;
 
-  # ZFS unlock at boot time
-  boot.zfs.requestEncryptionCredentials = true;
-
-  # 2024-10-01 `latestCompatibleLinuxPackages` was deprecated, need to hardcode now..
-  # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
-  # ... but 6.11 broken with zfs for now (:
-  # boot.kernelPackages = pkgs.linuxPackages_latest;
-
-  services.fwupd.enable = true;
-
-  # Enable the X11 windowing system.
-  services.xserver = {
-    enable = true;
-
-    # fast(er) key repeat
-    # seem not to work!
-    autoRepeatDelay = 190;
-    autoRepeatInterval = 30;
+    # ZFS unlock at boot time
+    zfs.requestEncryptionCredentials = true;
   };
 
-  services.displayManager = {
-    # Enable gdm & GNOME 3 Desktop Environment.
-    gdm = {
+  services = {
+    # 2024-10-01 `latestCompatibleLinuxPackages` was deprecated, need to hardcode now..
+    # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
+    # ... but 6.11 broken with zfs for now (:
+    # boot.kernelPackages = pkgs.linuxPackages_latest;
+
+    fwupd.enable = true;
+
+    # Enable the X11 windowing system.
+    xserver = {
       enable = true;
-      wayland = true;
+
+      # fast(er) key repeat
+      # seem not to work!
+      autoRepeatDelay = 190;
+      autoRepeatInterval = 30;
     };
 
-    # disabling this for now, not using it anyway.
-    # windowManager.qtile.enable = true;
+    displayManager = {
+      # Enable gdm & GNOME 3 Desktop Environment.
+      gdm = {
+        enable = true;
+        wayland = true;
+      };
 
-    # because we have encrypted ZFS, and thus already enter a password during boot
-    autoLogin = {
-      # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
-      # 2025-10-19: testing enabling, should be fixed: https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-3419081665
-      enable = true;
-      user = "felix";
+      # disabling this for now, not using it anyway.
+      # windowManager.qtile.enable = true;
+
+      # because we have encrypted ZFS, and thus already enter a password during boot
+      autoLogin = {
+        # disabled because I think it broke my graphical session, see https://github.com/NixOS/nixpkgs/issues/103746
+        # 2025-10-19: testing enabling, should be fixed: https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-3419081665
+        enable = true;
+        user = "felix";
+      };
     };
+
+    desktopManager = {
+      gnome = {
+        enable = true;
+        extraGSettingsOverridePackages = [ pkgs.mutter ];
+        extraGSettingsOverrides = ''
+          [org.gnome.mutter]
+          experimental-features = ['scale-monitor-framebuffer']
+        '';
+      };
+    };
+
+    # Enable touchpad support (enabled default in most desktopManager).
+    libinput.enable = true;
+
+    udev.packages = with pkgs; [ gnome-settings-daemon ];
   };
-
-  services.desktopManager = {
-    gnome = {
-      enable = true;
-      extraGSettingsOverridePackages = [ pkgs.mutter ];
-      extraGSettingsOverrides = ''
-        [org.gnome.mutter]
-        experimental-features = ['scale-monitor-framebuffer']
-      '';
-    };
-  };
-
-  # Enable touchpad support (enabled default in most desktopManager).
-  services.libinput.enable = true;
-
-  # also enable hyprand
-  # programs.hyprland.enable = true;
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
@@ -194,20 +194,29 @@ in
     networkmanager-openvpn
   ];
 
-  services.udev.packages = with pkgs; [ gnome-settings-daemon ];
+  programs = {
+    # we like our fish-shell
+    fish.enable = true;
 
-  # NOTE: required for `--allow-other` with rclone, see `home-modules/desktop-gdrive-keepassxc.nix`
-  programs.fuse.userAllowOther = true;
+    # Enable hyprland
+    # programs.hyprland.enable = true;
+
+    # Enable niri
+    niri.enable = true;
+
+    # NOTE: required for `--allow-other` with rclone, see `home-modules/desktop-gdrive-keepassxc.nix`
+    fuse.userAllowOther = true;
+
+    ccache = {
+      enable = true;
+      packageNames = [
+        "linux" # build our kernel with ccache, as we have crashdump enabled, which requires compiling it ourselves
+      ];
+    };
+  };
 
   # Since we run docker on an zfs partition
   virtualisation.docker.storageDriver = "zfs";
-
-  programs.ccache = {
-    enable = true;
-    packageNames = [
-      "linux" # build our kernel with ccache, as we have crashdump enabled, which requires compiling it ourselves
-    ];
-  };
 
   # Top-level stuff I keep around for reference:
 
