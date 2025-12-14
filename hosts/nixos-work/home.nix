@@ -28,6 +28,8 @@ in
 
       # "${home-modules}/hyprland.nix"
 
+      "${home-modules}/niri.nix"
+
       # > VA-API is enabled by default for Intel GPUs [10] if you are using Firefox 115 or a later version. For other GPUs, set media.ffmpeg.vaapi.enabled to true in about:config.
       # from https://wiki.archlinux.org/title/Firefox#Hardware_video_acceleration
       "${home-modules}/firefox.nix"
