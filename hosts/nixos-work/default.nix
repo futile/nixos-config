@@ -82,9 +82,16 @@ in
   # see also: https://discourse.nixos.org/t/fish-alias-added-by-nixos-cant-delete/19626/3
   environment.shellAliases = lib.mkForce { };
 
-  networking.hostId = "3168bba2"; # Just a unique ID (for ZFS)
-  networking.hostName = "nixos-work"; # Define your hostname.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  networking = {
+    hostId = "3168bba2"; # Just a unique ID (for ZFS)
+    hostName = "nixos-work"; # Define your hostname.
+
+    networkmanager = {
+      enable = true;
+    };
+
+    # wireless.enable = true; # Enables wireless support via wpa_supplicant.
+  };
 
   time = {
     # Set your time zone.
