@@ -53,7 +53,11 @@
         lazygit
         lazydocker
         dig
-        tldr
+
+        # `tealdeer` is a faster reimplementation of `tldr`
+        # tldr
+        tealdeer
+
         jq
         dyff # semantic yaml diffing
         kondo # for cleaning (old) build artifacts, cache folders etc. interactively
