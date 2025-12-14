@@ -2,8 +2,8 @@
 {
   config,
   pkgs,
-  flake-inputs,
-  thisFlakePath,
+  # flake-inputs,
+  # thisFlakePath,
   ...
 }:
 {
@@ -13,7 +13,10 @@
     configFile."niri".source =
       config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/dotfiles/niri/";
 
-    configFile."waybar".source = flake-inputs.waybar-WaybarTheme;
+    configFile."waybar".source =
+      config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/dotfiles/waybar/";
+
+    # configFile."waybar".source = flake-inputs.waybar-WaybarTheme;
   };
 
   home.packages = with pkgs; [
@@ -23,6 +26,9 @@
     brightnessctl
     xwayland-satellite
     wlogout
+    networkmanagerapplet
+
+    # `blueman` installed through `services.blueman.enable`
   ];
 
   programs.waybar = {

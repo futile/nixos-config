@@ -272,7 +272,6 @@
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-pkgs-unstable": "nixpkgs-pkgs-unstable",
-        "waybar-WaybarTheme": "waybar-WaybarTheme",
         "wezterm-embark": "wezterm-embark"
       }
     },
@@ -313,22 +312,6 @@
       "original": {
         "owner": "pyproject-nix",
         "repo": "uv2nix",
-        "type": "github"
-      }
-    },
-    "waybar-WaybarTheme": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1760194475,
-        "narHash": "sha256-b87LBRVpQhpcjcdfgAHx94xfu4cXDOxB7xsQPy9NKaY=",
-        "owner": "soaddevgit",
-        "repo": "WaybarTheme",
-        "rev": "4d4cd74295f6a66631d8d04f9907d6502e48fd7c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "soaddevgit",
-        "repo": "WaybarTheme",
         "type": "github"
       }
     },

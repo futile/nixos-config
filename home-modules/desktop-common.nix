@@ -44,6 +44,7 @@
         just
         dtrx
         tokei
+        unzip
 
         # not using this/these atm
         # magic-wormhole-rs

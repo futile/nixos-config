@@ -156,6 +156,8 @@ in
     libinput.enable = true;
 
     udev.packages = with pkgs; [ gnome-settings-daemon ];
+
+    blueman.enable = true;
   };
 
   # List packages installed in system profile. To search, run:
