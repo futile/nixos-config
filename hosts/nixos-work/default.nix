@@ -42,6 +42,10 @@ in
       # ausweisapp
       "${modules}/ausweisapp.nix"
 
+      # geoclue2; location provider for gammastep
+      # 2026-12-15: couldn't get this to work :(
+      "${modules}/geoclue2.nix"
+
       # user-configuration with home-manager
       "${modules}/home-manager.nix"
 
