@@ -143,4 +143,9 @@
     "on-click": "waybar-module-pomodoro toggle",
     "on-click-right": "waybar-module-pomodoro reset",
   },
+
+  "tray": {
+    // "icon-size": 16,
+    "spacing": 10,
+  },
 }
