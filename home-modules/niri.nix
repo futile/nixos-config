@@ -52,7 +52,7 @@ in
   # based on  https://yalter.github.io/niri/Example-systemd-Setup.html
   services.swayidle =
     let
-      swaylockCmd = "${swaylockPkg}/bin/swaylock --screenshot --effect-blur 4x4 --show-failed-attempts --show-keyboard-layout --daemonize";
+      swaylockCmd = "${swaylockPkg}/bin/swaylock --screenshot --effect-blur 4x4 --show-failed-attempts --show-keyboard-layout --ignore-empty-password --daemonize";
     in
     {
       enable = true;
