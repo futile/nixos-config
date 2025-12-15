@@ -394,6 +394,9 @@ binds {
     Mod+D hotkey-overlay-title="Run an Application: rofi" { spawn "rofi" "-show" "run"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock" "--screenshot" "--effect-blur" "4x4" "--show-failed-attempts" "--show-keyboard-layout"; }
 
+    // figured this one out using `wev`
+    XF86ScreenSaver { spawn "swaylock" "--screenshot" "--effect-blur" "4x4" "--show-failed-attempts" "--show-keyboard-layout"; }
+
     // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
     // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
     // For example, this is a standard bind to toggle the screen reader (orca).
