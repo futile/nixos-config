@@ -21,6 +21,10 @@
     "battery",
   ],
 
+  "niri/window": {
+    "separate-outputs": true,
+  },
+
   "hyprland/workspaces": {
     "format": "{name}: {icon}",
     "format-icons": {
