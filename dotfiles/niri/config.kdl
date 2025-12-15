@@ -281,6 +281,7 @@ layout {
 // This line starts waybar, a commonly used bar for Wayland compositors.
 // We're doing this through nixos.
 // spawn-at-startup "waybar"
+spawn-at-startup "waypaper" "--restore"
 
 // To run a shell command (with variables, pipes, etc.), use spawn-sh-at-startup:
 // spawn-sh-at-startup "qs -c ~/source/qs/MyAwesomeShell"

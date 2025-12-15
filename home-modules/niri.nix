@@ -28,6 +28,10 @@
     wlogout
     networkmanagerapplet
 
+    # wallpaper stuff
+    mpvpaper
+    waypaper
+
     # `blueman` installed through `services.blueman.enable`
   ];
 
