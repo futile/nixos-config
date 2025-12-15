@@ -137,7 +137,6 @@ in
         # lazygit
         # lazydocker
         # dig
-        tldr
         jq
         yq
         dyff # semantic yaml diffing
@@ -148,6 +147,10 @@ in
         nvtopPackages.apple # video/gpu stats
         unixtools.watch
         sshuttle
+
+        # `tealdeer` is a faster reimplementation of `tldr`
+        # tldr
+        tealdeer
 
         # for now here manually, instead of "git-extra.nix"
         git-town
