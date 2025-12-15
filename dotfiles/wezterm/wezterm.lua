@@ -1,4 +1,16 @@
 local wezterm = require("wezterm")
+
+-- for saving & restoring window layout: https://github.com/MLFlexer/resurrect.wezterm
+local resurrect = wezterm.plugin.require("https://github.com/MLFlexer/resurrect.wezterm")
+-- automatic save every 15 mins
+resurrect.state_manager.periodic_save({
+	save_workspaces = true,
+	save_windows = true,
+	save_tabs = true,
+})
+-- restore on startup
+wezterm.on("gui-startup", resurrect.state_manager.resurrect_on_gui_startup)
+
 local hostname = wezterm.hostname()
 
 local default_prog = nil
