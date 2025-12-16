@@ -39,6 +39,7 @@
 
         # useful gui tools
         # wofi
+        nomacs
 
         # useful cmdline-tools
         just
