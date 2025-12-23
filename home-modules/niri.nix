@@ -70,6 +70,7 @@ in
 
       events = {
         "before-sleep" = "${swaylockCmd}";
+        "lock" = "${swaylockCmd}";
       };
     };
 
