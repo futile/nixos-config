@@ -46,6 +46,11 @@
         dtrx
         tokei
         unzip
+        usbutils
+
+        # to switch usb wifi adapater from "CD mode" to wifi mode
+        usb-modeswitch
+        usb-modeswitch-data
 
         # not using this/these atm
         # magic-wormhole-rs

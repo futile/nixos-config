@@ -113,6 +113,9 @@ in
 
     # ZFS unlock at boot time
     zfs.requestEncryptionCredentials = true;
+
+    # 2025-12-24 USB wifi stick "Archer TX10UB Nano" requires at least this kernel for wifi to work
+    kernelPackages = pkgs.linuxPackages_6_17;
   };
 
   services = {
