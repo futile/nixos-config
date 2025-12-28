@@ -94,6 +94,7 @@ in
       enable = true;
     };
 
+    # enable once networkmanager is updated (& whole system)
     # wireless.enable = true; # Enables wireless support via wpa_supplicant.
   };
 
