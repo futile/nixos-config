@@ -49,6 +49,11 @@ in
     };
   };
 
+  home.sessionVariables = {
+    # for discord etc.
+    NIXOS_OZONE_WL = "1";
+  };
+
   # based on  https://yalter.github.io/niri/Example-systemd-Setup.html
   services.swayidle =
     let
