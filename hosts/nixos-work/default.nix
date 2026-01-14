@@ -120,6 +120,10 @@ in
     # kernelPackages = pkgs.linuxPackages_6_18;
   };
 
+  i18n.inputMethod = {
+    type = "ibus";
+  };
+
   services = {
     # 2024-10-01 `latestCompatibleLinuxPackages` was deprecated, need to hardcode now..
     # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
