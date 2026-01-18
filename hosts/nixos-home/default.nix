@@ -43,6 +43,9 @@ in
       # user-configuration with home-manager
       "${modules}/home-manager.nix"
 
+      # give me steam (wanna try PD2)
+      "${modules}/steam.nix"
+
       # cosmic desktop - https://github.com/lilyinstarlight/nixos-cosmic
       # causing too much rebuilding for now.
       # flake-inputs.nixos-cosmic.nixosModules.default
@@ -96,10 +99,23 @@ in
 
   # we like our fish-shell
   programs.fish.enable = true;
+  networking = {
+    hostId = "6adc5431"; # Just a unique ID (for ZFS)
+    hostName = "nixos-home"; # Define your hostname.
 
-  networking.hostId = "6adc5431"; # Just a unique ID (for ZFS)
-  networking.hostName = "nixos-home"; # Define your hostname.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+    # The global useDHCP flag is deprecated, therefore explicitly set to false here.
+    # Per-interface useDHCP will be mandatory in the future, so this generated config
+    # replicates the default behaviour.
+    useDHCP = false;
+
+    # Interface available when booting in VirtualBox
+    interfaces.enp0s3.useDHCP = true;
+
+    # Interface available when booting natively
+    interfaces.eno1.useDHCP = true;
+
+    # wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  };
 
   time = {
     # Set your time zone.
@@ -108,36 +124,28 @@ in
     hardwareClockInLocalTime = true;
   };
 
-  # Use the systemd-boot EFI boot loader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  boot = {
+    # Use the systemd-boot EFI boot loader.
+    loader.systemd-boot.enable = true;
+    loader.efi.canTouchEfiVariables = true;
 
-  # ZFS unlock at boot time
-  boot.zfs.requestEncryptionCredentials = true;
+    # ZFS unlock at boot time
+    zfs.requestEncryptionCredentials = true;
 
-  # enable booting into a crashDump kernel when my system panics/hangs
-  # this causes recompilation, don't want/need it currently
-  # boot.crashDump.enable = true;
+    # enable booting into a crashDump kernel when my system panics/hangs
+    # this causes recompilation, don't want/need it currently
+    # boot.crashDump.enable = true;
 
-  # 2024-10-01 `latestCompatibleLinuxPackages` was deprecated, need to hardcode now..
-  # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
-  # ... but 6.11 broken with zfs for now (:
-  boot.kernelPackages = pkgs.linuxPackages_6_6;
+    # 2024-10-01 `latestCompatibleLinuxPackages` was deprecated, need to hardcode now..
+    # boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
+    # ... but 6.11 broken with zfs for now (:
+    kernelPackages = pkgs.linuxPackages_6_6;
+  };
 
-  # The global useDHCP flag is deprecated, therefore explicitly set to false here.
-  # Per-interface useDHCP will be mandatory in the future, so this generated config
-  # replicates the default behaviour.
-  networking.useDHCP = false;
-
-  # Interface available when booting in VirtualBox
-  networking.interfaces.enp0s3.useDHCP = true;
   systemd.units."sys-subsystem-net-devices-enp0s3.device".text = ''
     [Unit]
     ConditionVirtualization=oracle
   '';
-
-  # Interface available when booting natively
-  networking.interfaces.eno1.useDHCP = true;
   systemd.units."sys-subsystem-net-devices-eno1.device".text = ''
     [Unit]
     ConditionVirtualization=none
@@ -201,17 +209,6 @@ in
 
   # cosmic greeter; doesn't allow gnome session I think, but works with cosmic.
   # services.displayManager.cosmic-greeter.enable = true;
-
-  # give me steam (wanna try PD2)
-  # from https://wiki.nixos.org/wiki/Steam
-  programs.steam = {
-    enable = true;
-    remotePlay.openFirewall = true; # Open ports in the firewall for Steam Remote Play
-    dedicatedServer.openFirewall = true; # Open ports in the firewall for Source Dedicated Server
-    extraCompatPackages = with pkgs; [
-      proton-ge-bin
-    ];
-  };
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
