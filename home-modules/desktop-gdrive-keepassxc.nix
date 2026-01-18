@@ -42,7 +42,9 @@
 
       Service = {
         Type = "simple";
-        ExecStart = "${pkgs.keepassxc}/bin/keepassxc";
+        # `-platform xcb` for AutoType under Wayland
+        # see file:////nix/store/n30lpan6vlwyhjhwa1xs5ggf7ans0fyn-keepassxc-2.7.11/share/keepassxc/docs/KeePassXC_UserGuide.html#_auto_type
+        ExecStart = "${pkgs.keepassxc}/bin/keepassxc -platform xcb";
       };
 
       Install = {
