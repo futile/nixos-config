@@ -49,6 +49,9 @@ in
       # user-configuration with home-manager
       "${modules}/home-manager.nix"
 
+      # give me steam
+      "${modules}/steam.nix"
+
       # hyprland
       # flake-inputs.hyprland.nixosModules.default
     ];
