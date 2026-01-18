@@ -391,7 +391,7 @@ binds {
 
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     Mod+T hotkey-overlay-title="Open a Terminal: wezterm" { spawn "wezterm"; }
-    Mod+D hotkey-overlay-title="Run an Application: rofi" { spawn "rofi" "-show" "run"; }
+    Mod+D hotkey-overlay-title="Run an Application: rofi" { spawn "rofi" "-show" "combi" "-combi-modes" "run,games" "-modes" "combi" "-theme" "material"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock" "--screenshot" "--effect-blur" "4x4" "--show-failed-attempts" "--show-keyboard-layout" "--ignore-empty-password"; }
 
     // figured this one out using `wev`

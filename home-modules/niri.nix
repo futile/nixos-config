@@ -27,7 +27,6 @@ in
     with pkgs;
     [
       playerctl
-      rofi
       brightnessctl
       xwayland-satellite
       wlogout
@@ -40,6 +39,13 @@ in
       # `blueman` installed through `services.blueman.enable`
     ]
     ++ [ swaylockPkg ];
+
+  programs.rofi = {
+    enable = true;
+    plugins = with pkgs; [
+      rofi-games
+    ];
+  };
 
   programs.waybar = {
     enable = true;
