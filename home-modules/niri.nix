@@ -70,7 +70,7 @@ in
 
       timeouts = [
         {
-          timeout = 600;
+          timeout = 3 * 600;
           command = "${swaylockCmd}";
         }
         {
