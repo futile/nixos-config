@@ -32,15 +32,22 @@
       };
     };
 
+    # adapted from looking at waybar's config using `isd`
     keepassxc = {
       Unit = {
         Description = "Autostart Keepassxc";
+        Requires = [ "tray.target" ];
         After = [
           "graphical-session.target"
           "rclone-gdrive.service"
+          "tray.target"
         ];
         Wants = [ "rclone-gdrive.service" ];
-        PartOf = [ "graphical-session.target" ];
+        PartOf = [
+          "graphical-session.target"
+          # "tray.target"
+        ];
+        ConditionEnvironment = "WAYLAND_DISPLAY";
       };
 
       Service = {
@@ -53,7 +60,10 @@
       };
 
       Install = {
-        WantedBy = [ "graphical-session.target" ];
+        WantedBy = [
+          "graphical-session.target"
+          # "tray.target"
+        ];
       };
     };
   };
