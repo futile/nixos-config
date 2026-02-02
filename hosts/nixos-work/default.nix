@@ -120,6 +120,7 @@ in
 
     # 2025-12-24 USB wifi stick "Archer TX10UB Nano" requires at least this kernel for wifi to work
     # 2026-01-05 That wifi stick isn't working anyway, even with 6.17, but let's try 6.18 -> no zfs yet
+    # 2026-01-30 6.18 still no zfs
     # kernelPackages = pkgs.linuxPackages_6_18;
   };
 

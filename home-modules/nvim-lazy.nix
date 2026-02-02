@@ -24,7 +24,9 @@ in
     enable = true;
     extraPackages = pkgs.lib.my.editorTools ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.xsel ]);
 
-    extraLuaPackages = luaPkgs: with luaPkgs; [ sqlite ];
+    # 2026-01-30 breaks with new auto-generated `init.lua`, because I'm symlinking my own one.
+    # see https://github.com/nix-community/home-manager/blob/475921375def3eb930e1f8883f619ff8609accb6/modules/misc/news/2026/01/2026-01-25_19-00-28.nix
+    # extraLuaPackages = luaPkgs: with luaPkgs; [ sqlite ];
 
     # dunno how to do this together with lazyvim :/
     # extraLuaConfig = ''
@@ -46,6 +48,10 @@ in
   xdg = {
     enable = true;
     configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/nvim";
+
+    # 2026-01-30 breaks with new auto-generated `init.lua`, because I'm symlinking my own one.
+    # see https://github.com/nix-community/home-manager/blob/475921375def3eb930e1f8883f619ff8609accb6/modules/misc/news/2026/01/2026-01-25_19-00-28.nix
+    configFile."nvim/init.lua".enable = false;
   };
 
   # home.file = {
