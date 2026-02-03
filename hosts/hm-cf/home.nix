@@ -155,7 +155,7 @@ in
         # for now here manually, instead of "git-extra.nix"
         git-town
         mergiraf
-        pre-commit
+        # pre-commit # pulls in .NET SDK which requires building Swift from source on Darwin
 
         # see https://tableplus.com/, free with tab-/window-count limitations
         # tableplus # getting this through brew instead, more up-to-date + postgresql:// links work
@@ -198,7 +198,8 @@ in
         spotify
 
         # el video
-        mpv
+        # 2026-02-02 apparently requires building swift locally (now?) which I really don't wanna..
+        # mpv
 
         # You can also create simple shell scripts directly inside your
         # configuration. For example, this adds a command 'my-hello' to your

@@ -223,7 +223,8 @@
                       # markdown
                       multimarkdown
                       markdownlint-cli2
-                      marksman
+                      # 2026-02-02 tries to build swift, don't wanna
+                      # marksman
 
                       # shell
                       shfmt

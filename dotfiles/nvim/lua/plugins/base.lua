@@ -155,75 +155,76 @@ if true then
 
     -- Bookmarks
     -- https://github.com/LintaoAmons/bookmarks.nvim
-    {
-      "LintaoAmons/bookmarks.nvim",
-      -- tag = "v0.5.4", -- optional, pin the plugin at specific version for stability
-      dependencies = {
-        { "kkharji/sqlite.lua" },
-        { "nvim-telescope/telescope.nvim" },
-        { "stevearc/dressing.nvim" }, -- optional: to have the same UI shown in the GIF
-      },
-      lazy = false,
-      dev = false,
-      opts = {
-        json_db_path = vim.fs.normalize(vim.fn.stdpath("config") .. "/bookmarks_" .. vim.fn.hostname() .. ".db.json"),
-        signs = {
-          mark = { icon = "󰃁", color = "", line_bg = "" },
-          desc_format = function(desc)
-            return "󰃁 " .. desc
-          end,
-        },
-        -- shows an empty buffer after `:BookmarksCalibration`, don't need that
-        show_calibrate_result = false,
-        -- disabling this actually makes it work?? lol, but ok :)
-        auto_calibrate_cur_buf = false,
-      },
-      keys = {
-        {
-          mode = { "n", "v" },
-          "äa",
-          "<cmd>BookmarksMark<cr>",
-          desc = "Add current line into active BookmarkList.",
-        },
-        {
-          mode = { "n", "v" },
-          "äg",
-          function()
-            local picker = require("bookmarks.adapter.picker")
-            local api = require("bookmarks.api")
-            picker.pick_bookmark_of_current_project(function(bookmark)
-              api.goto_bookmark(bookmark)
-            end, { all = true })
-          end,
-          desc = "Go to bookmark in current project",
-        },
-        {
-          mode = { "n", "v" },
-          "äd",
-          function()
-            local api = require("bookmarks.api")
-            local bm = api.find_existing_bookmark_under_cursor()
-            if bm then
-              api.mark({ name = "" })
-            end
-          end,
-          desc = "Delete bookmark in current line",
-        },
-        { mode = { "n", "v" }, "äc", "<cmd>BookmarksCommands<cr>", desc = "Find and trigger a bookmark command." },
-        {
-          mode = { "n", "v" },
-          "är",
-          "<cmd>BookmarksGotoRecent<cr>",
-          desc = "Go to latest visited/created Bookmark",
-        },
-        {
-          mode = { "n", "v" },
-          "ät",
-          "<cmd>BookmarksTree<cr>",
-          desc = "Open Bookmarks Tree View",
-        },
-      },
-    },
+    -- 2026-02-03 disabled because it requires libsqlite, which I currently don't have, because home-manager has changed how to add native packages to nvim
+    -- {
+    --   "LintaoAmons/bookmarks.nvim",
+    --   -- tag = "v0.5.4", -- optional, pin the plugin at specific version for stability
+    --   dependencies = {
+    --     { "kkharji/sqlite.lua" },
+    --     { "nvim-telescope/telescope.nvim" },
+    --     { "stevearc/dressing.nvim" }, -- optional: to have the same UI shown in the GIF
+    --   },
+    --   lazy = false,
+    --   dev = false,
+    --   opts = {
+    --     json_db_path = vim.fs.normalize(vim.fn.stdpath("config") .. "/bookmarks_" .. vim.fn.hostname() .. ".db.json"),
+    --     signs = {
+    --       mark = { icon = "󰃁", color = "", line_bg = "" },
+    --       desc_format = function(desc)
+    --         return "󰃁 " .. desc
+    --       end,
+    --     },
+    --     -- shows an empty buffer after `:BookmarksCalibration`, don't need that
+    --     show_calibrate_result = false,
+    --     -- disabling this actually makes it work?? lol, but ok :)
+    --     auto_calibrate_cur_buf = false,
+    --   },
+    --   keys = {
+    --     {
+    --       mode = { "n", "v" },
+    --       "äa",
+    --       "<cmd>BookmarksMark<cr>",
+    --       desc = "Add current line into active BookmarkList.",
+    --     },
+    --     {
+    --       mode = { "n", "v" },
+    --       "äg",
+    --       function()
+    --         local picker = require("bookmarks.adapter.picker")
+    --         local api = require("bookmarks.api")
+    --         picker.pick_bookmark_of_current_project(function(bookmark)
+    --           api.goto_bookmark(bookmark)
+    --         end, { all = true })
+    --       end,
+    --       desc = "Go to bookmark in current project",
+    --     },
+    --     {
+    --       mode = { "n", "v" },
+    --       "äd",
+    --       function()
+    --         local api = require("bookmarks.api")
+    --         local bm = api.find_existing_bookmark_under_cursor()
+    --         if bm then
+    --           api.mark({ name = "" })
+    --         end
+    --       end,
+    --       desc = "Delete bookmark in current line",
+    --     },
+    --     { mode = { "n", "v" }, "äc", "<cmd>BookmarksCommands<cr>", desc = "Find and trigger a bookmark command." },
+    --     {
+    --       mode = { "n", "v" },
+    --       "är",
+    --       "<cmd>BookmarksGotoRecent<cr>",
+    --       desc = "Go to latest visited/created Bookmark",
+    --     },
+    --     {
+    --       mode = { "n", "v" },
+    --       "ät",
+    --       "<cmd>BookmarksTree<cr>",
+    --       desc = "Open Bookmarks Tree View",
+    --     },
+    --   },
+    -- },
 
     -- :Telescope emoji
     -- https://github.com/xiyaowong/telescope-emoji.nvim
