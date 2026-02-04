@@ -52,9 +52,12 @@
 
       Service = {
         Type = "simple";
+        # try sleeping a bit before keepassxc starts, so it *actually* shows up in the tray..
+        # 2026-02-04 don't think I need this anymore now that I restart in niri with a delay
+        # ExecStartPre = "${pkgs.coreutils}/bin/sleep 10";
         # `-platform xcb` for AutoType under Wayland
         # see file:////nix/store/n30lpan6vlwyhjhwa1xs5ggf7ans0fyn-keepassxc-2.7.11/share/keepassxc/docs/KeePassXC_UserGuide.html#_auto_type
-        ExecStart = "${pkgs.keepassxc}/bin/keepassxc -platform xcb";
+        ExecStart = "${pkgs.keepassxc}/bin/keepassxc --platform xcb --minimized";
         Restart = "on-failure";
         RestartSec = "10s";
       };
