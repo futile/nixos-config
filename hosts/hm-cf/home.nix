@@ -34,7 +34,7 @@ in
       # fix apps not showing in spotlight etc.
       # flake-inputs.mac-app-util.homeManagerModules.default
 
-      # "${home-modules}/base.nix"
+      "${home-modules}/base.nix"
       "${home-modules}/shell-common.nix"
       "${home-modules}/git.nix"
       "${home-modules}/jj.nix"
@@ -165,6 +165,7 @@ in
         # sublime-merge # license allows "unrestricted evaluation period"; but not available for darwin :( https://search.nixos.org/packages?channel=unstable&show=sublime-merge&from=0&size=50&sort=relevance&type=packages&query=sublime-merge
         # dbeaver-bin
         scala-cli
+        jdk
         # earthly
 
         # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
@@ -200,6 +201,9 @@ in
         # el video
         # 2026-02-02 apparently requires building swift locally (now?) which I really don't wanna..
         # mpv
+
+        # el pdf viewer with auto-reload support
+        skimpdf
 
         # You can also create simple shell scripts directly inside your
         # configuration. For example, this adds a command 'my-hello' to your
