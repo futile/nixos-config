@@ -254,9 +254,9 @@
                       # texlab
 
                       # typst
-                      # typst-lsp # currently broken due to Rust 1.80 `time`-fallout
                       typstyle
                       # typst-live
+                      tinymist
 
                       # scala
                       metals
