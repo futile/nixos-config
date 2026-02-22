@@ -1,0 +1,3 @@
+- [ ] Add stuff from `gitignore-append` to `.gitignore`: `cat gitignore-append >> .gitignore && rm gitignore-append`
+- [ ] Adjust to current nightly version (or w/e is desired) in `rust-toolchain.toml`
+- [ ] Delete this file :)

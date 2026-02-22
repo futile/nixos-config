@@ -350,5 +350,12 @@
         x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixfmt-tree;
         aarch64-darwin = nixpkgs.legacyPackages.aarch64-darwin.nixfmt-tree;
       };
+
+      templates = {
+        myrust = {
+          description = "Template to add a flake.nix to a Cargo.toml project";
+          path = ./flake-templates/myrust;
+        };
+      };
     };
 }
