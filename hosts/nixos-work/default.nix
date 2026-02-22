@@ -62,6 +62,7 @@ in
     extraGroups = [
       "wheel"
       "docker"
+      "wireshark"
     ];
     shell = pkgs.fish;
   };
@@ -232,6 +233,12 @@ in
 
     # NOTE: required for `--allow-other` with rclone, see `home-modules/desktop-gdrive-keepassxc.nix`
     fuse.userAllowOther = true;
+
+    wireshark = {
+      enable = true;
+      dumpcap.enable = true;
+      usbmon.enable = true;
+    };
 
     ccache = {
       enable = true;
