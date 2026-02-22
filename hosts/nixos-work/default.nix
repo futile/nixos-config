@@ -236,7 +236,14 @@ in
 
     wireshark = {
       enable = true;
+
+      # otherwise onli cli tools (tshark, etc.) are available
+      package = pkgs.wireshark;
+
+      # allow dumping network device traffic
       dumpcap.enable = true;
+
+      # allow dumping usb device traffic
       usbmon.enable = true;
     };
 
