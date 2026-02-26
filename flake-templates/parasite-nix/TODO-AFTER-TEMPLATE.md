@@ -1,0 +1,2 @@
+- [ ] Add stuff from `gitignore-append` to `.gitignore`: `cat gitignore-append >> .gitignore && rm gitignore-append`
+- [ ] Delete this file :)

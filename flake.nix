@@ -356,6 +356,11 @@
           description = "Template to add a flake.nix to a Cargo.toml project";
           path = ./flake-templates/myrust;
         };
+
+        parasite-nix = {
+          description = "Template to add a git-ignored `./nix-flake/flake.nix` into a directory";
+          path = ./flake-templates/parasite-nix;
+        };
       };
     };
 }
