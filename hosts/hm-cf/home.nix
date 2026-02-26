@@ -167,6 +167,8 @@ in
         scala-cli
         jdk
         # earthly
+        wrangler
+        pnpm
 
         # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
         # measureme
