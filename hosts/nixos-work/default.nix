@@ -111,6 +111,11 @@ in
     hardwareClockInLocalTime = true;
   };
 
+  hardware.openrazer = {
+    enable = true;
+    users = [ "felix" ];
+  };
+
   boot = {
     # Use the systemd-boot EFI boot loader.
     loader.systemd-boot.enable = true;
@@ -215,6 +220,9 @@ in
     # monitoring
     lm_sensors
     cachix # just use cachix system-wide
+
+    # for Razer mouse config
+    polychromatic
 
     # vpn stuff
     openvpn
