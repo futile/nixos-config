@@ -31,6 +31,7 @@ if true then
     {
       "mfussenegger/nvim-lint",
       optional = true,
+      enabled = false,
       opts = {
         linters = {
           ["markdownlint-cli2"] = {
@@ -336,6 +337,7 @@ if true then
     -- overseer, task runner
     {
       "stevearc/overseer.nvim",
+      enabled = false,
       opts = {},
     },
 
@@ -396,6 +398,7 @@ if true then
       dependencies = {
         "nvim-lua/plenary.nvim",
       },
+      enabled = false,
       opts = {},
       keys = function()
         local harpoon = require("harpoon")
@@ -433,8 +436,15 @@ if true then
     {
       "NvChad/nvim-colorizer.lua",
       opts = {
-        user_default_options = {
-          css = true,
+        options = {
+          parsers = {
+            css = true, -- preset: enables names, hex, rgb, hsl, oklch
+            tailwind = { enable = true },
+          },
+          display = {
+            mode = "virtualtext",
+            virtualtext = { position = "after" },
+          },
         },
       },
     },
@@ -455,15 +465,15 @@ if true then
     -- },
 
     -- ft .yuck (for eww)
-    { "elkowar/yuck.vim" },
+    -- { "elkowar/yuck.vim" },
 
     -- parinfer, for lisp (including yuck)
-    { "eraserhd/parinfer-rust", build = "nix-shell --run 'cargo build --release '" },
+    -- { "eraserhd/parinfer-rust", build = "nix-shell --run 'cargo build --release '" },
 
     -- snippet editing & creation: https://github.com/chrisgrieser/nvim-scissors
     {
       "chrisgrieser/nvim-scissors",
-      dependencies = "nvim-telescope/telescope.nvim", -- optional
+      dependencies = "folke/snacks.nvim", -- optional
       opts = {
         snippetDir = snippetsDir,
       },
@@ -555,6 +565,7 @@ if true then
     -- Octo.nvim <3
     {
       "pwntester/octo.nvim",
+      enabled = false,
       requires = {
         "nvim-lua/plenary.nvim",
         "nvim-telescope/telescope.nvim",
@@ -571,6 +582,7 @@ if true then
     -- (postgres)-SQL interface based on vim-dadbod
     {
       "kristijanhusak/vim-dadbod-ui",
+      enabled = false,
       dependencies = {
         { "tpope/vim-dadbod", lazy = true },
         { "kristijanhusak/vim-dadbod-completion", ft = { "sql", "mysql", "plsql" }, lazy = true },
@@ -641,7 +653,9 @@ if true then
     -- just needed to stash this somewhere (from a .vscode/settings.json) "commented-out.rust-analyzer.cargo.buildScripts.invocationLocation": "root",
     {
       "mrcjkb/rustaceanvim",
-      version = "^6",
+      version = "^8",
+      -- already lazy according to docs
+      lazy = false,
       opts = {
         server = {
           -- this replaces the default keybindings, see https://www.lazyvim.org/extras/lang/rust#rustaceanvim
@@ -868,6 +882,7 @@ if true then
     -- Diffview https://github.com/sindrets/diffview.nvim
     {
       "sindrets/diffview.nvim",
+      enabled = false,
       keys = {
         { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Open Diffview" },
       },
@@ -879,14 +894,24 @@ if true then
       "NeogitOrg/neogit",
       dependencies = {
         "nvim-lua/plenary.nvim", -- required
-        "nvim-telescope/telescope.nvim", -- optional
-        "sindrets/diffview.nvim", -- optional
-        "ibhagwan/fzf-lua", -- optional
+        "esmuellert/codediff.nvim",
+        "folke/snacks.nvim", -- optional
       },
       keys = { { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" } },
       cmd = "Neogit",
       opts = {
         disable_insert_on_commit = false,
+      },
+    },
+
+    -- https://github.com/esmuellert/codediff.nvim
+    {
+      "esmuellert/codediff.nvim",
+      cmd = "CodeDiff",
+      opts = {
+        diff = {
+          layout = "inline",
+        },
       },
     },
 
