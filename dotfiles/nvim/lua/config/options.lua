@@ -21,6 +21,9 @@ vim.filetype.add({
     -- this is not correct 🙃
     -- ["edge-test"] = "json5",
   },
+  pattern = {
+    ["spacetime.*%.json"] = "json5",
+  },
 })
 
 -- neovide-only settings
