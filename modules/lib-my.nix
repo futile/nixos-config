@@ -5,6 +5,7 @@ let
       jq
       editorconfig-core-c
       prettier
+      taplo
 
       # markdown
       multimarkdown
