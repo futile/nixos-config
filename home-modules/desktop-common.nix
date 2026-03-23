@@ -26,6 +26,7 @@
         nixpkgs-review
         nixpkgs-fmt
         nix-diff
+        nix-update # the good, interactive one
 
         # image editing
         # inkscape
@@ -47,6 +48,7 @@
         tokei
         unzip
         usbutils
+        onefetch
 
         # to switch usb wifi adapater from "CD mode" to wifi mode
         usb-modeswitch
