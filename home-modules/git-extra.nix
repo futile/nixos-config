@@ -41,6 +41,8 @@
 
   programs.difftastic = {
     enable = true;
+
+    # means I have to use `git diff --no-ext-diff --patch` when creating patches
     git.enable = true;
 
     # display = "inline"; # default is better imo, I think
