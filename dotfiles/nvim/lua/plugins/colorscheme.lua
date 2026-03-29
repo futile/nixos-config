@@ -71,6 +71,12 @@ return {
 
   -- these I haven't tried out/sorted yet
 
+  {
+    "Shatur/neovim-ayu",
+    lazy = false,
+    priority = 1000,
+  },
+
   -- mapledark
   -- https://github.com/abhilash26/mapledark.nvim
   {
