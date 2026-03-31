@@ -38,5 +38,8 @@
     };
 
     lfs.enable = true;
+
+    # 2026-03-30 adopting new default value
+    signing.format = null;
   };
 }

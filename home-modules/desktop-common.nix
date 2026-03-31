@@ -93,7 +93,8 @@
         # cargo-audit # broken for now due to Rust 1.80/`time`-lib fallout, should (?) be fixed by v0.20.1 soon
 
         # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
-        measureme
+        # 2026-03-30 fails to build due to `deny(warnings)`
+        # measureme
 
         # debugging stuff for hardware video accel
         # gpu-viewer
@@ -143,5 +144,8 @@
   # at the time of writing: for pointerCursor.gtk.enable
   gtk = {
     enable = true;
+
+    # 2026-03-30 adapting new default value
+    gtk4.theme = null;
   };
 }

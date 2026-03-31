@@ -52,7 +52,7 @@ let
       nodejs
 
       # jsonls
-      nodePackages.vscode-json-languageserver
+      vscode-json-languageserver
 
       # js/ts (:
       vtsls
