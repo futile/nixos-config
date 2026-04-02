@@ -74,7 +74,8 @@ in
           gdb
 
           # AI etc.
-          claude-code
+          # 2026-04-02 broken until https://nixpk.gs/pr-tracker.html?pr=505911
+          # claude-code
 
           # messengers
           signal-desktop

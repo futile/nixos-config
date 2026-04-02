@@ -3,6 +3,41 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+
+    -- direnv.nvim for .envrc (auto-)loading
+    -- https://github.com/NotAShelf/direnv.nvim
+    {
+      "NotAShelf/direnv.nvim",
+      opts = {
+        -- Whether to automatically load direnv when entering a directory with .envrc
+        autoload_direnv = true,
+
+        -- Statusline integration
+        statusline = {
+          -- Enable statusline component
+          enabled = true,
+          -- Icon to display in statusline
+          icon = "󱚟",
+        },
+
+        -- Keyboard mappings
+        -- keybindings = {
+        --   allow = "<Leader>da",
+        --   deny = "<Leader>dd",
+        --   reload = "<Leader>dr",
+        --   edit = "<Leader>de",
+        -- },
+
+        -- Notification settings
+        notifications = {
+          -- Log level (vim.log.levels.INFO, ERROR, etc.)
+          level = vim.log.levels.INFO,
+          -- Don't show notifications during autoload
+          silent_autoload = false,
+        },
+      },
+    },
+
     -- setup neotest with jest for ts
     -- https://github.com/nvim-neotest/neotest-jest
     {
