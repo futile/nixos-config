@@ -2,6 +2,8 @@
   config,
   pkgs,
   thisFlakePath,
+  flake-inputs,
+  system,
   ...
 }:
 let
@@ -23,6 +25,10 @@ in
   programs.neovim = {
     enable = true;
     extraPackages = pkgs.lib.my.editorTools ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.xsel ]);
+
+    # 2026-04-01 for nvim 0.12; PR to track: https://github.com/NixOS/nixpkgs/pull/504078
+    # doesn't build due to `touch /nix/store/...` getting Permission Denied
+    # package = flake-inputs.nixpkgs-pkgs-unstable.legacyPackages.${system}.neovim;
 
     # 2026-01-30 breaks with new auto-generated `init.lua`, because I'm symlinking my own one.
     # see https://github.com/nix-community/home-manager/blob/475921375def3eb930e1f8883f619ff8609accb6/modules/misc/news/2026/01/2026-01-25_19-00-28.nix

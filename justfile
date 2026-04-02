@@ -43,7 +43,7 @@ show-inputs:
 
 # Update a single input (see `show-inputs` for available inputs)
 update-input input:
-    nix flake lock --update-input '{{ input }}'
+    nix flake update '{{ input }}'
 
 # Sync doom, sometimes necessary to do manually after updates
 sync-doom:

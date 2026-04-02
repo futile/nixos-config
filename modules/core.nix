@@ -51,7 +51,7 @@ in
     # NOTE: Uses a somewhat vulnerable, deprecated end-to-end library.
     # Think this is used for Matrix video calls? allow it for now.
     # See also: https://github.com/NixOS/nixpkgs/pull/334638#issuecomment-2289025802
-    "jitsi-meet-1.0.8043"
+    # "jitsi-meet-1.0.8043"
   ];
 
   # nix base config
