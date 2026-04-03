@@ -33,8 +33,11 @@ return {
         -- vim.opt.background = "light"
         -- opts.colorscheme = "gruvdark"
 
-        vim.opt.background = "dark"
-        opts.colorscheme = "mapledark"
+        -- very very goated
+        -- vim.opt.background = "dark"
+        -- opts.colorscheme = "mapledark"
+
+        opts.colorscheme = "lume"
       elseif vim.g.neovide then
         -- colorscheme in neovide
 
@@ -70,6 +73,17 @@ return {
   -- -- Grouped Colorschemes below --
 
   -- these I haven't tried out/sorted yet
+
+  {
+    "danfry1/lume",
+    lazy = false,
+    priority = 1000,
+    opts = {},
+    -- config = function()
+    --   require("lume").setup()
+    --   vim.cmd("colorscheme lume")
+    -- end,
+  },
 
   {
     "Shatur/neovim-ayu",
