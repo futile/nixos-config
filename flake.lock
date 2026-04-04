@@ -107,6 +107,22 @@
         "type": "github"
       }
     },
+    "lume-theme": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1774794262,
+        "narHash": "sha256-T0I8lPEE7qxeIm0ZiVC7edodnhN/QednkxuETKHhdoU=",
+        "owner": "danfry1",
+        "repo": "lume",
+        "rev": "90e195dc574aa680594983566a396446e6b12b1b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "danfry1",
+        "repo": "lume",
+        "type": "github"
+      }
+    },
     "nix-alien": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -268,6 +284,7 @@
         "fish-tide": "fish-tide",
         "home-manager": "home-manager",
         "isd": "isd",
+        "lume-theme": "lume-theme",
         "nix-alien": "nix-alien",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_2",

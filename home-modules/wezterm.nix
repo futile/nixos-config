@@ -44,5 +44,7 @@ in
       config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
     configFile."wezterm/colors/embark.toml".source =
       flake-inputs.wezterm-embark + "/colors/embark.toml";
+    configFile."wezterm/colors/lume.toml".source =
+      flake-inputs.lume-theme + "/terminals/wezterm/lume.toml";
   };
 }

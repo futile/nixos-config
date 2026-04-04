@@ -81,6 +81,11 @@
       flake = false;
     };
 
+    lume-theme = {
+      url = "github:danfry1/lume";
+      flake = false;
+    };
+
     # wezterm-git.url = "github:wez/wezterm?dir=nix";
 
     # mac-app-util.url = "github:hraban/mac-app-util";
