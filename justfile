@@ -103,3 +103,8 @@ last-update-when:
 # Restart nix-daemon, reloads config at /etc/nix/nix.conf. ref https://github.com/NixOS/nix/issues/8939
 macos-restart-daemon:
     sudo launchctl kickstart -k  system/org.nixos.nix-daemon
+
+# Install the macOS privacy permissions profile (Developer Tools, App Management, Accessibility, Screen Recording).
+# Only needs to be run once — the profile survives app updates. Re-run if the profile was removed.
+setup-macos-permissions:
+    bash "./hosts/hm-cf/setup-macos-permissions.sh"

@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   flake-inputs,
   thisFlakePath,
@@ -267,6 +268,17 @@ in
 
   # PATH for golang go install'd binaries
   home.sessionPath = [ "$HOME/go/bin" ];
+
+  # After activation, check if any app binaries changed and remind to re-grant
+  # permissions if so. The script is interactive (opens System Settings panes)
+  # so it cannot run fully here — it detects changes and prints a reminder.
+  home.activation.macosPermissions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if ! bash "${flakeRoot}/hosts/hm-cf/setup-macos-permissions.sh" --check-only 2>/dev/null; then
+      echo ""
+      echo "One or more app binaries changed. Run: just setup-macos-permissions"
+      echo ""
+    fi
+  '';
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;

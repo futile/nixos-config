@@ -17,6 +17,24 @@ The general layout of this repository is as follows:
 * `cachix.nix` and `cachix/` contain (boilerplate) cachix configuration.
 * `justfile` commands I regularly use for managing my config, bundled up for usage with `just`. Very handy to write down commands I don't want to forget.
 
+## macOS
+
+The `hosts/hm-cf/` host targets macOS (aarch64-darwin) and is managed via
+home-manager standalone (no nix-darwin). Apps are installed via
+`targets.darwin.copyApps` into `~/Applications/Home Manager Apps/`.
+
+After the initial checkout, run:
+
+```sh
+just setup-macos-permissions
+```
+
+This installs a configuration profile that grants privacy permissions (Developer
+Tools, App Management, Accessibility, Screen Recording) to WezTerm, Neovide, and
+Brave — permissions that macOS otherwise resets after Nix package updates. The
+profile only needs to be installed once; it survives all future updates. See
+[AGENTS.md](AGENTS.md) for full details.
+
 ## Setting Up a New Host
 
 Instructions for setting up a new host can be found [here](new-system-installation.md).
