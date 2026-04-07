@@ -62,6 +62,15 @@ record_hash() {
   fi
 }
 
+# Removes the stale TCC entry for an app so the user doesn't have to manually
+# delete it in System Settings before re-adding. No sudo required.
+reset_tcc() {
+  local service="$1"
+  local bundle_id="$2"
+  tccutil reset "$service" "$bundle_id" 2>/dev/null && \
+    echo "   Cleared stale TCC entry: $service → $bundle_id" || true
+}
+
 open_pane() {
   local label="$1"
   local url="$2"
@@ -110,8 +119,8 @@ echo "└───────────────────────�
 # Developer Tools: open once for both WezTerm and Neovide if either changed
 if [[ $WEZTERM_CHANGED -eq 1 || $NEOVIDE_CHANGED -eq 1 ]]; then
   DEVTOOLS_APPS=""
-  [[ $WEZTERM_CHANGED -eq 1 ]] && DEVTOOLS_APPS="WezTerm"
-  [[ $NEOVIDE_CHANGED -eq 1 ]] && DEVTOOLS_APPS="${DEVTOOLS_APPS:+$DEVTOOLS_APPS, }Neovide"
+  [[ $WEZTERM_CHANGED -eq 1 ]] && { reset_tcc DeveloperTool com.github.wez.wezterm; DEVTOOLS_APPS="WezTerm"; }
+  [[ $NEOVIDE_CHANGED -eq 1 ]] && { reset_tcc DeveloperTool com.neovide.neovide;    DEVTOOLS_APPS="${DEVTOOLS_APPS:+$DEVTOOLS_APPS, }Neovide"; }
   open_pane \
     "Developer Tools (XProtect bypass for cargo build/test)" \
     "x-apple.systempreferences:com.apple.preference.security?Privacy_DevTools" \
@@ -119,6 +128,7 @@ if [[ $WEZTERM_CHANGED -eq 1 || $NEOVIDE_CHANGED -eq 1 ]]; then
 fi
 
 if [[ $BRAVE_CHANGED -eq 1 ]]; then
+  reset_tcc ScreenCapture com.brave.Browser
   open_pane \
     "Screen Recording" \
     "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture" \
@@ -126,6 +136,7 @@ if [[ $BRAVE_CHANGED -eq 1 ]]; then
 fi
 
 if [[ $WEZTERM_CHANGED -eq 1 ]]; then
+  reset_tcc SystemPolicyAppBundles com.github.wez.wezterm
   open_pane \
     "App Management" \
     "x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles" \

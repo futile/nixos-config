@@ -25,18 +25,24 @@ Permissions needed:
 
 `hosts/hm-cf/setup-macos-permissions.sh` tracks MD5 hashes of the relevant app
 binaries in `~/.local/state/hm-tcc-hashes/`. On each run it compares current hashes
-against stored ones and only opens System Settings panes for apps whose binary changed.
-For each pane you click `+`, select the app, and press Enter to continue.
+against stored ones and only acts on apps whose binary changed. For each affected app
+it:
+
+1. Runs `tccutil reset <service> <bundle-id>` to remove the stale TCC entry (no sudo
+   required — this is what previously required manual deletion in System Settings).
+2. Opens the correct System Settings privacy pane.
+3. Waits for you to click `+`, select the app, and press Enter.
 
 Run it with:
 ```sh
-just setup-macos-permissions        # only prompts for changed apps
+just setup-macos-permissions          # only prompts for changed apps
 just setup-macos-permissions --force  # opens all panes regardless
 ```
 
 `home-manager switch` runs the script in `--check-only` mode (non-interactive): if any
 binary has changed it prints a reminder to run `just setup-macos-permissions`, otherwise
-it is silent.
+it is silent. `tccutil reset` is intentionally not called in `--check-only` mode —
+resetting without immediately re-granting would leave the app with no permission.
 
 ### Why not a .mobileconfig profile?
 
