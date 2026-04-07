@@ -255,6 +255,7 @@ in
   #
   home.sessionVariables = {
     EDITOR = "nvim";
+    SSH_AUTH_SOCK = "/opt/homebrew/var/run/yubikey-agent-cloudflare.sock";
   };
 
   # not using this yet, needs to use `.text = ''...` when I do
