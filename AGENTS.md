@@ -89,6 +89,24 @@ in `~/.local/state/hm-tcc-hashes/`. After `home-manager switch`, if a hash chang
 you will see a reminder in the activation output. Run `just setup-macos-permissions`
 to re-grant only the affected permissions.
 
+## Touch ID for sudo (`scripts/setup-macos-sudo-touchid.sh`)
+
+Enables fingerprint authentication for `sudo` by writing `/etc/pam.d/sudo_local`,
+which is Apple's designated local PAM override file. Unlike `/etc/pam.d/sudo` itself,
+`sudo_local` is **not reset by macOS updates** — so this only needs to be run once
+per machine.
+
+Run it with:
+```sh
+just setup-macos-sudo-touchid
+```
+
+`home-manager switch` checks for the file and prints a one-time reminder if it's
+missing. It does not run the script automatically since it requires `sudo`.
+
+`pam-reattach` (needed to make Touch ID work inside `tmux`/`screen`) is not installed
+since WezTerm is used without a terminal multiplexer.
+
 ### XProtect and Rust build performance
 
 The Developer Tools permission is particularly impactful for `cargo test`, which

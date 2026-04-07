@@ -280,6 +280,16 @@ in
     fi
   '';
 
+  # One-time reminder to enable Touch ID for sudo.
+  # /etc/pam.d/sudo_local survives macOS updates, so this only fires once per machine.
+  home.activation.sudoTouchId = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if ! grep -qF "pam_tid.so" /etc/pam.d/sudo_local 2>/dev/null; then
+      echo ""
+      echo "Touch ID for sudo is not enabled. Run: just setup-macos-sudo-touchid"
+      echo ""
+    fi
+  '';
+
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 

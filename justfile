@@ -104,7 +104,11 @@ last-update-when:
 macos-restart-daemon:
     sudo launchctl kickstart -k  system/org.nixos.nix-daemon
 
-# Install the macOS privacy permissions profile (Developer Tools, App Management, Accessibility, Screen Recording).
-# Only needs to be run once — the profile survives app updates. Re-run if the profile was removed.
+# Enable Touch ID for sudo via /etc/pam.d/sudo_local. Only needs to be run once per machine.
+setup-macos-sudo-touchid:
+    bash "./scripts/setup-macos-sudo-touchid.sh"
+
+# Open System Settings privacy panes to (re-)grant permissions for dev tools.
+# Only prompts for apps whose binary changed since last run.
 setup-macos-permissions:
     bash "./hosts/hm-cf/setup-macos-permissions.sh"
