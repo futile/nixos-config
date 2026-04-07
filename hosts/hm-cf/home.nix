@@ -169,6 +169,7 @@ in
         # earthly
         wrangler
         pnpm
+        opencode
 
         # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
         # measureme
