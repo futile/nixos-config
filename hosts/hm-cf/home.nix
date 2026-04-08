@@ -170,7 +170,10 @@ in
         # earthly
         wrangler
         pnpm
+
+        # AI
         opencode
+        skills # https://skills.sh/
 
         # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
         # measureme
