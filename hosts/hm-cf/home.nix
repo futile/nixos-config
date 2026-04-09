@@ -172,7 +172,8 @@ in
         pnpm
 
         # AI
-        opencode
+        # 2026-04-09 keeping opencode in my profile for now, since it updates so often, and I don't want to wait for nixos-unstable every time
+        # opencode
         skills # https://skills.sh/
 
         # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
