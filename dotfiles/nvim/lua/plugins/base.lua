@@ -4,19 +4,22 @@ if true then
 
   return {
 
+    { "janet-lang/janet.vim" },
+
     -- doesn't work :( 2026-04-10
+    -- doesn't fail loading anymore, but also doesn't work for Cargo.toml dependency sorting 2026-04-11
     -- smart, treesitter-based sorting (use `:'<,'>Smartsort`)
     -- https://github.com/JavierPoduje/smartsort.nvim
-    -- {
-    --   "JavierPoduje/smartsort.nvim",
-    --   dependencies = {
-    --     "nvim-lua/plenary.nvim",
-    --   },
-    --   opts = {
-    --     non_sortable_behavior = "preserve", -- options: "preserve", "above", "below"
-    --     single_line_separator = ",", -- use as the default separator for single line sorting
-    --   },
-    -- },
+    {
+      "JavierPoduje/smartsort.nvim",
+      dependencies = {
+        "nvim-lua/plenary.nvim",
+      },
+      opts = {
+        non_sortable_behavior = "preserve", -- options: "preserve", "above", "below"
+        single_line_separator = ",", -- use as the default separator for single line sorting
+      },
+    },
 
     -- direnv.nvim for .envrc (auto-)loading
     -- https://github.com/NotAShelf/direnv.nvim
@@ -1009,6 +1012,7 @@ if true then
           "prisma",
           "sql",
           "terraform",
+          "janet_simple",
         },
         matchup = {
           enable = true,
