@@ -8,14 +8,11 @@ personality = "pragmatic"
 [tools]
 view_image = true
 
-[projects."/home/felix/gits/pale-darks-online"]
-trust_level = "trusted"
-
-[projects."/home/felix/.codex"]
-trust_level = "trusted"
-
-[projects."/home/felix/nixos"]
-trust_level = "trusted"
-
 [tui]
-status_line = ["model-with-reasoning", "context-remaining", "current-dir", "git-branch", "five-hour-limit"]
+status_line = [
+  "model-with-reasoning",
+  "context-remaining",
+  "current-dir",
+  "git-branch",
+  "five-hour-limit",
+]
