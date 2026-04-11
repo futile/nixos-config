@@ -49,6 +49,7 @@
         unzip
         usbutils
         onefetch
+        tree
 
         # to switch usb wifi adapater from "CD mode" to wifi mode
         usb-modeswitch
@@ -108,7 +109,6 @@
         # nitrogen
         # procs # TODO move config from `nixos-home:~/.config/procs/config.toml` into this repo # stable, because fish completion on unstable is broken
         # sshuttle
-        # tree # just using `exa` now
         # valgrind
         # tilix
 

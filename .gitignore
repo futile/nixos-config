@@ -1,5 +1,6 @@
 /result
 /.metals/
+/.codex
 
 # not really useful to keep this synced, it changes all the time anyway
 /dotfiles/nvim/lazy-lock.json

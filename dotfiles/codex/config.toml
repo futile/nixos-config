@@ -1,0 +1,21 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+model_verbosity = "medium"
+personality = "pragmatic"
+
+[tools]
+view_image = true
+
+[projects."/home/felix/gits/pale-darks-online"]
+trust_level = "trusted"
+
+[projects."/home/felix/.codex"]
+trust_level = "trusted"
+
+[projects."/home/felix/nixos"]
+trust_level = "trusted"
+
+[tui]
+status_line = ["model-with-reasoning", "context-remaining", "current-dir", "git-branch", "five-hour-limit"]

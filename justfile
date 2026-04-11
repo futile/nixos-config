@@ -76,7 +76,7 @@ format:
 
 # Check if everything is formatted correctly (depends on `nixfmt-tree` cmdline option).
 format-check:
-    nix fmt -- --fail-on-check
+    nix fmt -- --fail-on-change
     just --unstable --fmt --check
 
 # Show a diff of changes using `nix-diff`

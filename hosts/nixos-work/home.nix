@@ -20,6 +20,8 @@ in
       "${home-modules}/git.nix"
       "${home-modules}/git-extra.nix"
       "${home-modules}/jj.nix"
+      "${home-modules}/agents.nix"
+      "${home-modules}/codex.nix"
       "${home-modules}/fish.nix"
       "${home-modules}/nushell.nix"
       "${home-modules}/desktop-common.nix"

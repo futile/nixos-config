@@ -21,6 +21,8 @@ in
       "${home-modules}/git-extra.nix"
       # "${home-modules}/gitbutler.nix" # always builds from scratch, too annoying
       "${home-modules}/jj.nix"
+      "${home-modules}/agents.nix"
+      "${home-modules}/codex.nix"
       "${home-modules}/fish.nix"
       "${home-modules}/nushell.nix"
       "${home-modules}/desktop-common.nix"
