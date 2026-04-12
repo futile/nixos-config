@@ -16,3 +16,8 @@ status_line = [
   "git-branch",
   "five-hour-limit",
 ]
+terminal_title = ["spinner", "project", "app-name"]
+
+# DeepWiki mcp: https://docs.devin.ai/work-with-devin/deepwiki-mcp
+[mcp_servers.DeepWiki]
+url = "https://mcp.deepwiki.com/mcp"
