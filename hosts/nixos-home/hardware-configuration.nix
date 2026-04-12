@@ -26,13 +26,14 @@
     "btusb" # for bluetooth keyboard, i.e., my Glove80 :)
   ];
   boot.initrd.kernelModules = [ ];
-  boot.kernelModules =
-    [ "kvm-intel" ]
-    # from `sudo sensors-detect`
-    ++ [
-      "coretemp"
-      "nct6775"
-    ];
+  boot.kernelModules = [
+    "kvm-intel"
+  ]
+  # from `sudo sensors-detect`
+  ++ [
+    "coretemp"
+    "nct6775"
+  ];
 
   # for fixing some NVIDIA/NVK-stuff, maybe (see https://discourse.nixos.org/t/drm-kernel-driver-nvidia-drm-in-use-nvk-requires-nouveau/42222/18)
   # actually I think this caused a kernel bug in the nvidia-driver that crashed my pc when waking up from suspend

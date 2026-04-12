@@ -108,7 +108,9 @@ macos-restart-daemon:
 setup-macos-sudo-touchid:
     bash "./scripts/setup-macos-sudo-touchid.sh"
 
-# Open System Settings privacy panes to (re-)grant permissions for dev tools.
 # Only prompts for apps whose binary changed since last run.
+#
+
+# Open System Settings privacy panes to (re-)grant permissions for dev tools.
 setup-macos-permissions:
     bash "./hosts/hm-cf/setup-macos-permissions.sh"
