@@ -29,3 +29,6 @@ if vim.loop.os_uname().sysname == "Darwin" then
     map({ "i", "v", "n", "o", "c", "t" }, "<D-Right>", "<End>")
   end
 end
+
+-- Mapping for `:restart` until LazyVim adds it natively
+map("n", "<space>qr", "<Cmd>restart<CR>", { desc = "Restart" })
