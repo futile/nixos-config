@@ -18,6 +18,13 @@ status_line = [
 ]
 terminal_title = ["spinner", "project", "app-name"]
 
+# for superpowers
+[features]
+multi_agent = true
+
+[sandbox_workspace_write]
+writable_roots = ["/home/felix/.cache/sccache"]
+
 # DeepWiki mcp: https://docs.devin.ai/work-with-devin/deepwiki-mcp
 [mcp_servers.DeepWiki]
 url = "https://mcp.deepwiki.com/mcp"
