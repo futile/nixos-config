@@ -8,6 +8,8 @@
   # 2026-04-11 Codex adds "trusted project paths" to the file, which are machine-specific, so can't share the file :/
   # home.file.".codex/config.toml".source =
   #   config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/codex/config.toml";
+  home.file.".codex/AGENTS.md".source =
+    config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/codex/AGENTS.md";
   home.file.".codex/agents".source =
     config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/codex/agents";
 }
