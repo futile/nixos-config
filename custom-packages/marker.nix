@@ -19,6 +19,8 @@
 }:
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "marker";
+  # Using the version from a PR that updated the deps, because otherwise they were too old to really be buildable.
+  # PR link: https://github.com/tk04/Marker/pull/41
   version = "1.4.1-pr41";
 
   src = fetchFromGitHub {
