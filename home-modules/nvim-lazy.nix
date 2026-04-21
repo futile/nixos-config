@@ -42,6 +42,9 @@ in
     # 2026-04-09 adopting these since they are new defaults, silences warning
     withRuby = false;
     withPython3 = false;
+
+    # 2026-04-21 See https://github.com/nix-community/home-manager/commit/565e5349208fe7d0831ef959103c9bafbeac0681
+    sideloadInitLua = true;
   };
 
   home.packages = [
