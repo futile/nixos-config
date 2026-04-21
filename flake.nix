@@ -128,6 +128,7 @@
     {
       packages.${system} = {
         # these are here mostly for debugging, for actual use I base on the `nixpkgs`-instance of a configured system, see overlay in `core.nix`.
+        marker = nixpkgs.legacyPackages.${system}.callPackage ./custom-packages/marker.nix { };
         phinger-cursors-extended =
           nixpkgs.legacyPackages.${system}.callPackage ./custom-packages/phinger-cursors-extended.nix
             { };

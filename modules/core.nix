@@ -39,6 +39,7 @@ let
   #   };
   custom-packages-overlay = final: prev: {
     my-custom-packages = {
+      marker = final.callPackage ../custom-packages/marker.nix { };
       phinger-cursors-extended = final.callPackage ../custom-packages/phinger-cursors-extended.nix { };
     };
   };
