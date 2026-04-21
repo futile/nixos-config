@@ -74,11 +74,6 @@ in
   # allow our user to use `nix`
   nix.settings.trusted-users = [ "felix" ];
 
-  # for my-custom-packages.marker (see the package file)
-  my.permittedInsecurePackages = [
-    "libsoup-2.74.3"
-  ];
-
   # home-manager configuration
   home-manager = {
     # forward system-specific arguments to home-manager
