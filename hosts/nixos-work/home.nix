@@ -119,6 +119,8 @@ in
           # hardware stuff
           # v4l-utils # webcam utils
           radeontop
+
+          my-custom-packages.marker
         ])
       ++
         # packages from master
