@@ -3,6 +3,26 @@ if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
   return {
+    {
+      "nvimtools/none-ls.nvim",
+      optional = true,
+      config = function(_, opts)
+        local nls = require("null-ls")
+
+        -- normal setup first
+        nls.setup(opts or {})
+
+        -- then disable & deregister "markdownlint-cli2", because I hate it 🙃
+        -- this is easier than removing it from the `opts` list manually.
+        -- it is added by LazyVim's `extras.lang.markdown` plugin.
+        nls.disable(nls.builtins.diagnostics.markdownlint_cli2.name)
+        nls.deregister(nls.builtins.diagnostics.markdownlint_cli2.name)
+
+        -- opts.sources = vim.list_extend(opts.sources or {}, {
+        --   nls.builtins.diagnostics.markdownlint_cli2,
+        -- })
+      end,
+    },
 
     { "janet-lang/janet.vim" },
 
@@ -83,7 +103,9 @@ if true then
     {
       "mfussenegger/nvim-lint",
       optional = true,
+      -- vvvv CURRENTLY DISABLED vvvv
       enabled = false,
+      -- ^^^^ CURRENTLY DISABLED ^^^^
       opts = {
         linters = {
           ["markdownlint-cli2"] = {
@@ -101,6 +123,8 @@ if true then
       opts = {
         formatters = {
           ["markdownlint-cli2"] = {
+            -- 2026-04-23 don't want markdownlint-cli2 anymore, using `true` as the command is the best way I found to disable it here..
+            command = "true",
             args = { "--config", os.getenv("HOME") .. "/nixos/dotfiles/.markdownlint.yaml", "--" },
           },
         },
