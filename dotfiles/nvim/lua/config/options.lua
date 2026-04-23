@@ -12,6 +12,10 @@ end
 -- turn off relativenumbers, they make scrolling non-smooth
 vim.o.relativenumber = false
 
+-- spell checking is too annoying for me
+-- see also `./autocmds.lua` where I also disabled it
+vim.o.spell = false
+
 -- try out Snacks!
 vim.g.lazyvim_picker = "snacks"
 
