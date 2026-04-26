@@ -129,6 +129,9 @@ in
         # packages from other nixpkgs branches
         [ ];
 
+    # use locally-built `marker` if available
+    sessionPath = [ "$HOME/gits/Marker/src-tauri/target/release" ];
+
     sessionVariables = {
       EDITOR = "nvim";
 
