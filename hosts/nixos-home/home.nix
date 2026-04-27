@@ -74,7 +74,9 @@ in
           # misc
           # texlive.combined.scheme-full
           # zotero # disable due to CVE-2023-5217 in ‘zotero-6.0.27’
-          protonvpn-gui # official GUI that has to be used now (:
+
+          proton-vpn
+          proton-vpn-cli
 
           # hardware stuff
           v4l-utils # webcam utils
