@@ -56,10 +56,19 @@ in
     enable = true;
     configFile =
       let
-        dotdir = "${config.home.homeDirectory}/nixos/dotfiles/hyprland";
+        hyprland = "${config.home.homeDirectory}/nixos/dotfiles/hyprland";
+        noctalia = "${config.home.homeDirectory}/nixos/dotfiles/noctalia/nixos-work";
       in
       {
-        "hypr/local.conf".source = config.lib.file.mkOutOfStoreSymlink "${dotdir}/local.conf";
+        "hypr/local.conf".source = config.lib.file.mkOutOfStoreSymlink "${hyprland}/local.conf";
+
+        "noctalia/colors.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/colors.json";
+        "noctalia/notification-rules.json".source =
+          config.lib.file.mkOutOfStoreSymlink "${noctalia}/notification-rules.json";
+        "noctalia/plugins.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/plugins.json";
+        "noctalia/settings.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/settings.json";
+        "noctalia/user-templates.toml".source =
+          config.lib.file.mkOutOfStoreSymlink "${noctalia}/user-templates.toml";
       };
   };
 

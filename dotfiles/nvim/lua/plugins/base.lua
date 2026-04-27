@@ -17,7 +17,8 @@ if true then
       set_light_mode = function()
         vim.api.nvim_set_option_value("background", "light", {})
         vim.cmd([[colorscheme rose-pine-dawn]])
-        require("noctalia-matugen").setup()
+        -- actually disable noctalia gen'd theme for now, two hardcoded themes might be enough/better
+        -- require("noctalia-matugen").setup()
       end,
     },
   }
