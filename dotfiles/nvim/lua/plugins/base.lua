@@ -2,7 +2,34 @@
 if true then
   local snippetsDir = vim.fn.stdpath("config") .. "/snippets"
 
+  -- https://github.com/f-person/auto-dark-mode.nvim/tree/main
+  -- auto dark mode (esp. for noctalia switching)
+  local autoDarkMode = {
+    "f-person/auto-dark-mode.nvim",
+    enabled = false,
+    opts = {
+      set_dark_mode = function()
+        vim.api.nvim_set_option_value("background", "dark", {})
+        vim.cmd([[colorscheme lume]])
+        -- gross. but it works. (dark -> lume, light -> noctalia gen'd)
+        -- require("noctalia-matugen").setup()
+      end,
+      set_light_mode = function()
+        vim.api.nvim_set_option_value("background", "light", {})
+        vim.cmd([[colorscheme rose-pine-dawn]])
+        require("noctalia-matugen").setup()
+      end,
+    },
+  }
+
+  local hostname = vim.loop.os_gethostname()
+  if hostname == "nixos-work" then
+    autoDarkMode.enabled = true
+  end
+
   return {
+    autoDarkMode,
+
     {
       "nvimtools/none-ls.nvim",
       optional = true,

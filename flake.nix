@@ -56,6 +56,11 @@
     #   # inputs.nixpkgs.follows = "nixpkgs";
     # };
 
+    noctalia = {
+      url = "github:noctalia-dev/noctalia-shell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     fish-foreign-env = {
       url = "github:oh-my-fish/plugin-foreign-env";
       flake = false;
@@ -179,6 +184,36 @@
         modules = baseModules ++ [
           # "draw the rest of the owl"
           ./hosts/nixos-work
+
+          # noctalia module to add the package
+          (
+            {
+              config,
+              lib,
+              flake-inputs,
+              system,
+              ...
+            }:
+            {
+              # required by noctalia, see https://docs.noctalia.dev/getting-started/nixos/#_top
+              networking.networkmanager.enable = true;
+              hardware.bluetooth.enable = true;
+              services.upower.enable = true;
+
+              services.tuned.enable = true;
+              # need to force this off so noctalia can get its `tuned`
+              services.auto-cpufreq.enable = lib.mkForce false;
+              services.tlp.enable = false;
+
+              # for calendar support, see https://docs.noctalia.dev/getting-started/nixos/#calendar-events-support
+              services.gnome.evolution-data-server.enable = true;
+
+              environment.systemPackages = [
+                (flake-inputs.noctalia.packages.${system}.default.override { calendarSupport = true; })
+              ];
+            }
+          )
+
           # use wezterm from git, because unstable currently fails to start on wayland
           # (
           #   {

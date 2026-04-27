@@ -281,10 +281,12 @@ layout {
 // This line starts waybar, a commonly used bar for Wayland compositors.
 // We're doing this through nixos.
 // spawn-at-startup "waybar"
-spawn-at-startup "waypaper" "--restore"
+// spawn-at-startup "waypaper" "--restore"
 
 // restart keepassxc service, so it properly joins the tray
-spawn-sh-at-startup "sleep 7 && systemctl restart --user keepassxc.service"
+// spawn-sh-at-startup "sleep 7 && systemctl restart --user keepassxc.service"
+
+spawn-sh-at-startup "noctalia-shell"
 
 // To run a shell command (with variables, pipes, etc.), use spawn-sh-at-startup:
 // spawn-sh-at-startup "qs -c ~/source/qs/MyAwesomeShell"
@@ -358,8 +360,26 @@ window-rule {
 // Example: enable rounded corners for all windows.
 // (This example rule is commented out with a "/-" in front.)
 window-rule {
-    geometry-corner-radius 12
     clip-to-geometry true
+
+    // pre-noctalia
+    // geometry-corner-radius 12
+    
+    // for noctalia
+    geometry-corner-radius 20
+}
+
+// for noctalia (see https://docs.noctalia.dev/v4/getting-started/compositor-settings/niri/)
+debug {
+  // Allows notification actions and window activation from Noctalia.
+  honor-xdg-activation-with-invalid-serial
+}
+
+// also noctalia
+// Set the overview wallpaper on the backdrop.
+layer-rule {
+  match namespace="^noctalia-overview*"
+  place-within-backdrop true
 }
 
 // Enable only the top-right hot corners (instead of default top-left).

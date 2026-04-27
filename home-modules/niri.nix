@@ -48,7 +48,8 @@ in
   };
 
   programs.waybar = {
-    enable = true;
+    # disabled for noctalia-shell
+    enable = false;
 
     systemd = {
       enable = true;
@@ -66,7 +67,8 @@ in
       swaylockCmd = "${swaylockPkg}/bin/swaylock --screenshot --effect-blur 4x4 --show-failed-attempts --show-keyboard-layout --ignore-empty-password --daemonize";
     in
     {
-      enable = true;
+      # turned off for noctalia-shell
+      enable = false;
 
       timeouts = [
         {

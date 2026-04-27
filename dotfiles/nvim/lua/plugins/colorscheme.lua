@@ -39,7 +39,12 @@ return {
         -- vim.opt.background = "dark"
         -- opts.colorscheme = "mapledark"
 
-        opts.colorscheme = "lume"
+        -- very very good
+        -- opts.colorscheme = "lume"
+
+        -- trying out noctalia-generated colorscheme
+        opts.colorscheme = "tokyonight"
+        require("noctalia-matugen").setup()
       elseif vim.g.neovide then
         -- colorscheme in neovide
 
@@ -75,6 +80,15 @@ return {
   -- -- Grouped Colorschemes below --
 
   -- these I haven't tried out/sorted yet
+
+  -- for noctalia-based nvim theming
+  -- https://docs.noctalia.dev/v4/theming/program-specific/neovim/
+  {
+    "RRethy/base16-nvim",
+    config = function()
+      require("noctalia-matugen").setup()
+    end,
+  },
 
   {
     "danfry1/lume",
