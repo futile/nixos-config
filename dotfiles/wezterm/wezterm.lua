@@ -36,6 +36,12 @@ elseif hostname == "nixos-work" then
 	-- use_ime = false
 end
 
+local color_scheme = "Lume"
+
+if hostname == "nixos-work" then
+	color_scheme = "Noctalia"
+end
+
 return {
 	-- color_scheme = "nord",
 	-- color_scheme = "Nord (base16)",
@@ -44,7 +50,7 @@ return {
 	-- color_scheme = "Seafoam Pastel",
 	-- color_scheme = "Solarized (light) (terminal.sexy)",
 	-- color_scheme = "kanagawabones",
-	color_scheme = "Noctalia",
+	-- color_scheme = "Noctalia",
 	-- color_scheme = "Lume",
 	-- color_scheme = "onedark",
 	-- color_scheme = "everforest",
@@ -61,6 +67,8 @@ return {
 	-- color_scheme = "Sakura (base16)",
 	-- dark:
 	-- color_scheme = "Rosé Pine (base16)",
+
+	color_scheme = color_scheme,
 
 	font = wezterm.font_with_fallback({
 		-- "FantasqueSansM Nerd Font Mono", -- I just can't use this, not pleasent enough xd
