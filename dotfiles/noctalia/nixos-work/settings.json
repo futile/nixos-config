@@ -42,7 +42,7 @@
     "bar": {
         "autoHideDelay": 500,
         "autoShowDelay": 150,
-        "backgroundOpacity": 1,
+        "backgroundOpacity": 0.93,
         "barType": "floating",
         "capsuleColorKey": "none",
         "capsuleOpacity": 1,
@@ -79,6 +79,9 @@
         "widgets": {
             "center": [
                 {
+                    "id": "plugin:weekly-calendar"
+                },
+                {
                     "clockColor": "none",
                     "customFont": "",
                     "formatHorizontal": "HH:mm ddd, MMM dd",
@@ -86,6 +89,9 @@
                     "id": "Clock",
                     "tooltipFormat": "HH:mm ddd, MMM dd",
                     "useCustomFont": false
+                },
+                {
+                    "id": "plugin:catwalk"
                 },
                 {
                     "characterCount": 2,
@@ -141,9 +147,6 @@
                     "textColor": "none",
                     "useMonospaceFont": true,
                     "usePadding": false
-                },
-                {
-                    "id": "plugin:catwalk"
                 },
                 {
                     "colorizeIcons": false,
@@ -672,7 +675,7 @@
         "fontDefaultScale": 1,
         "fontFixed": "monospace",
         "fontFixedScale": 1,
-        "panelBackgroundOpacity": 0.93,
+        "panelBackgroundOpacity": 1,
         "panelsAttachedToBar": true,
         "scrollbarAlwaysVisible": true,
         "settingsPanelMode": "attached",
