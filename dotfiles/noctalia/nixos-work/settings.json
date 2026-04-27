@@ -152,7 +152,7 @@
                     "colorizeIcons": false,
                     "hideMode": "hidden",
                     "id": "ActiveWindow",
-                    "maxWidth": 145,
+                    "maxWidth": 400,
                     "scrollingMode": "hover",
                     "showIcon": true,
                     "showText": true,
@@ -164,7 +164,7 @@
                     "hideMode": "hidden",
                     "hideWhenIdle": false,
                     "id": "MediaMini",
-                    "maxWidth": 145,
+                    "maxWidth": 400,
                     "panelShowAlbumArt": true,
                     "scrollingMode": "hover",
                     "showAlbumArt": true,
@@ -197,8 +197,8 @@
                     "unreadBadgeColor": "primary"
                 },
                 {
-                    "displayMode": "onhover",
-                    "iconColor": "none",
+                    "displayMode": "alwaysShow",
+                    "iconColor": "secondary",
                     "id": "Volume",
                     "middleClickCommand": "pwvucontrol || pavucontrol",
                     "textColor": "none"
