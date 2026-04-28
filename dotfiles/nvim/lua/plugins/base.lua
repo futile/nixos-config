@@ -12,12 +12,14 @@ if true then
         vim.api.nvim_set_option_value("background", "dark", {})
         vim.cmd([[colorscheme lume]])
         -- gross. but it works. (dark -> lume, light -> noctalia gen'd)
+        -- package.loaded["noctalia-matugen"] = nil
         -- require("noctalia-matugen").setup()
       end,
       set_light_mode = function()
         vim.api.nvim_set_option_value("background", "light", {})
         vim.cmd([[colorscheme rose-pine-dawn]])
         -- actually disable noctalia gen'd theme for now, two hardcoded themes might be enough/better
+        -- package.loaded["noctalia-matugen"] = nil
         -- require("noctalia-matugen").setup()
       end,
     },

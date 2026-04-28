@@ -25,13 +25,14 @@ function M.setup()
 end
 
 -- Register a signal handler for SIGUSR1 (matugen updates)
-local signal = vim.uv.new_signal()
-signal:start(
-  "sigusr1",
-  vim.schedule_wrap(function()
-    package.loaded["noctalia-matugen"] = nil
-    require("noctalia-matugen").setup()
-  end)
-)
+-- 2026-04-28 don't do this for now, my `auto-dark-mode` plugin in base.lua already takes care of this (if required).
+-- local signal = vim.uv.new_signal()
+-- signal:start(
+--   "sigusr1",
+--   vim.schedule_wrap(function()
+--     package.loaded["noctalia-matugen"] = nil
+--     require("noctalia-matugen").setup()
+--   end)
+-- )
 
 return M
