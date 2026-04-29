@@ -72,6 +72,12 @@ in
       };
   };
 
+  # 2026-04-29 new default path is this. before switching to this, I did:
+  # > To migrate to the XDG path, move `~/.mozilla/firefox` to
+  # > `$XDG_CONFIG_HOME/mozilla/firefox` and remove the old directory.
+  # > Native messaging hosts are not moved by this option change.
+  programs.firefox.configPath = "${config.xdg.configHome}/mozilla/firefox";
+
   home = {
     packages =
       # bound packages
@@ -129,7 +135,8 @@ in
           # v4l-utils # webcam utils
           radeontop
 
-          my-custom-packages.marker
+          # 2026-04-29 this causes it to rebuild during `switch`, don't wanna 🙃
+          # my-custom-packages.marker
         ])
       ++
         # packages from master
