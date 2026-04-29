@@ -2,7 +2,7 @@
     "rules": [
         {
             "action": "block",
-            "pattern": "razer"
+            "pattern": "/Open Razer.*Battery is \\d\\d%.*/"
         }
     ]
 }
