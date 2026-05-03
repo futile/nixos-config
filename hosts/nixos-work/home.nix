@@ -62,7 +62,9 @@ in
       {
         "hypr/local.conf".source = config.lib.file.mkOutOfStoreSymlink "${hyprland}/local.conf";
 
-        "noctalia/colors.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/colors.json";
+        # don't symlink this, it changes whenever light/dark mode changes etc.
+        # "noctalia/colors.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/colors.json";
+
         "noctalia/notification-rules.json".source =
           config.lib.file.mkOutOfStoreSymlink "${noctalia}/notification-rules.json";
         "noctalia/plugins.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/plugins.json";
