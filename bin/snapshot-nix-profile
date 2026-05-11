@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+profile_name="${1:-default}"
+profile_path="${2:-$HOME/.nix-profile}"
+host_name="${3:-$(hostname -s)}"
+repo_path="${4:-$HOME/nixos}"
+
+if [[ ! -e "$profile_path" ]]; then
+  echo "profile path does not exist: $profile_path" >&2
+  exit 1
+fi
+
+out_dir="$repo_path/dotfiles/nix-profiles/$host_name"
+out_file="$out_dir/$profile_name.json"
+
+mkdir -p "$out_dir"
+
+tmp="$(mktemp "$out_file.tmp.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+
+nix profile list --profile "$profile_path" --json | jq --sort-keys . > "$tmp"
+mv "$tmp" "$out_file"
+
+trap - EXIT

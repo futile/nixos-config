@@ -1,0 +1,170 @@
+{
+  "elements": {
+    "OpenSpec": {
+      "active": true,
+      "attrPath": "packages.x86_64-linux.default",
+      "originalUrl": "github:Fission-AI/OpenSpec",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/v9m8p10vdkmkkkn98bjrss783j7rqsf6-openspec-1.3.1"
+      ],
+      "url": "github:Fission-AI/OpenSpec/053d8a59d587f3c027a06ad80503a6b43d4f2a92?narHash=sha256-MUSPD16%2BhoFBfQWYahtNLN2BIFEAlFFo2KNofrc947g%3D"
+    },
+    "acpica-tools": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.acpica-tools",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/npx6in7w2ah93gpzslkzb3ccymc994nm-acpica-tools-20250807"
+      ],
+      "url": "path:/nix/store/zrfsqn9i68kwvb6idjdfk5nhdbdcf6xk-source?lastModified=1761236834&narHash=sha256-%2Bpthv6hrL5VLW2UqPdISGuLiUZ6SnAXdd2DdUE%2BfV2Q%3D&rev=d5faa84122bc0a1fd5d378492efce4e289f8eac1"
+    },
+    "beads": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.beads",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/abci5lbmmvzg3vriansd7mgiiq4ch0w7-beads-1.0.3"
+      ],
+      "url": "path:/nix/store/nhadsmcq0saqxjl8dpmvzqacdfgvjb3v-source?lastModified=1778124196&narHash=sha256-pYEytCNic/czazbV9r3tbQ6BZzqRBg/41x2dIC5ymOo%3D&rev=68a8af93ff4297686cb68880845e61e5e2e41d92"
+    },
+    "beads_viewer": {
+      "active": true,
+      "attrPath": "packages.x86_64-linux.default",
+      "originalUrl": "github:Dicklesworthstone/beads_viewer",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/ppsnbyf64sd7snh2js228k8ycbch7mqy-bv-0.15.2"
+      ],
+      "url": "github:Dicklesworthstone/beads_viewer/ce1529a243d1002a7db89c92327666457caefccd?narHash=sha256-DEEuMUDrmXbAxnedDtw7AuVjHWl%2Bjx9PYtgKge3LjnE%3D"
+    },
+    "cargo-cache": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.cargo-cache",
+      "originalUrl": "github:NixOS/nixpkgs/nixpkgs-unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/590vhgn08s0asgyw2f3krv68xb22bcr4-cargo-cache-0.8.3"
+      ],
+      "url": "github:NixOS/nixpkgs/13043924aaa7375ce482ebe2494338e058282925?narHash=sha256-nwASzrRDD1JBEu/o8ekKYEXm/oJW6EMCzCRdrwcLe90%3D"
+    },
+    "cargo-watch": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.cargo-watch",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/zrx7kmcgzax4s6fldam9hf6nmwcw5nks-cargo-watch-8.5.3"
+      ],
+      "url": "path:/nix/store/gcf1p209bczcpvyd2mwa4prv8znxhx6g-source?lastModified=1771207753&narHash=sha256-b9uG8yN50DRQ6A7JdZBfzq718ryYrlmGgqkRm9OOwCE%3D&rev=d1c15b7d5806069da59e819999d70e1cec0760bf"
+    },
+    "codex": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.codex",
+      "originalUrl": "github:NixOS/nixpkgs/master",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/209ycbcmp8ic1pkwjcvbyi20rwk59dyy-codex-0.130.0"
+      ],
+      "url": "github:NixOS/nixpkgs/f742dae1fef4e9f486e76e41ff9534f305d71343?narHash=sha256-jPe%2BYK5r/Vg3hDyP/Y3N0SIbeFifljHDwdg/7TTWYNA%3D"
+    },
+    "gh": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.gh",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/drnv6j70ajhvznb70wcclz6z008shgy7-gh-2.83.1"
+      ],
+      "url": "path:/nix/store/hhyjq4dr4w4dwssm8vzq4cfjzxixhanp-source?lastModified=1763618868&narHash=sha256-v5afmLjn/uyD9EQuPBn7nZuaZVV9r%2BJerayK/4wvdWA%3D&rev=a8d610af3f1a5fb71e23e08434d8d61a466fc942"
+    },
+    "hexchat": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.hexchat",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/5lnkq0q0wiaqp8jzilckmgy1zk59x6jn-hexchat-2.16.2"
+      ],
+      "url": "path:/nix/store/i2gsp87gqp16whm9mw0ybk9n84zir01x-source?lastModified=1776329215&narHash=sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw%3D&rev=b86751bc4085f48661017fa226dee99fab6c651b"
+    },
+    "janet": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.janet",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/q6gzb9sm8hizka1az8nmla9l7fj863x7-janet-1.41.2"
+      ],
+      "url": "path:/nix/store/c999kkcfmsv97myv4h7hp67zlvri8943-source?lastModified=1775732571&narHash=sha256-cd6wKenSQ6G6jikqxFLvyel47TkY30uOSvOBV9gYDX0%3D&rev=02f3fa0374fa13707d42d55d58ecc76b091f223c"
+    },
+    "kitty": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.kitty",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/qjdjp2l9plq6xaqr08804y43qhgv7dh6-kitty-0.30.1"
+      ],
+      "url": "path:/nix/store/j0jlb33bm31w347w43051hbffgh616jr-source?lastModified=1698266953&narHash=sha256-jf72t7pC8%2B8h8fUslUYbWTX5rKsRwOzRMX8jJsGqDXA%3D&rev=75a52265bda7fd25e06e3a67dee3f0354e73243c"
+    },
+    "nixpkgs-update": {
+      "active": true,
+      "attrPath": "packages.x86_64-linux.default",
+      "originalUrl": "github:ryantm/nixpkgs-update",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/d5s5fc9sg64njvwfa34cs3ij2cfabl2x-nixpkgs-update-0.4.0"
+      ],
+      "url": "github:ryantm/nixpkgs-update/b089717082e2a3897411ab52da913a93bff0342d?narHash=sha256-jfR42VgOArea7swkcaaikd0%2Br0V%2BoT7UnVYB5J8fjIE%3D"
+    },
+    "skills": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.skills",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/k3mimi9i6mwn2ndknl3827i9qwcmgw8f-skills-1.4.6"
+      ],
+      "url": "path:/nix/store/i2gsp87gqp16whm9mw0ybk9n84zir01x-source?lastModified=1776329215&narHash=sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw%3D&rev=b86751bc4085f48661017fa226dee99fab6c651b"
+    },
+    "tiled": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.tiled",
+      "originalUrl": "git+file:///home/felix/gits/nixpkgs",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/n6asp8d324fzrxaw2adz9mn2a50h3k5d-tiled-1.12.0"
+      ],
+      "url": "git+file:///home/felix/gits/nixpkgs?ref=refs/heads/update/tiled-1.12.0&rev=8c968909328b33a59cc0f077a3b8c70287a78391"
+    },
+    "yarn": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.yarn",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/i2d711xk76lzfd817wrg76czlljq2yjv-yarn-1.22.19"
+      ],
+      "url": "path:/nix/store/gjg3b0xl0w7a43qywrjnm1528dspyxv3-source?lastModified=1696419054&narHash=sha256-EdR%2BdIKCfqL3voZUDYwcvgRDOektQB9KbhBVcE0/3Mo%3D&rev=7131f3c223a2d799568e4b278380cd9dac2b8579"
+    }
+  },
+  "version": 3
+}

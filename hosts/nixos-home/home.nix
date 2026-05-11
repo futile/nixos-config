@@ -23,6 +23,7 @@ in
       "${home-modules}/jj.nix"
       "${home-modules}/agents.nix"
       "${home-modules}/codex.nix"
+      "${home-modules}/nix-profile-snapshot.nix"
       "${home-modules}/fish.nix"
       "${home-modules}/nushell.nix"
       "${home-modules}/desktop-common.nix"
@@ -90,6 +91,11 @@ in
     };
 
     stateVersion = "22.05";
+  };
+
+  my.nixProfileSnapshot = {
+    enable = true;
+    hostName = "nixos-home";
   };
 
   # see also system's 'default.nix'
