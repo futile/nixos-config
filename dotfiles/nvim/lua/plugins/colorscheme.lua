@@ -86,7 +86,10 @@ return {
   {
     "RRethy/base16-nvim",
     config = function()
-      require("noctalia-matugen").setup()
+      local ok, nm = pcall(require, "noctalia-matugen")
+      if ok then
+        nm.setup()
+      end
     end,
   },
 
