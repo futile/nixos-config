@@ -7,10 +7,12 @@
 }:
 let
   cfg = config.my.nixProfileSnapshot;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
+  launchdWatchPath = /. + lib.removePrefix "/" cfg.watchPath;
 
   # Mirror imperative `nix profile` state into this repo for review/history.
-  # The systemd path watches the profile symlink directory because profile
-  # updates create a new generation link instead of editing a manifest in place.
+  # Watch the profile symlink path because profile updates create a new
+  # generation link instead of editing a manifest in place.
   snapshotScript = pkgs.writeShellApplication {
     name = "snapshot-nix-profile";
     runtimeInputs = [
@@ -72,12 +74,13 @@ in
       description = "Profile path passed to nix profile list.";
     };
 
-    watchDirectory = lib.mkOption {
-      type = lib.types.str;
-      default = "/nix/var/nix/profiles/per-user/${config.home.username}";
+    watchPath = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
       description = ''
-        Directory watched by systemd. nix profile updates replace profile
-        symlinks here; the manifest inside the store output does not change.
+        Path watched by the user service manager. nix profile updates replace
+        profile symlinks here; the manifest inside the store output does not
+        change.
       '';
     };
 
@@ -94,31 +97,47 @@ in
         assertion = cfg.hostName != null;
         message = "my.nixProfileSnapshot.hostName must be set when nix profile snapshots are enabled.";
       }
+      {
+        assertion = cfg.watchPath != null;
+        message = "my.nixProfileSnapshot.watchPath must be set when nix profile snapshots are enabled.";
+      }
     ];
 
-    systemd.user.services.snapshot-nix-profile = {
-      Unit = {
-        Description = "Snapshot nix profile state into nixos repo";
+    systemd.user = lib.mkIf (!isDarwin) {
+      services.snapshot-nix-profile = {
+        Unit = {
+          Description = "Snapshot nix profile state into nixos repo";
+        };
+
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${snapshotScript}/bin/snapshot-nix-profile";
+        };
       };
 
-      Service = {
-        Type = "oneshot";
-        ExecStart = "${snapshotScript}/bin/snapshot-nix-profile";
+      paths.snapshot-nix-profile = {
+        Unit = {
+          Description = "Watch nix profile generation changes";
+        };
+
+        Path = {
+          PathChanged = cfg.watchPath;
+          Unit = "snapshot-nix-profile.service";
+        };
+
+        Install = {
+          WantedBy = [ "default.target" ];
+        };
       };
     };
 
-    systemd.user.paths.snapshot-nix-profile = {
-      Unit = {
-        Description = "Watch nix profile generation changes";
-      };
-
-      Path = {
-        PathChanged = cfg.watchDirectory;
-        Unit = "snapshot-nix-profile.service";
-      };
-
-      Install = {
-        WantedBy = [ "default.target" ];
+    launchd.agents.snapshot-nix-profile = lib.mkIf isDarwin {
+      enable = true;
+      config = {
+        ProgramArguments = [ "${snapshotScript}/bin/snapshot-nix-profile" ];
+        ProcessType = "Background";
+        RunAtLoad = true;
+        WatchPaths = [ launchdWatchPath ];
       };
     };
   };

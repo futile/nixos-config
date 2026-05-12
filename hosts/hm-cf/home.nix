@@ -39,6 +39,7 @@ in
       "${home-modules}/shell-common.nix"
       "${home-modules}/git.nix"
       "${home-modules}/jj.nix"
+      "${home-modules}/nix-profile-snapshot.nix"
       # "${home-modules}/gitbutler.nix" # always builds from scratch, too annoying
       "${home-modules}/fish.nix"
       "${home-modules}/sbt.nix"
@@ -272,6 +273,12 @@ in
 
   # PATH for golang go install'd binaries
   home.sessionPath = [ "$HOME/go/bin" ];
+
+  my.nixProfileSnapshot = {
+    enable = true;
+    hostName = "hm-cf";
+    watchPath = "${config.home.homeDirectory}/.local/state/nix/profiles";
+  };
 
   # After activation, check if any app binaries changed and remind to re-grant
   # permissions if so. The script is interactive (opens System Settings panes)

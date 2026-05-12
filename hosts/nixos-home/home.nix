@@ -96,6 +96,7 @@ in
   my.nixProfileSnapshot = {
     enable = true;
     hostName = "nixos-home";
+    watchPath = "/nix/var/nix/profiles/per-user/${config.home.username}";
   };
 
   # see also system's 'default.nix'

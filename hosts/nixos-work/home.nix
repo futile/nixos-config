@@ -165,5 +165,6 @@ in
   my.nixProfileSnapshot = {
     enable = true;
     hostName = "nixos-work";
+    watchPath = "/nix/var/nix/profiles/per-user/${config.home.username}";
   };
 }

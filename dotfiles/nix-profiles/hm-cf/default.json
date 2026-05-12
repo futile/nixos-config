@@ -1,0 +1,90 @@
+{
+  "elements": {
+    "cargo-override": {
+      "active": true,
+      "attrPath": "packages.aarch64-darwin.default",
+      "originalUrl": "github:eopb/cargo-override",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/k9hdjhjslqccym9mf7yfci2z12iyjhg1-cargo-override-unstable-7e9fa20"
+      ],
+      "url": "github:eopb/cargo-override/7e9fa20e65701c6751d2218197ffb94478481d1d?narHash=sha256-oENxEJYJ8JLHkjYN7nyVs1Mu/rb8j//8HzpzOfxfIng%3D"
+    },
+    "glab": {
+      "active": true,
+      "attrPath": "legacyPackages.aarch64-darwin.glab",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/66jx5k8malrrlv2qn7kn0kg6sn0j0lvc-glab-1.82.0"
+      ],
+      "url": "path:/nix/store/dx2qikyb4dyb6hbdfywbmsyla0z5a1h3-source?lastModified=1771369470&narHash=sha256-0NBlEBKkN3lufyvFegY4TYv5mCNHbi5OmBDrzihbBMQ%3D&rev=0182a361324364ae3f436a63005877674cf45efb"
+    },
+    "go-swagger": {
+      "active": true,
+      "attrPath": "legacyPackages.aarch64-darwin.go-swagger",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/6757nzrkjjpsl11r3a6zpk3wbbqnbr8v-go-swagger-0.32.3"
+      ],
+      "url": "path:/nix/store/pxnx7dbr0pz3qpgw2r315wdbb00afdw7-source?lastModified=1755615617&narHash=sha256-HMwfAJBdrr8wXAkbGhtcby1zGFvs%2BStOp19xNsbqdOg%3D&rev=20075955deac2583bb12f07151c2df830ef346b4"
+    },
+    "home-manager-path": {
+      "active": true,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/27zyv3bkilrh3bvkqc4h0qjqyl5gx6bp-home-manager-path"
+      ]
+    },
+    "opencode": {
+      "active": true,
+      "attrPath": "legacyPackages.aarch64-darwin.opencode",
+      "originalUrl": "flake:nixpkgs",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/q95hrhjnsk49f6h70p0hym0a3pk73v9q-opencode-1.14.35"
+      ],
+      "url": "github:NixOS/nixpkgs/b3da656039dc7a6240f27b2ef8cc6a3ef3bccae7?narHash=sha256-I4puXmX1iovcCHZlRmztO3vW0mAbbRvq4F8wgIMQ1MM%3D"
+    },
+    "parallel": {
+      "active": true,
+      "attrPath": "legacyPackages.aarch64-darwin.parallel",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/279b5aj7imbgacvzpw0x93x9sq5kykd8-parallel-20260122",
+        "/nix/store/hjklzxwr3cdydyb3f5jff6b3hhr3brnn-parallel-20260122-man"
+      ],
+      "url": "path:/nix/store/dx2qikyb4dyb6hbdfywbmsyla0z5a1h3-source?lastModified=1771369470&narHash=sha256-0NBlEBKkN3lufyvFegY4TYv5mCNHbi5OmBDrzihbBMQ%3D&rev=0182a361324364ae3f436a63005877674cf45efb"
+    },
+    "toml-cli": {
+      "active": true,
+      "attrPath": "legacyPackages.aarch64-darwin.toml-cli",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/d7sldf7v2j9xkdjwg56rprsph9dxkmds-toml-cli-0.2.3"
+      ],
+      "url": "path:/nix/store/m68ikm8045fj7ys7qvgr608z9l70hh1k-source?lastModified=1730200266&narHash=sha256-l253w0XMT8nWHGXuXqyiIC/bMvh1VRszGXgdpQlfhvU%3D&rev=807e9154dcb16384b1b765ebe9cd2bba2ac287fd"
+    },
+    "wireshark": {
+      "active": true,
+      "attrPath": "legacyPackages.aarch64-darwin.wireshark",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/5xs3pw4wnpy305wl7iksivwsmq9sbqs0-wireshark-qt-4.2.8"
+      ],
+      "url": "path:/nix/store/vqhkmj60457j8nrw9vb94ln40rkic1p6-source?lastModified=1733212471&narHash=sha256-M1%2BuCoV5igihRfcUKrr1riygbe73/dzNnzPsmaLCmpo%3D&rev=55d15ad12a74eb7d4646254e13638ad0c4128776"
+    }
+  },
+  "version": 3
+}

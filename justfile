@@ -1,7 +1,7 @@
 # allow positional arguments to commands
 
-set positional-arguments := true
-set ignore-comments := true
+set positional-arguments
+set ignore-comments
 
 # ignore comment lines in recipes
 
