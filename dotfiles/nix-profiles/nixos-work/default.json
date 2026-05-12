@@ -117,9 +117,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/qjdjp2l9plq6xaqr08804y43qhgv7dh6-kitty-0.30.1"
+        "/nix/store/4fdrvxcx6ckmird2rh50lmzgp2ggmmj4-kitty-0.46.2"
       ],
-      "url": "path:/nix/store/j0jlb33bm31w347w43051hbffgh616jr-source?lastModified=1698266953&narHash=sha256-jf72t7pC8%2B8h8fUslUYbWTX5rKsRwOzRMX8jJsGqDXA%3D&rev=75a52265bda7fd25e06e3a67dee3f0354e73243c"
+      "url": "path:/nix/store/nhadsmcq0saqxjl8dpmvzqacdfgvjb3v-source?lastModified=1778124196&narHash=sha256-pYEytCNic/czazbV9r3tbQ6BZzqRBg/41x2dIC5ymOo%3D&rev=68a8af93ff4297686cb68880845e61e5e2e41d92"
     },
     "nixpkgs-update": {
       "active": true,
