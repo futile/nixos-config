@@ -540,6 +540,7 @@
         "location": "top_right",
         "lowUrgencyDuration": 3,
         "monitors": [
+            "HDMI-A-1"
         ],
         "normalUrgencyDuration": 8,
         "overlayLayer": true,
