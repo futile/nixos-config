@@ -41,7 +41,13 @@ let
       tmp="$(mktemp "$out_file.tmp.XXXXXX")"
       trap 'rm -f "$tmp"' EXIT
 
-      nix profile list --profile "$profile_path" --json | jq --sort-keys . > "$tmp"
+      nix profile list --profile "$profile_path" --json \
+        | jq --sort-keys '
+          # Home Manager installs its own aggregate profile entry on standalone
+          # Home Manager hosts. Its store path changes on every switch, so drop
+          # it from the snapshot. del() is safe when the key is missing.
+          del(.elements["home-manager-path"])
+        ' > "$tmp"
       mv "$tmp" "$out_file"
 
       trap - EXIT

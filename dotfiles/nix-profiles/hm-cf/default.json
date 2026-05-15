@@ -44,13 +44,6 @@
       ],
       "url": "path:/nix/store/pxnx7dbr0pz3qpgw2r315wdbb00afdw7-source?lastModified=1755615617&narHash=sha256-HMwfAJBdrr8wXAkbGhtcby1zGFvs%2BStOp19xNsbqdOg%3D&rev=20075955deac2583bb12f07151c2df830ef346b4"
     },
-    "home-manager-path": {
-      "active": true,
-      "priority": 5,
-      "storePaths": [
-        "/nix/store/2djzv3n5qsaskyn7lc98c5jphcv86cxj-home-manager-path"
-      ]
-    },
     "opencode": {
       "active": true,
       "attrPath": "legacyPackages.aarch64-darwin.opencode",
