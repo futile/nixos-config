@@ -177,6 +177,7 @@ in
         # opencode
         skills # https://skills.sh/
         sandbox-runtime # https://github.com/anthropic-experimental/sandbox-runtime
+        my-custom-packages.agent-safehouse # https://agent-safehouse.dev/
 
         # working with rustc's `-Zself-profile` output: https://github.com/rust-lang/measureme
         # measureme

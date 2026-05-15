@@ -251,6 +251,12 @@
 
           overlays = [
             (final: prev: {
+              my-custom-packages = {
+                agent-safehouse = final.callPackage ./custom-packages/agent-safehouse.nix { };
+              };
+            })
+
+            (final: prev: {
               lib = prev.lib // {
                 my = {
                   editorTools = (
