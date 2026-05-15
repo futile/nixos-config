@@ -56,6 +56,8 @@ in
     linkApps.enable = false;
   };
 
+  programs.firefox.configPath = "${config.xdg.configHome}/mozilla/firefox";
+
   programs.git = {
     settings = {
       # rerere.enabled = true;
