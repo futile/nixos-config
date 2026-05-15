@@ -1,5 +1,16 @@
 {
   "elements": {
+    "beads": {
+      "active": true,
+      "attrPath": "packages.aarch64-darwin.default",
+      "originalUrl": "github:gastownhall/beads",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/901j5k4sc5ajxi8pg54h7im79mmwyj8w-beads-1.0.4"
+      ],
+      "url": "github:gastownhall/beads/da73b7511ccac8069a53fcb7a8963e8c9c9433a6?narHash=sha256-gAuUUH/JR5a/5WkPzuTtbWwfC4aPt1LdpoGBbHubT9Q%3D"
+    },
     "cargo-override": {
       "active": true,
       "attrPath": "packages.aarch64-darwin.default",
