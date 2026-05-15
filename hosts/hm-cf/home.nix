@@ -371,5 +371,16 @@ in
         and safe-opencode $argv
       '';
     };
+
+    oc-browser = {
+      body = ''
+        # Dedicated Brave profile for the chrome-devtools OpenCode MCP server.
+        # Keep this in sync with ~/.config/opencode/opencode.jsonc.
+        "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" \
+          --remote-debugging-port=9222 \
+          --user-data-dir="$HOME/Library/Application Support/BraveSoftware/Brave-Browser-MCP" \
+          $argv
+      '';
+    };
   };
 }
