@@ -2,6 +2,7 @@
   lib,
   stdenvNoCC,
   fetchurl,
+  bashInteractive,
 }:
 
 stdenvNoCC.mkDerivation {
@@ -19,7 +20,11 @@ stdenvNoCC.mkDerivation {
     runHook preInstall
 
     install -Dm755 "$src" "$out/bin/safehouse"
-    patchShebangs "$out/bin/safehouse"
+    # Safehouse's --env mode uses the Bash-specific `compgen` builtin to enumerate
+    # inherited environment variables. nixpkgs' non-interactive `bash` build omits
+    # that builtin, so use `bashInteractive` instead of the default patchShebangs target.
+    substituteInPlace "$out/bin/safehouse" \
+      --replace-fail '#!/usr/bin/env bash' '#!${lib.getExe bashInteractive}'
 
     runHook postInstall
   '';
