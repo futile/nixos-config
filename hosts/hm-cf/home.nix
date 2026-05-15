@@ -357,8 +357,17 @@ in
 
     os = {
       body = ''
-        opencode mcp auth cf-portal
-        and opencode auth login https://opencode.cloudflare.dev
+        # `opencode mcp auth cf-portal` prompts to re-authenticate even when
+        # credentials are still valid. Check first so `os` stays non-interactive
+        # unless cf-portal actually needs fresh OAuth credentials.
+        set -l cf_portal_auth_status (opencode mcp auth list | string collect | string replace -ar '\e\[[0-9;]*m' "")
+
+        if not string match -q "*cf-portal*authenticated*" -- $cf_portal_auth_status
+          opencode mcp auth cf-portal
+          or return $status
+        end
+
+        opencode auth login https://opencode.cloudflare.dev
         and safe-opencode $argv
       '';
     };
