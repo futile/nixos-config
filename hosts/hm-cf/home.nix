@@ -337,4 +337,30 @@ in
   programs.fish.shellInit = ''
     fenv "source /Users/frath/.local/share/cloudflare-warp-certs/config.sh"
   '';
+
+  programs.fish.functions = {
+    safe = {
+      body = ''
+        safehouse \
+          --env \
+          --enable=wide-read,ssh,shell-init \
+          $argv
+      '';
+    };
+
+    safe-opencode = {
+      body = ''
+        set -lx OPENCODE_PERMISSION '{"*":"allow"}'
+        safe opencode $argv
+      '';
+    };
+
+    os = {
+      body = ''
+        opencode mcp auth cf-portal
+        and opencode auth login https://opencode.cloudflare.dev
+        and safe-opencode $argv
+      '';
+    };
+  };
 }
