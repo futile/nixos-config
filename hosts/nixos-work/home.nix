@@ -26,7 +26,7 @@ in
       "${home-modules}/fish.nix"
       "${home-modules}/nushell.nix"
       "${home-modules}/desktop-common.nix"
-      "${home-modules}/desktop-gdrive-keepassxc.nix"
+      "${home-modules}/desktop-gdrive.nix"
       # "${home-modules}/vivaldi.nix"
 
       # "${home-modules}/hyprland.nix"
@@ -55,6 +55,7 @@ in
 
   xdg = {
     enable = true;
+    autostart.enable = true;
     configFile =
       let
         hyprland = "${config.home.homeDirectory}/nixos/dotfiles/hyprland";
@@ -73,6 +74,11 @@ in
         "noctalia/user-templates.toml".source =
           config.lib.file.mkOutOfStoreSymlink "${noctalia}/user-templates.toml";
       };
+  };
+
+  programs.keepassxc = {
+    enable = true;
+    autostart = true;
   };
 
   # 2026-04-29 new default path is this. before switching to this, I did:

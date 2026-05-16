@@ -239,7 +239,7 @@ in
     # Enable niri
     niri.enable = true;
 
-    # NOTE: required for `--allow-other` with rclone, see `home-modules/desktop-gdrive-keepassxc.nix`
+    # NOTE: required for `--allow-other` with rclone, see `home-modules/desktop-gdrive.nix`
     fuse.userAllowOther = true;
 
     wireshark = {

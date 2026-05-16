@@ -27,7 +27,7 @@ in
       "${home-modules}/fish.nix"
       "${home-modules}/nushell.nix"
       "${home-modules}/desktop-common.nix"
-      "${home-modules}/desktop-gdrive-keepassxc.nix"
+      "${home-modules}/desktop-gdrive.nix"
       "${home-modules}/vivaldi.nix"
       "${home-modules}/firefox.nix"
       "${home-modules}/zoom.nix"
