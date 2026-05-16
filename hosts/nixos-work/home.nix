@@ -22,6 +22,7 @@ in
       "${home-modules}/jj.nix"
       "${home-modules}/agents.nix"
       "${home-modules}/codex.nix"
+      "${home-modules}/gascity.nix"
       "${home-modules}/nix-profile-snapshot.nix"
       "${home-modules}/fish.nix"
       "${home-modules}/nushell.nix"
@@ -79,6 +80,11 @@ in
   programs.keepassxc = {
     enable = true;
     autostart = true;
+  };
+
+  my.gascity = {
+    enable = true;
+    supervisor.installOnActivation = true;
   };
 
   # 2026-04-29 new default path is this. before switching to this, I did:
