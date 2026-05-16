@@ -3,12 +3,15 @@
   stdenvNoCC,
   fetchurl,
   installShellFiles,
+  writeShellApplication,
+  curl,
   tmux,
   git,
   jq,
   dolt,
   util-linux,
-  nix-update-script,
+  nix,
+  gnused,
 }:
 
 let
@@ -20,7 +23,7 @@ let
       };
       aarch64-linux = {
         suffix = "linux_arm64";
-        hash = "sha256-a+Qln84Rvu9X7R/BdJQDHZYCg2bLUHGusu1SM+FyxNw=";
+        hash = "sha256-a+Qln84RvudX7R/BdJQDHZYCSLbLUHGusu1SM+FyxNw=";
       };
       x86_64-darwin = {
         suffix = "darwin_amd64";
@@ -85,12 +88,59 @@ stdenvNoCC.mkDerivation (finalAttrs: {
       util-linux
     ];
 
-    updateScript = nix-update-script {
-      extraArgs = [
-        "--use-github-releases"
-        "--version-regex=^v(.*)$"
+    updateScript = lib.getExe (writeShellApplication {
+      name = "gascity-update-script";
+      runtimeInputs = [
+        curl
+        jq
+        nix
+        gnused
       ];
-    };
+      text = ''
+        set -euo pipefail
+
+        file="''${UPDATE_NIX_FILE:-custom-packages/gascity.nix}"
+        if [[ ! -f "$file" && -f gascity.nix ]]; then
+          file=gascity.nix
+        fi
+        if [[ ! -f "$file" ]]; then
+          echo "gascity update: could not find package file: $file" >&2
+          exit 1
+        fi
+
+        release_json=$(curl -fsSL "https://api.github.com/repos/gastownhall/gascity/releases/latest")
+        version=$(jq -er '.tag_name | sub("^v"; "")' <<< "$release_json")
+
+        asset_hash() {
+          local suffix="$1"
+          local digest
+          digest=$(jq -er --arg name "gascity_''${version}_''${suffix}.tar.gz" '
+            .assets[]
+            | select(.name == $name)
+            | .digest
+            | sub("^sha256:"; "")
+          ' <<< "$release_json")
+          nix hash convert --hash-algo sha256 --to sri "$digest"
+        }
+
+        replace_platform_hash() {
+          local system="$1"
+          local hash="$2"
+          sed -i -E "/''${system} = \\{/,/\\};/ s|(hash = )\"sha256-[^\"]+\";|\\1\"''${hash}\";|" "$file"
+        }
+
+        linux_amd64=$(asset_hash linux_amd64)
+        linux_arm64=$(asset_hash linux_arm64)
+        darwin_amd64=$(asset_hash darwin_amd64)
+        darwin_arm64=$(asset_hash darwin_arm64)
+
+        sed -i -E 's|(version = )"[^"]+";|\1"'"$version"'";|' "$file"
+        replace_platform_hash x86_64-linux "$linux_amd64"
+        replace_platform_hash aarch64-linux "$linux_arm64"
+        replace_platform_hash x86_64-darwin "$darwin_amd64"
+        replace_platform_hash aarch64-darwin "$darwin_arm64"
+      '';
+    });
   };
 
   meta = {
