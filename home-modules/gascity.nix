@@ -25,6 +25,7 @@ let
   supervisorExtraPath = lib.concatStringsSep ":" cfg.supervisor.extraPath;
   supervisorFullPath =
     supervisorPath + lib.optionalString (supervisorExtraPath != "") ":${supervisorExtraPath}";
+  supervisorHome = "${config.home.homeDirectory}/.gc";
 in
 {
   options.my.gascity = {
@@ -70,6 +71,7 @@ in
     home.activation.gascitySupervisorInstall = lib.mkIf cfg.supervisor.installOnActivation (
       lib.hm.dag.entryAfter [ "installPackages" ] ''
         desired_path=${lib.escapeShellArg supervisorFullPath}
+        supervisor_home=${lib.escapeShellArg supervisorHome}
         systemctl=${lib.escapeShellArg "${pkgs.systemd}/bin/systemctl"}
         xdg_runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
@@ -80,6 +82,8 @@ in
         systemd_status=$(env XDG_RUNTIME_DIR="$xdg_runtime_dir" "$systemctl" --user is-system-running 2>&1 || true)
 
         if [[ "$systemd_status" == "running" || "$systemd_status" == "degraded" ]]; then
+          run install -d -m 700 "$supervisor_home"
+
           # Let Gas City compare the full rendered unit and perform the
           # daemon-reload/enable/start or warm-refresh sequence it owns.
           run env XDG_RUNTIME_DIR="$xdg_runtime_dir" PATH="$desired_path" ${lib.getExe cfg.package} supervisor install
