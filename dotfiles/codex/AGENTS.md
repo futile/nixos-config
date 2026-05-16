@@ -31,3 +31,7 @@ If unsure, you MUST explicitly ASK what should be done!
 - DO NOT silently switch to a less-than-ideal subagent model even though a model above gpt-5.5-medium would be appropriate!
 - DO use models below gpt-5.5-medium if you wanted to do so anyway.
 - DO NOT use gpt-5.5-medium for every model instead of choosing the appropriate model for each task!
+
+## Tool Usage
+
+- When using DeepWiki, repository names may be case-sensitive. Use the exact GitHub owner/repository casing from the URL when a lowercase or guessed name fails. For example, BitCraft public server docs are indexed as `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
