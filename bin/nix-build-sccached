@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""Build nixpkgs package attributes with Rust sccache enabled.
+
+See docs/nix-sccache.md for usage examples and cache-status commands.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+
+DEFAULT_SCCACHE_DIR = "/var/cache/ccache/sccache"
+
+
+def split_args(argv: list[str]) -> tuple[list[str], list[str]]:
+    if "--" not in argv:
+        return argv, []
+
+    separator = argv.index("--")
+    return argv[:separator], argv[separator + 1 :]
+
+
+def package_name(value: str) -> str:
+    if not value:
+        raise argparse.ArgumentTypeError("package attribute must not be empty")
+
+    parts = value.split(".")
+    if any(part == "" for part in parts):
+        raise argparse.ArgumentTypeError(f"invalid attr path: {value!r}")
+
+    return value
+
+
+def existing_path(value: str) -> Path:
+    path = Path(value).expanduser().resolve()
+    if not path.exists():
+        raise argparse.ArgumentTypeError(f"path does not exist: {path}")
+    return path
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    script_args, nix_build_args = split_args(argv)
+
+    parser = argparse.ArgumentParser(
+        description="Build nixpkgs package attributes with Rust sccache enabled.",
+        epilog=(
+            "Nix build flags can be passed after --, for example: "
+            "nix-build-sccached llm-wiki -- --no-link --print-build-logs"
+        ),
+    )
+    parser.add_argument(
+        "--nixpkgs-path",
+        type=existing_path,
+        default=existing_path(os.environ.get("NIXPKGS_PATH", os.getcwd())),
+        help="nixpkgs checkout to import; defaults to $NIXPKGS_PATH or $PWD",
+    )
+    parser.add_argument(
+        "--sccache-dir",
+        default=os.environ.get("SCCACHE_DIR", DEFAULT_SCCACHE_DIR),
+        help=f"shared sccache directory; defaults to $SCCACHE_DIR or {DEFAULT_SCCACHE_DIR}",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the generated Nix expression instead of running nix build",
+    )
+    parser.add_argument(
+        "packages",
+        metavar="PACKAGE_ATTR",
+        nargs="+",
+        type=package_name,
+        help="package attr to wrap; dotted attr paths are supported",
+    )
+
+    args = parser.parse_args(script_args)
+    args.nix_build_args = nix_build_args
+    return args
+
+
+def check_nixpkgs_path(path: Path) -> None:
+    if not (path / "pkgs/top-level/impure.nix").is_file() and not (path / "flake.nix").is_file():
+        raise SystemExit(f"nix-build-sccached: not a nixpkgs checkout: {path}")
+
+
+def nix_expr(package_names: list[str]) -> str:
+    package_names_json = json.dumps(package_names)
+    return f"""
+let
+  nixpkgsPath = builtins.getEnv "NIX_BUILD_SCCACHED_NIXPKGS_PATH";
+  sccacheDir = builtins.getEnv "NIX_BUILD_SCCACHED_SCCACHE_DIR";
+  packageNames = builtins.fromJSON {json.dumps(package_names_json)};
+
+  pkgs = import nixpkgsPath {{
+    overlays = [
+      (final: prev:
+        let
+          lib = prev.lib;
+          attrPath = name: lib.splitString "." name;
+          withRustSccache = packageName: pkg:
+            pkg.overrideAttrs (old: {{
+              nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.sccache ];
+              env = (old.env or {{ }}) // {{
+                RUSTC_WRAPPER = lib.getExe prev.sccache;
+                SCCACHE_DIR = sccacheDir;
+              }};
+              preBuild =
+                ''
+                  echo "nix-build-sccached: building ${{packageName}} with SCCACHE_DIR=$SCCACHE_DIR" >&2
+                  mkdir -p "$SCCACHE_DIR"
+                ''
+                + (old.preBuild or "");
+            }});
+        in
+        lib.foldl' (
+          acc: packageName:
+            let
+              path = attrPath packageName;
+              pkg = lib.getAttrFromPath path prev;
+            in
+            lib.recursiveUpdate acc (lib.setAttrByPath path (withRustSccache packageName pkg))
+        ) {{ }} packageNames)
+    ];
+  }};
+in
+map (packageName: pkgs.lib.getAttrFromPath (pkgs.lib.splitString "." packageName) pkgs) packageNames
+""".strip()
+
+
+def main(argv: list[str]) -> int:
+    args = parse_args(argv)
+    check_nixpkgs_path(args.nixpkgs_path)
+
+    expr = nix_expr(args.packages)
+    if args.dry_run:
+        print(expr)
+        return 0
+
+    env = os.environ.copy()
+    env["NIX_BUILD_SCCACHED_NIXPKGS_PATH"] = str(args.nixpkgs_path)
+    env["NIX_BUILD_SCCACHED_SCCACHE_DIR"] = args.sccache_dir
+
+    command = ["nix", "build", "--impure", "--expr", expr, *args.nix_build_args]
+    return subprocess.run(command, env=env, check=False).returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

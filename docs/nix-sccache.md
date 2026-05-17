@@ -21,13 +21,64 @@ This path is added to `nix.settings.extra-sandbox-paths` when
 `my.rustSccache.enable = true`, so Nix sandbox builders can write sccache
 entries there.
 
+## Build nixpkgs Packages With sccache
+
+The `my.rustSccache` module and this repo's package overlay only affect builds
+where this repo's NixOS configuration or flake package wrapper is in scope. A
+plain `nix build .#llm-wiki` from a separate `~/gits/nixpkgs` checkout will not
+automatically use sccache, even if the sandbox can access
+`/var/cache/ccache/sccache`. The derivation still needs `RUSTC_WRAPPER` and
+`SCCACHE_DIR` set.
+
+For local nixpkgs iteration builds, use the helper script:
+
+```bash
+~/nixos/bin/nix-build-sccached llm-wiki -- --no-link --print-build-logs
+```
+
+Run it from the nixpkgs checkout. It defaults to importing nixpkgs from the
+current directory and wrapping the requested package attributes with a local
+overlay.
+
+Multiple attributes can be wrapped in one build:
+
+```bash
+~/nixos/bin/nix-build-sccached llm-wiki some-other-package and-another-package -- --no-link
+```
+
+To run it from another directory, pass the nixpkgs checkout explicitly:
+
+```bash
+~/nixos/bin/nix-build-sccached \
+  --nixpkgs-path ~/gits/nixpkgs \
+  llm-wiki \
+  -- --no-link --print-build-logs
+```
+
+You can override the cache directory if needed:
+
+```bash
+~/nixos/bin/nix-build-sccached \
+  --nixpkgs-path ~/gits/nixpkgs \
+  --sccache-dir /var/cache/ccache/sccache \
+  llm-wiki \
+  -- --no-link
+```
+
+Use `--dry-run` to inspect the generated Nix expression without starting a
+build:
+
+```bash
+~/nixos/bin/nix-build-sccached --nixpkgs-path ~/gits/nixpkgs llm-wiki --dry-run
+```
+
 ## Check sccache Disk Usage
 
 The most reliable way to check whether Nix builds are populating sccache is to
 inspect the on-disk cache:
 
 ```bash
-sudo du -sh /var/cache/ccache /var/cache/ccache/sccache 2>&1
+sudo du -sh /var/cache/ccache/sccache /var/cache/ccache 2>&1
 ```
 
 To inspect the directory fanout and ownership:
