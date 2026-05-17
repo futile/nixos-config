@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+payload="${1:-}"
+if [[ -z "${payload}" ]]; then
+	payload="$(cat)"
+fi
+
+event_type="$(jq -r '.type // empty' <<<"${payload}")"
+if [[ "${event_type}" != "agent-turn-complete" ]]; then
+	exit 0
+fi
+
+pane="${WEZTERM_PANE:-}"
+if [[ -z "${pane}" ]]; then
+	exit 0
+fi
+
+focused_panes="$(
+	wezterm cli list-clients --format json 2>/dev/null |
+		jq -r '.[].focused_pane_id // empty' 2>/dev/null
+)" || focused_panes=""
+
+if grep -qxF "${pane}" <<<"${focused_panes}"; then
+	exit 0
+fi
+
+app_name="Codex pane ${pane}"
+summary="Codex turn complete"
+state_dir="${CODEX_NOCTALIA_STATE_DIR:-/tmp/codex-noctalia-${UID}}"
+map_file="${state_dir}/notifications.tsv"
+lock_file="${state_dir}/notifications.lock"
+body="$(
+	jq -r '
+		."last-assistant-message"
+		// (."input-messages" | if type == "array" then .[-1] else empty end)
+		// "Codex turn complete"
+	' <<<"${payload}" |
+		tr '\n' ' ' |
+		sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//' |
+		cut -c 1-800
+)"
+
+mkdir -p -m 700 "${state_dir}"
+
+notification_result="$(
+	gdbus call \
+	--session \
+	--dest org.freedesktop.Notifications \
+	--object-path /org/freedesktop/Notifications \
+	--method org.freedesktop.Notifications.Notify \
+	"${app_name}" \
+	0 \
+	"" \
+	"${summary}" \
+	"${body}" \
+	"['default', 'Open pane']" \
+	"{}" \
+	8000
+)"
+
+notification_id="$(sed -n 's/^(uint32 \([0-9][0-9]*\),)$/\1/p' <<<"${notification_result}")"
+if [[ -n "${notification_id}" ]]; then
+	(
+		flock 9
+		printf '%s\t%s\t%s\n' "${notification_id}" "${pane}" "$(date +%s)" >>"${map_file}"
+	) 9>"${lock_file}"
+fi

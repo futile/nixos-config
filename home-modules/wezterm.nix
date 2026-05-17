@@ -24,6 +24,7 @@ let
           "/nix/var/nix/profiles/default"
         ];
       });
+  codexNoctaliaFocusWatch = "${thisFlakePath}/bin/codex-noctalia-focus-watch";
 in
 {
   # rolling wezterm by hand, as I don't like the upstream home-manager module
@@ -46,5 +47,33 @@ in
       flake-inputs.wezterm-embark + "/colors/embark.toml";
     configFile."wezterm/colors/lume.toml".source =
       flake-inputs.lume-theme + "/terminals/wezterm/lume.toml";
+  };
+
+  systemd.user.services.codex-noctalia-focus-watch = pkgs.lib.mkIf pkgs.stdenv.isLinux {
+    Unit = {
+      Description = "Clear tagged Codex notifications when their WezTerm pane is focused";
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+
+    Service = {
+      ExecStart = "${pkgs.bash}/bin/bash ${codexNoctaliaFocusWatch}";
+      Restart = "on-failure";
+      RestartSec = "5s";
+      Environment = "PATH=${
+        pkgs.lib.makeBinPath [
+          pkgs.coreutils
+          pkgs.gawk
+          pkgs.glib
+          pkgs.gnugrep
+          pkgs.gnused
+          pkgs.jq
+          pkgs.util-linux
+          my-wezterm
+        ]
+      }:/run/current-system/sw/bin";
+    };
+
+    Install.WantedBy = [ "graphical-session.target" ];
   };
 }

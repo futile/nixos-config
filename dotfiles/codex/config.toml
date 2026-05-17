@@ -4,11 +4,15 @@ model = "gpt-5.4"
 model_reasoning_effort = "medium"
 model_verbosity = "medium"
 personality = "pragmatic"
+notify = ["/home/felix/nixos/bin/codex-notify-noctalia"]
 
 [tools]
 view_image = true
 
 [tui]
+notifications = ["approval-requested"]
+notification_method = "osc9"
+notification_condition = "unfocused"
 status_line = [
   "model-with-reasoning",
   "context-remaining",

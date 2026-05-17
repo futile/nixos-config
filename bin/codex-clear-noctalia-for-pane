@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+pane="${1:?pane id required}"
+app_name="Codex pane ${pane}"
+
+noctalia_shell="${NOCTALIA_SHELL:-noctalia-shell}"
+
+"${noctalia_shell}" ipc call notifications getHistory |
+	jq -r --arg app_name "${app_name}" '
+		.[]?
+		| select(.appName == $app_name)
+		| .id
+	' |
+	while IFS= read -r notification_id; do
+		if [[ -n "${notification_id}" ]]; then
+			"${noctalia_shell}" ipc call notifications removeFromHistory "${notification_id}" >/dev/null
+		fi
+	done
