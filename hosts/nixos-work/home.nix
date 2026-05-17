@@ -79,7 +79,9 @@ in
 
   programs.keepassxc = {
     enable = true;
-    autostart = true;
+    # Keep this disabled so KeePassXC can manage its own XDG autostart entry
+    # through the in-app startup setting.
+    autostart = false;
   };
 
   my.gascity = {
