@@ -9,6 +9,7 @@
 let
   # swaylock but with fancy background-blurring effect
   swaylockPkg = pkgs.swaylock-effects;
+  sudoAskpassPkg = pkgs.lxqt.lxqt-openssh-askpass;
 in
 {
   xdg = {
@@ -31,6 +32,7 @@ in
       xwayland-satellite
       wlogout
       networkmanagerapplet
+      sudoAskpassPkg
 
       # wallpaper stuff
       mpvpaper
@@ -59,6 +61,8 @@ in
   home.sessionVariables = {
     # for discord etc.
     NIXOS_OZONE_WL = "1";
+
+    SUDO_ASKPASS = "${sudoAskpassPkg}/bin/lxqt-openssh-askpass";
   };
 
   # based on  https://yalter.github.io/niri/Example-systemd-Setup.html
