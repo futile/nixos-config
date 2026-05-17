@@ -41,6 +41,7 @@ let
     my-custom-packages = {
       agent-safehouse = final.callPackage ../custom-packages/agent-safehouse.nix { };
       gascity = final.callPackage ../custom-packages/gascity.nix { };
+      llm-wiki = final.callPackage ../custom-packages/llm-wiki.nix { };
       marker = final.callPackage ../custom-packages/marker.nix { };
       phinger-cursors-extended = final.callPackage ../custom-packages/phinger-cursors-extended.nix { };
     };

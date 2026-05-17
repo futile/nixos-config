@@ -263,6 +263,13 @@ in
     };
   };
 
+  my.rustSccache = {
+    enable = true;
+    customPackageNames = [
+      "llm-wiki"
+    ];
+  };
+
   # Since we run docker on an zfs partition
   virtualisation.docker.storageDriver = "zfs";
 

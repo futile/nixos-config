@@ -122,6 +122,9 @@
         # core stuff (overlays, nix config, flake registry, nix path, etc.)
         ./modules/core.nix
 
+        # opt-in Rust compiler caching for local source builds
+        ./modules/sccache.nix
+
         # `lib.my`
         ./modules/lib-my.nix
 
@@ -129,14 +132,34 @@
         ./cachix.nix
       ];
       system = "x86_64-linux";
+      pkgsForSystem = nixpkgs.legacyPackages.${system};
+      withRustSccache =
+        package:
+        if pkgsForSystem.stdenv.hostPlatform.isLinux then
+          package.overrideAttrs (oldAttrs: {
+            nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
+              pkgsForSystem.sccache
+            ];
+            env = (oldAttrs.env or { }) // {
+              RUSTC_WRAPPER = nixpkgs.lib.getExe pkgsForSystem.sccache;
+              SCCACHE_DIR = "/var/cache/ccache/sccache";
+            };
+            preBuild = ''
+              mkdir -p "$SCCACHE_DIR"
+            ''
+            + (oldAttrs.preBuild or "");
+          })
+        else
+          package;
     in
     {
       packages.${system} = {
         # these are here mostly for debugging, for actual use I base on the `nixpkgs`-instance of a configured system, see overlay in `core.nix`.
-        gascity = nixpkgs.legacyPackages.${system}.callPackage ./custom-packages/gascity.nix { };
-        marker = nixpkgs.legacyPackages.${system}.callPackage ./custom-packages/marker.nix { };
+        gascity = pkgsForSystem.callPackage ./custom-packages/gascity.nix { };
+        llm-wiki = withRustSccache (pkgsForSystem.callPackage ./custom-packages/llm-wiki.nix { });
+        marker = pkgsForSystem.callPackage ./custom-packages/marker.nix { };
         phinger-cursors-extended =
-          nixpkgs.legacyPackages.${system}.callPackage ./custom-packages/phinger-cursors-extended.nix
+          pkgsForSystem.callPackage ./custom-packages/phinger-cursors-extended.nix
             { };
       };
 
