@@ -30,6 +30,7 @@ summary="Codex turn complete"
 state_dir="${CODEX_NOCTALIA_STATE_DIR:-/tmp/codex-noctalia-${UID}}"
 map_file="${state_dir}/notifications.tsv"
 lock_file="${state_dir}/notifications.lock"
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 body="$(
 	jq -r '
 		."last-assistant-message"
@@ -43,6 +44,23 @@ body="$(
 
 mkdir -p -m 700 "${state_dir}"
 
+icon_variant="light"
+if command -v gsettings >/dev/null 2>&1; then
+	color_scheme="$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || true)"
+	if [[ "${color_scheme}" == *dark* ]]; then
+		icon_variant="dark"
+	fi
+elif [[ -r "${repo_root}/dotfiles/noctalia/nixos-work/settings.json" ]]; then
+	if jq -e '.colorSchemes.darkMode == true' "${repo_root}/dotfiles/noctalia/nixos-work/settings.json" >/dev/null 2>&1; then
+		icon_variant="dark"
+	fi
+fi
+
+app_icon="${repo_root}/dotfiles/codex/icons/codex-${icon_variant}.svg"
+if [[ ! -r "${app_icon}" ]]; then
+	app_icon=""
+fi
+
 notification_result="$(
 	gdbus call \
 	--session \
@@ -51,7 +69,7 @@ notification_result="$(
 	--method org.freedesktop.Notifications.Notify \
 	"${app_name}" \
 	0 \
-	"" \
+	"${app_icon}" \
 	"${summary}" \
 	"${body}" \
 	"['default', 'Open pane']" \

@@ -54,6 +54,13 @@ Thanks and shoutouts to good resources:
 Everything in this repo is licensed under CC0, see [LICENSE](LICENSE) for further information.
 Please let me know if you find anything that can't be licensed under CC0 in this repo.
 
+Third-party asset exception: the Codex notification icons in `dotfiles/codex/icons/`
+are derived from [Lobe Icons](https://github.com/lobehub/lobe-icons)
+`codex-color.svg` / <https://lobehub.com/icons/codex>, licensed under MIT
+(`Copyright (c) 2023 LobeHub`). See
+[`docs/codex-cli-wezterm-noctalia-notifications.md`](docs/codex-cli-wezterm-noctalia-notifications.md)
+for implementation notes and attribution details.
+
 ## Contributing
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, shall be licensed under CC0, without any additional terms or conditions.

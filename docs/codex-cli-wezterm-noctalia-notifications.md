@@ -17,6 +17,8 @@ The implemented files are:
 - `bin/codex-notify-noctalia`
 - `bin/codex-clear-noctalia-for-pane`
 - `bin/codex-noctalia-focus-watch`
+- `dotfiles/codex/icons/codex-light.svg`
+- `dotfiles/codex/icons/codex-dark.svg`
 - `dotfiles/codex/config.toml`
 - `home-modules/wezterm.nix`
 
@@ -53,7 +55,8 @@ The hook:
 5. Sends a freedesktop notification through `org.freedesktop.Notifications.Notify`.
 6. Sets the notification app name to `Codex pane <pane-id>`.
 7. Adds a default action, `['default', 'Open pane']`, so Noctalia left-clicks invoke an action instead of only focusing by app name.
-8. Stores a local mapping from freedesktop notification id to pane id in:
+8. Chooses a local Codex SVG icon based on the current light/dark preference.
+9. Stores a local mapping from freedesktop notification id to pane id in:
 
 ```text
 /tmp/codex-noctalia-$UID/notifications.tsv
@@ -66,6 +69,39 @@ notification_id  pane_id  unix_timestamp
 ```
 
 This file is runtime state only. It is used to translate a clicked notification back into the WezTerm pane that produced it.
+
+### Notification Icon
+
+The notification hook passes an absolute SVG path as the freedesktop notification `appIcon` argument. Noctalia accepts absolute paths in `NotificationService.getIcon()`, so this avoids relying on icon theme lookup or desktop entry metadata.
+
+The local icon files are:
+
+```text
+dotfiles/codex/icons/codex-light.svg
+dotfiles/codex/icons/codex-dark.svg
+```
+
+Both are circle/avatar-style SVGs derived from Lobe Icons' static color SVG asset:
+
+```text
+https://lobehub.com/icons/codex
+https://github.com/lobehub/lobe-icons
+https://unpkg.com/@lobehub/icons-static-svg@latest/icons/codex-color.svg
+```
+
+Lobe Icons documents the package as MIT licensed. The SVG package exposes variant types such as `codex.svg`, `codex-color.svg`, and `codex-text.svg`, but does not expose light/dark directories. Lobe's light/dark variants are available for PNG/WebP.
+
+Noctalia displays notification images in a rounded/circular slot. The LobeHub preview's rectangular app-tile variants are therefore a poor fit because their corners or edges may be clipped, similar to how rectangular app icons can be clipped in Noctalia. The local SVGs use a white circular background plus the Codex gradient glyph, matching the preview's avatar/circle shape more closely.
+
+The current light and dark SVG files intentionally have the same visible artwork. Keeping both filenames preserves the theme-selection structure if we later want subtly different light/dark artwork.
+
+The hook picks the icon variant like this:
+
+1. If `gsettings org.gnome.desktop.interface color-scheme` contains `dark`, use `codex-dark.svg`.
+2. Otherwise, if Noctalia's repo settings file has `.colorSchemes.darkMode == true`, use `codex-dark.svg`.
+3. Otherwise use `codex-light.svg`.
+
+The `gsettings` path is checked first because it reflects the active desktop color-scheme preference. The Noctalia settings file is only a fallback for environments where `gsettings` is unavailable.
 
 ### Watcher Service
 
@@ -484,6 +520,20 @@ cat "/tmp/codex-noctalia-$UID/notifications.tsv"
 
 The map is only needed for click activation. Noctalia history cleanup uses `appName = "Codex pane <pane-id>"`.
 
+Inspect the stored image path for tagged notifications:
+
+```sh
+noctalia-shell ipc call notifications getHistory |
+  jq -r '.[] | select(.appName | startswith("Codex pane ")) | [.appName, .originalImage, .cachedImage] | @tsv'
+```
+
+Expected `originalImage` is one of:
+
+```text
+/home/felix/nixos/dotfiles/codex/icons/codex-light.svg
+/home/felix/nixos/dotfiles/codex/icons/codex-dark.svg
+```
+
 ### Clear One Pane Manually
 
 Clear tagged history entries for pane `1`:
@@ -623,6 +673,47 @@ WEZTERM_PANE=1 bin/codex-notify-noctalia \
 
 Click the test notification and confirm it activates pane `1`.
 
+### Change The Notification Icon
+
+Edit the local SVGs under:
+
+```text
+dotfiles/codex/icons/
+```
+
+Then run:
+
+```sh
+bash -n bin/codex-notify-noctalia
+WEZTERM_PANE=1 bin/codex-notify-noctalia \
+  '{"type":"agent-turn-complete","last-assistant-message":"Icon test"}'
+```
+
+Inspect the saved image path:
+
+```sh
+noctalia-shell ipc call notifications getHistory |
+  jq -r '.[] | select(.appName == "Codex pane 1") | [.originalImage, .cachedImage] | @tsv'
+```
+
+If Noctalia shows its fallback bell icon, check:
+
+- the `originalImage` path exists and is readable;
+- the SVG renders in the current image stack;
+- `gsettings get org.gnome.desktop.interface color-scheme` returns the expected light/dark preference;
+- `dotfiles/noctalia/nixos-work/settings.json` has the expected fallback `.colorSchemes.darkMode` value.
+
+To use upstream light/dark assets without local SVG derivation, switch to PNG or WebP and use Lobe Icons' static light/dark package paths:
+
+```text
+https://unpkg.com/@lobehub/icons-static-png@latest/light/codex.png
+https://unpkg.com/@lobehub/icons-static-png@latest/dark/codex.png
+https://unpkg.com/@lobehub/icons-static-webp@latest/light/codex.webp
+https://unpkg.com/@lobehub/icons-static-webp@latest/dark/codex.webp
+```
+
+For this setup, SVG is preferred because it is local, small, and scales cleanly in Noctalia's notification UI.
+
 ### Change The Click Or Cleanup Behavior
 
 Edit `bin/codex-noctalia-focus-watch` or `bin/codex-clear-noctalia-for-pane`, then run:
@@ -666,6 +757,9 @@ The Home Manager module intentionally does not symlink the live file because Cod
 
 - Codex advanced notifications config: <https://developers.openai.com/codex/config-advanced>
 - Codex config reference for TUI notification keys: <https://developers.openai.com/codex/config-reference>
+- LobeHub Codex icon page: <https://lobehub.com/icons/codex>
+- Lobe Icons repository and license: <https://github.com/lobehub/lobe-icons>
+- Lobe Icons agent instructions: <https://lobehub.com/icons/skill.md>
 - WezTerm `notification_handling`: <https://wezterm.org/config/lua/config/notification_handling.html>
 - WezTerm `window-focus-changed`: <https://wezterm.org/config/lua/window-events/window-focus-changed.html>
 - WezTerm `pane:pane_id()`: <https://wezterm.org/config/lua/pane/pane_id.html>
