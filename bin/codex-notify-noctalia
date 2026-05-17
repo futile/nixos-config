@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Send pane-tagged Codex turn-complete notifications for Noctalia.
+# See docs/codex-cli-wezterm-noctalia-notifications.md for the full flow.
 set -euo pipefail
 
 payload="${1:-}"
@@ -42,7 +44,8 @@ body="$(
 		cut -c 1-800
 )"
 
-mkdir -p -m 700 "${state_dir}"
+mkdir -p "${state_dir}"
+chmod 700 "${state_dir}"
 
 icon_variant="light"
 if command -v gsettings >/dev/null 2>&1; then

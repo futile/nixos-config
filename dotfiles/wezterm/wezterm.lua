@@ -11,6 +11,13 @@ resurrect.state_manager.periodic_save({
 -- restore on startup
 wezterm.on("gui-startup", resurrect.state_manager.resurrect_on_gui_startup)
 
+local codex_noctalia_ok, codex_noctalia = pcall(dofile, "/home/felix/nixos/dotfiles/wezterm/codex-noctalia.lua")
+if codex_noctalia_ok and codex_noctalia and codex_noctalia.setup then
+	codex_noctalia.setup(wezterm)
+else
+	wezterm.log_error("failed to load codex-noctalia.lua: " .. tostring(codex_noctalia))
+end
+
 local hostname = wezterm.hostname()
 
 local default_prog = nil

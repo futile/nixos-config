@@ -24,7 +24,7 @@ let
           "/nix/var/nix/profiles/default"
         ];
       });
-  codexNoctaliaFocusWatch = "${thisFlakePath}/bin/codex-noctalia-focus-watch";
+  codexNoctaliaActionWatch = "${thisFlakePath}/bin/codex-noctalia-action-watch";
 in
 {
   # rolling wezterm by hand, as I don't like the upstream home-manager module
@@ -43,21 +43,23 @@ in
     # symlink directly to this repo, for easier iteration/changes
     configFile."wezterm/wezterm.lua".source =
       config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/wezterm/wezterm.lua";
+    configFile."wezterm/codex-noctalia.lua".source =
+      config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/wezterm/codex-noctalia.lua";
     configFile."wezterm/colors/embark.toml".source =
       flake-inputs.wezterm-embark + "/colors/embark.toml";
     configFile."wezterm/colors/lume.toml".source =
       flake-inputs.lume-theme + "/terminals/wezterm/lume.toml";
   };
 
-  systemd.user.services.codex-noctalia-focus-watch = pkgs.lib.mkIf pkgs.stdenv.isLinux {
+  systemd.user.services.codex-noctalia-action-watch = pkgs.lib.mkIf pkgs.stdenv.isLinux {
     Unit = {
-      Description = "Clear tagged Codex notifications when their WezTerm pane is focused";
+      Description = "Activate WezTerm panes from tagged Codex notification clicks";
       After = [ "graphical-session.target" ];
       PartOf = [ "graphical-session.target" ];
     };
 
     Service = {
-      ExecStart = "${pkgs.bash}/bin/bash ${codexNoctaliaFocusWatch}";
+      ExecStart = "${pkgs.bash}/bin/bash ${codexNoctaliaActionWatch}";
       Restart = "on-failure";
       RestartSec = "5s";
       Environment = "PATH=${

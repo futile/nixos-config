@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
+# Clear Noctalia notification history and local mappings for one WezTerm pane.
+# See docs/codex-cli-wezterm-noctalia-notifications.md for the full flow.
 set -euo pipefail
 
 pane="${1:?pane id required}"
 app_name="Codex pane ${pane}"
+state_dir="${CODEX_NOCTALIA_STATE_DIR:-/tmp/codex-noctalia-${UID}}"
+map_file="${state_dir}/notifications.tsv"
+lock_file="${state_dir}/notifications.lock"
 
 noctalia_shell="${NOCTALIA_SHELL:-noctalia-shell}"
+
+mkdir -p "${state_dir}"
+chmod 700 "${state_dir}"
 
 "${noctalia_shell}" ipc call notifications getHistory |
 	jq -r --arg app_name "${app_name}" '
@@ -17,3 +25,12 @@ noctalia_shell="${NOCTALIA_SHELL:-noctalia-shell}"
 			"${noctalia_shell}" ipc call notifications removeFromHistory "${notification_id}" >/dev/null
 		fi
 	done
+
+if [[ -f "${map_file}" ]]; then
+	(
+		flock 9
+		tmp_file="$(mktemp "${map_file}.XXXXXX")"
+		awk -v pane="${pane}" '$2 != pane' "${map_file}" >"${tmp_file}"
+		mv "${tmp_file}" "${map_file}"
+	) 9>"${lock_file}"
+fi

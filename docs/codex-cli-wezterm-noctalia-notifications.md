@@ -16,10 +16,11 @@ The implemented files are:
 
 - `bin/codex-notify-noctalia`
 - `bin/codex-clear-noctalia-for-pane`
-- `bin/codex-noctalia-focus-watch`
+- `bin/codex-noctalia-action-watch`
 - `dotfiles/codex/icons/codex-light.svg`
 - `dotfiles/codex/icons/codex-dark.svg`
 - `dotfiles/codex/config.toml`
+- `dotfiles/wezterm/codex-noctalia.lua`
 - `home-modules/wezterm.nix`
 
 Codex is configured with:
@@ -68,7 +69,9 @@ The mapping file has three tab-separated columns:
 notification_id  pane_id  unix_timestamp
 ```
 
-This file is runtime state only. It is used to translate a clicked notification back into the WezTerm pane that produced it.
+This file is runtime state only. It is used to translate a clicked notification back into the WezTerm pane that produced it. Mappings are removed when a pane's tagged notifications are cleared and after a click action is handled, so stale notification ids do not keep pointing at panes indefinitely.
+
+The pane id is WezTerm's internal `pane_id`, not the visible tab index. A notification labelled `Codex pane 3` can therefore correspond to a tab that appears in position 1 or 2 in the tab bar.
 
 ### Notification Icon
 
@@ -103,12 +106,37 @@ The hook picks the icon variant like this:
 
 The `gsettings` path is checked first because it reflects the active desktop color-scheme preference. The Noctalia settings file is only a fallback for environments where `gsettings` is unavailable.
 
-### Watcher Service
+### Focus Cleanup
 
-`bin/codex-noctalia-focus-watch` does two things:
+Focused-pane cleanup is handled inside WezTerm, not by a polling service. The top-level `dotfiles/wezterm/wezterm.lua` loads:
 
-1. It polls `wezterm cli list-clients --format json` every `0.5` seconds by default and clears Noctalia history for each focused pane.
-2. It runs `gdbus monitor` for `org.freedesktop.Notifications.ActionInvoked` signals and activates the mapped WezTerm pane when a tagged notification's `default` action is clicked.
+```lua
+local codex_noctalia_ok, codex_noctalia = pcall(dofile, "/home/felix/nixos/dotfiles/wezterm/codex-noctalia.lua")
+if codex_noctalia_ok and codex_noctalia and codex_noctalia.setup then
+  codex_noctalia.setup(wezterm)
+else
+  wezterm.log_error("failed to load codex-noctalia.lua: " .. tostring(codex_noctalia))
+end
+```
+
+`dotfiles/wezterm/codex-noctalia.lua` registers two WezTerm events:
+
+- `window-focus-changed`: clears notifications for the active pane when the WezTerm window regains focus.
+- `update-status`: tracks the active pane while the window is focused and clears notifications when the active pane id changes.
+
+Both paths call:
+
+```sh
+/home/felix/nixos/bin/codex-clear-noctalia-for-pane <pane-id>
+```
+
+This avoids the previous external polling loop. WezTerm owns pane focus, so it is the better place to notice pane focus changes.
+
+### Action Watcher Service
+
+Click-to-pane activation is still handled by a user service because WezTerm Lua does not provide a native D-Bus signal listener for notification action events.
+
+`bin/codex-noctalia-action-watch` runs `gdbus monitor` for `org.freedesktop.Notifications.ActionInvoked` signals and activates the mapped WezTerm pane when a tagged notification's `default` action is clicked.
 
 The click path is:
 
@@ -129,6 +157,14 @@ wezterm cli activate-pane --pane-id <pane-id>
 ```
 
 7. The watcher clears matching Noctalia history entries for that pane.
+
+The watcher logs each pane activation to its systemd journal:
+
+```text
+codex-noctalia-action-watch: notification <notification-id> activates pane <pane-id>
+```
+
+If a pane changes unexpectedly, check this log first. If there is no matching line, the pane change came from something other than the custom notification click watcher.
 
 ### Cleanup Path
 
@@ -151,6 +187,8 @@ appName == "Codex pane <pane-id>"
 ```
 
 This avoids touching unrelated WezTerm notifications and avoids clearing notifications from other Codex tabs.
+
+The cleanup script also removes local notification-id mappings for that pane from `/tmp/codex-noctalia-$UID/notifications.tsv`.
 
 ## Local Findings
 
@@ -580,7 +618,7 @@ Check shell syntax:
 
 ```sh
 bash -n bin/codex-clear-noctalia-for-pane
-bash -n bin/codex-noctalia-focus-watch
+bash -n bin/codex-noctalia-action-watch
 bash -n bin/codex-notify-noctalia
 ```
 
@@ -605,10 +643,10 @@ just check
 
 ## Service Operations
 
-The persistent service is declared in `home-modules/wezterm.nix`:
+The persistent action watcher service is declared in `home-modules/wezterm.nix`:
 
 ```text
-systemd.user.services.codex-noctalia-focus-watch
+systemd.user.services.codex-noctalia-action-watch
 ```
 
 It becomes persistent after a Home Manager switch. During development, it can also be started as a transient user service:
@@ -616,44 +654,56 @@ It becomes persistent after a Home Manager switch. During development, it can al
 ```sh
 systemd-run \
   --user \
-  --unit=codex-noctalia-focus-watch \
+  --unit=codex-noctalia-action-watch \
   --collect \
   --same-dir \
   --setenv=PATH=/etc/profiles/per-user/felix/bin:/run/current-system/sw/bin:/home/felix/.nix-profile/bin \
   /etc/profiles/per-user/felix/bin/bash \
-  /home/felix/nixos/bin/codex-noctalia-focus-watch
+  /home/felix/nixos/bin/codex-noctalia-action-watch
 ```
 
 Check whether it is active:
 
 ```sh
-systemctl --user is-active codex-noctalia-focus-watch.service
+systemctl --user is-active codex-noctalia-action-watch.service
 ```
 
 Inspect its process tree:
 
 ```sh
-systemctl --user status codex-noctalia-focus-watch.service --no-pager
+systemctl --user status codex-noctalia-action-watch.service --no-pager
 ```
 
-Expected child processes include the main Bash script, a `gdbus monitor` process, and short-lived `sleep`/helper commands.
+Expected child processes include the main Bash script and a `gdbus monitor` process.
 
 Restart after editing scripts:
 
 ```sh
-systemctl --user restart codex-noctalia-focus-watch.service
+systemctl --user restart codex-noctalia-action-watch.service
 ```
 
 Stop the transient or persistent service:
 
 ```sh
-systemctl --user stop codex-noctalia-focus-watch.service
+systemctl --user stop codex-noctalia-action-watch.service
 ```
 
 Read recent logs:
 
 ```sh
-journalctl --user -u codex-noctalia-focus-watch.service --since '10 minutes ago' --no-pager
+journalctl --user -u codex-noctalia-action-watch.service --since '10 minutes ago' --no-pager
+```
+
+Look for lines like:
+
+```text
+codex-noctalia-action-watch: notification 42 activates pane 3
+```
+
+The old development service name was `codex-noctalia-focus-watch.service`. If it exists as a stale transient unit, stop it:
+
+```sh
+systemctl --user stop codex-noctalia-focus-watch.service
 ```
 
 After editing `/home/felix/.codex/config.toml`, restart Codex before relying on the new configuration. Existing Codex sessions and subagents may keep the startup config they already loaded.
@@ -666,7 +716,7 @@ Edit `bin/codex-notify-noctalia`, then run:
 
 ```sh
 bash -n bin/codex-notify-noctalia
-systemctl --user restart codex-noctalia-focus-watch.service
+systemctl --user restart codex-noctalia-action-watch.service
 WEZTERM_PANE=1 bin/codex-notify-noctalia \
   '{"type":"agent-turn-complete","last-assistant-message":"Notification text test"}'
 ```
@@ -714,17 +764,27 @@ https://unpkg.com/@lobehub/icons-static-webp@latest/dark/codex.webp
 
 For this setup, SVG is preferred because it is local, small, and scales cleanly in Noctalia's notification UI.
 
-### Change The Click Or Cleanup Behavior
+### Change Click Behavior
 
-Edit `bin/codex-noctalia-focus-watch` or `bin/codex-clear-noctalia-for-pane`, then run:
+Edit `bin/codex-noctalia-action-watch`, then run:
 
 ```sh
-bash -n bin/codex-noctalia-focus-watch
-bash -n bin/codex-clear-noctalia-for-pane
-systemctl --user restart codex-noctalia-focus-watch.service
+bash -n bin/codex-noctalia-action-watch
+systemctl --user restart codex-noctalia-action-watch.service
 ```
 
 Then send a test notification and click it.
+
+### Change Focus Cleanup Behavior
+
+Edit `dotfiles/wezterm/codex-noctalia.lua` or `bin/codex-clear-noctalia-for-pane`, then run:
+
+```sh
+wezterm --config-file dotfiles/wezterm/wezterm.lua show-keys >/tmp/wezterm-config-check.txt
+bash -n bin/codex-clear-noctalia-for-pane
+```
+
+The WezTerm config is live-linked and auto-reloads, so keep edits small and validate immediately.
 
 ### Update The Home Manager Service
 
@@ -732,7 +792,7 @@ Edit `home-modules/wezterm.nix`, then run:
 
 ```sh
 just format-check
-nix eval .#nixosConfigurations.nixos-work.config.home-manager.users.felix.systemd.user.services.codex-noctalia-focus-watch.Service.Environment --json
+nix eval .#nixosConfigurations.nixos-work.config.home-manager.users.felix.systemd.user.services.codex-noctalia-action-watch.Service.Environment --json
 ```
 
 Use `just hm-switch` or `just switch` only when you are ready to apply the Home Manager/system changes in the working tree.
