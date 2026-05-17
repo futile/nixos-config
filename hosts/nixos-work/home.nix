@@ -146,6 +146,7 @@ in
           # misc
           # texlive.combined.scheme-full
           # zotero
+          my-custom-packages.llm-wiki
           # protonvpn-cli
 
           # hardware stuff
