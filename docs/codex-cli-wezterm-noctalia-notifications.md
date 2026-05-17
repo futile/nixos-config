@@ -156,12 +156,19 @@ org.freedesktop.Notifications.ActionInvoked (uint32 <notification-id>, 'default'
 wezterm cli activate-pane --pane-id <pane-id>
 ```
 
-7. The watcher clears matching Noctalia history entries for that pane.
+7. On Niri, the watcher finds the matching `org.wezfurlong.wezterm` compositor window and runs:
+
+```sh
+niri msg action focus-window --id <niri-window-id>
+```
+
+8. The watcher clears matching Noctalia history entries for that pane.
 
 The watcher logs each pane activation to its systemd journal:
 
 ```text
 codex-noctalia-action-watch: notification <notification-id> activates pane <pane-id>
+codex-noctalia-action-watch: focusing niri window <niri-window-id> for pane <pane-id>
 ```
 
 If a pane changes unexpectedly, check this log first. If there is no matching line, the pane change came from something other than the custom notification click watcher.

@@ -11,6 +11,48 @@ lock_file="${state_dir}/notifications.lock"
 mkdir -p "${state_dir}"
 chmod 700 "${state_dir}"
 
+focus_wezterm_window_for_pane() {
+	local pane="${1:?pane id required}"
+	local window_title
+	local niri_window_id
+
+	if ! command -v niri >/dev/null 2>&1; then
+		return 0
+	fi
+
+	window_title="$(
+		wezterm cli list --format json 2>/dev/null |
+			jq -r --arg pane "${pane}" '
+				.[]?
+				| select((.pane_id | tostring) == $pane)
+				| .window_title // .title // empty
+			' |
+			head -n 1
+	)" || window_title=""
+
+	if [[ -z "${window_title}" ]]; then
+		return 0
+	fi
+
+	niri_window_id="$(
+		niri msg -j windows 2>/dev/null |
+			jq -r --arg title "${window_title}" '
+				.[]?
+				| select(.app_id == "org.wezfurlong.wezterm")
+				| select(.title == $title or (.title | endswith($title)))
+				| .id
+			' |
+			head -n 1
+	)" || niri_window_id=""
+
+	if [[ ! "${niri_window_id}" =~ ^[0-9]+$ ]]; then
+		return 0
+	fi
+
+	printf 'codex-noctalia-action-watch: focusing niri window %s for pane %s\n' "${niri_window_id}" "${pane}" >&2
+	niri msg action focus-window --id "${niri_window_id}" >/dev/null 2>&1 || true
+}
+
 activate_pane_for_notification() {
 	local notification_id="${1:?notification id required}"
 	local pane
@@ -22,6 +64,7 @@ activate_pane_for_notification() {
 
 	printf 'codex-noctalia-action-watch: notification %s activates pane %s\n' "${notification_id}" "${pane}" >&2
 	wezterm cli activate-pane --pane-id "${pane}" >/dev/null 2>&1 || true
+	focus_wezterm_window_for_pane "${pane}"
 	"${script_dir}/codex-clear-noctalia-for-pane" "${pane}" || true
 }
 
