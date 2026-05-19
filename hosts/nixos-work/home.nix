@@ -3,6 +3,7 @@
   pkgs,
   flake-inputs,
   thisFlakePath,
+  system,
   ...
 }:
 let
@@ -161,7 +162,9 @@ in
         (with pkgs.master; [ ])
       ++
         # packages from other nixpkgs branches
-        [ ];
+        [
+          flake-inputs.nix-alien.packages.${system}.nix-alien
+        ];
 
     # use locally-built `marker` if available
     sessionPath = [ "$HOME/gits/Marker/src-tauri/target/release" ];

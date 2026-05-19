@@ -261,6 +261,9 @@ in
         "linux" # build our kernel with ccache, as we have crashdump enabled, which requires compiling it ourselves
       ];
     };
+
+    # think it's nice together with nix-alien
+    nix-ld.enable = true;
   };
 
   my.rustSccache = {
