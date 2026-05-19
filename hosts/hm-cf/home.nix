@@ -351,7 +351,24 @@ in
     safe-opencode = {
       body = ''
         set -lx OPENCODE_PERMISSION '{"*":"allow"}'
-        safe opencode $argv
+
+        if test -x "$HOME/.git-ai/bin/git-ai"; \
+            and not "$HOME/.git-ai/bin/git-ai" bg status >/dev/null 2>&1; \
+            and test -e "$HOME/.git-ai/internal/daemon/daemon.lock"; \
+            and not test -S "$HOME/.git-ai/internal/daemon/control.sock"
+          rm "$HOME/.git-ai/internal/daemon/daemon.lock"
+        end
+
+        safe \
+          --add-dirs=(string join : \
+            "$HOME/.local/share/opencode" \
+            "$HOME/.cache/opencode" \
+            "$HOME/.config/opencode" \
+            "$HOME/.local/state/opencode" \
+            "$HOME/.git-ai/internal" \
+            "$TMPDIR/opencode") \
+          opencode \
+          $argv
       '';
     };
 

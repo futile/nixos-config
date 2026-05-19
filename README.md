@@ -35,6 +35,10 @@ Brave — permissions that macOS otherwise resets after Nix package updates. The
 profile only needs to be installed once; it survives all future updates. See
 [AGENTS.md](AGENTS.md) for full details.
 
+The `hm-cf` OpenCode setup runs through Agent Safehouse with scoped writable
+runtime paths. See
+[`docs/safehouse-opencode.md`](docs/safehouse-opencode.md) for details.
+
 ## Setting Up a New Host
 
 Instructions for setting up a new host can be found [here](new-system-installation.md).
