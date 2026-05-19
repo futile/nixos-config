@@ -24,7 +24,8 @@ commands can use the same baseline sandbox without OpenCode-specific writable
 paths.
 
 `safe-opencode` is the OpenCode-specific wrapper. It sets OpenCode's internal
-permission mode and grants write access to only OpenCode's runtime directories:
+permission mode, enables clipboard access, and grants write access to only
+OpenCode's runtime directories:
 
 ```fish
 set -lx OPENCODE_PERMISSION '{"*":"allow"}'
@@ -36,13 +37,16 @@ if test -x "$HOME/.git-ai/bin/git-ai"; \
   rm "$HOME/.git-ai/internal/daemon/daemon.lock"
 end
 
-safe \
+safehouse \
+  --env \
+  --enable=wide-read,ssh,shell-init,clipboard \
   --add-dirs=(string join : \
-    "$HOME/.local/share/opencode" \
+    "$HOME/.local" \
     "$HOME/.cache" \
     "$HOME/.config/opencode" \
-    "$HOME/.local/state/opencode" \
     "$HOME/.git-ai/internal" \
+    "$HOME/repos" \
+    "$HOME/nixos" \
     "$TMPDIR/opencode") \
   opencode \
   $argv
@@ -52,6 +56,11 @@ safe \
 server is authenticated, runs `opencode mcp auth cf-portal` only when needed,
 logs in to `https://opencode.cloudflare.dev`, and then delegates the session to
 `safe-opencode`.
+
+`safe-opencode` calls `safehouse` directly instead of delegating to `safe`
+because Safehouse `--enable` flags are not cumulative when repeated. The generic
+`safe` wrapper intentionally does not include `clipboard`; clipboard access is
+only granted to OpenCode sessions.
 
 ## Writable Paths
 
@@ -76,11 +85,12 @@ less common in technical usage.
 The wrapper grants these parent directories instead of every child path:
 
 ```text
-/Users/frath/.local/share/opencode
+/Users/frath/.local
 /Users/frath/.cache
 /Users/frath/.config/opencode
-/Users/frath/.local/state/opencode
 /Users/frath/.git-ai/internal
+/Users/frath/repos
+/Users/frath/nixos
 $TMPDIR/opencode
 ```
 
@@ -88,13 +98,13 @@ Those parent grants cover the child paths OpenCode reports:
 
 | OpenCode path | Covered by |
 |---|---|
-| `data` | `~/.local/share/opencode` |
-| `log` | `~/.local/share/opencode` |
-| `repos` | `~/.local/share/opencode` |
+| `data` | `~/.local` |
+| `log` | `~/.local` |
+| `repos` | `~/.local` |
 | `cache` | `~/.cache` |
 | `bin` | `~/.cache` |
 | `config` | `~/.config/opencode` |
-| `state` | `~/.local/state/opencode` |
+| `state` | `~/.local` |
 | `tmp` | `$TMPDIR/opencode` |
 
 The `~/.git-ai/internal` grant is for OpenCode's `git-ai` plugin. The plugin
@@ -102,6 +112,10 @@ runs `/Users/frath/.git-ai/bin/git-ai checkpoint opencode --hook-input stdin`
 around editing tools, and `git-ai` writes daemon locks, sockets, logs, and
 SQLite state under `~/.git-ai/internal`. The rest of `~/.git-ai` stays read-only:
 OpenCode only needs to execute the installed binary and mutate runtime state.
+
+The `~/repos` and `~/nixos` grants intentionally allow OpenCode to edit source
+trees outside the current working directory while keeping the rest of `$HOME`
+read-only unless another grant permits it.
 
 Before entering Safehouse, `safe-opencode` also removes a stale
 `~/.git-ai/internal/daemon/daemon.lock` only when `git-ai bg status` fails and no

@@ -359,13 +359,16 @@ in
           rm "$HOME/.git-ai/internal/daemon/daemon.lock"
         end
 
-        safe \
+        safehouse \
+          --env \
+          --enable=wide-read,ssh,shell-init,clipboard \
           --add-dirs=(string join : \
-            "$HOME/.local/share/opencode" \
+            "$HOME/.local" \
             "$HOME/.cache" \
             "$HOME/.config/opencode" \
-            "$HOME/.local/state/opencode" \
             "$HOME/.git-ai/internal" \
+            "$HOME/repos" \
+            "$HOME/nixos" \
             "$TMPDIR/opencode") \
           opencode \
           $argv
