@@ -51,9 +51,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/q95hrhjnsk49f6h70p0hym0a3pk73v9q-opencode-1.14.35"
+        "/nix/store/js2z13p2d8ym7j3x6dx58vdkk2z36bpa-opencode-1.14.48"
       ],
-      "url": "github:NixOS/nixpkgs/b3da656039dc7a6240f27b2ef8cc6a3ef3bccae7?narHash=sha256-I4puXmX1iovcCHZlRmztO3vW0mAbbRvq4F8wgIMQ1MM%3D"
+      "url": "github:NixOS/nixpkgs/d233902339c02a9c334e7e593de68855ad26c4cb?narHash=sha256-30sZNZoA1cqF5JNO9fVX%2BwgiQYjB7HJqqJ4ztCDeBZE%3D"
     },
     "parallel": {
       "active": true,
