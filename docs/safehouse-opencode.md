@@ -39,7 +39,7 @@ end
 safe \
   --add-dirs=(string join : \
     "$HOME/.local/share/opencode" \
-    "$HOME/.cache/opencode" \
+    "$HOME/.cache" \
     "$HOME/.config/opencode" \
     "$HOME/.local/state/opencode" \
     "$HOME/.git-ai/internal" \
@@ -77,7 +77,7 @@ The wrapper grants these parent directories instead of every child path:
 
 ```text
 /Users/frath/.local/share/opencode
-/Users/frath/.cache/opencode
+/Users/frath/.cache
 /Users/frath/.config/opencode
 /Users/frath/.local/state/opencode
 /Users/frath/.git-ai/internal
@@ -91,8 +91,8 @@ Those parent grants cover the child paths OpenCode reports:
 | `data` | `~/.local/share/opencode` |
 | `log` | `~/.local/share/opencode` |
 | `repos` | `~/.local/share/opencode` |
-| `cache` | `~/.cache/opencode` |
-| `bin` | `~/.cache/opencode` |
+| `cache` | `~/.cache` |
+| `bin` | `~/.cache` |
 | `config` | `~/.config/opencode` |
 | `state` | `~/.local/state/opencode` |
 | `tmp` | `$TMPDIR/opencode` |

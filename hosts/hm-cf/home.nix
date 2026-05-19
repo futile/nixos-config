@@ -362,7 +362,7 @@ in
         safe \
           --add-dirs=(string join : \
             "$HOME/.local/share/opencode" \
-            "$HOME/.cache/opencode" \
+            "$HOME/.cache" \
             "$HOME/.config/opencode" \
             "$HOME/.local/state/opencode" \
             "$HOME/.git-ai/internal" \
