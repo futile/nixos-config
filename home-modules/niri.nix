@@ -31,6 +31,7 @@ in
       brightnessctl
       xwayland-satellite
       wlogout
+      wl-clipboard
       networkmanagerapplet
       sudoAskpassPkg
 
@@ -90,7 +91,4 @@ in
         "lock" = "${swaylockCmd}";
       };
     };
-
-  # somewhat buggy with non-hyprland DE, i.e., gnome
-  # home.packages = [ pkgs.wl-clipboard ];
 }
