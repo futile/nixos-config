@@ -18,9 +18,49 @@ if [[ -z "${pane}" ]]; then
 	exit 0
 fi
 
+default_state_dir="${XDG_RUNTIME_DIR:-}"
+if [[ -n "${default_state_dir}" ]]; then
+	default_state_dir="${default_state_dir}/codex-noctalia"
+else
+	default_state_dir="/tmp/codex-noctalia-${UID}"
+fi
+fallback_state_dir="/tmp/codex-noctalia-${UID}"
+
+state_dir="${CODEX_NOCTALIA_STATE_DIR:-${default_state_dir}}"
+ready_dir="${state_dir}/ready-panes"
+map_file="${state_dir}/notifications.tsv"
+lock_file="${state_dir}/notifications.lock"
+
+prepare_state_dir() {
+	local candidate="${1:?state dir required}"
+
+	mkdir -p "${candidate}" "${candidate}/ready-panes" 2>/dev/null &&
+		chmod 700 "${candidate}" 2>/dev/null &&
+		touch "${candidate}/.write-test" 2>/dev/null &&
+		rm -f "${candidate}/.write-test" 2>/dev/null
+}
+
 focused_panes="$(
-	wezterm cli list-clients --format json 2>/dev/null |
-		jq -r '.[].focused_pane_id // empty' 2>/dev/null
+	clients_json="$(wezterm cli list-clients --format json 2>/dev/null)" || exit 0
+
+	if command -v niri >/dev/null 2>&1 && focused_window_json="$(niri msg -j focused-window 2>/dev/null)"; then
+		focused_wezterm_pid="$(
+			jq -r '
+				select(.app_id == "org.wezfurlong.wezterm")
+				| .pid // empty
+			' <<<"${focused_window_json}" 2>/dev/null
+		)"
+
+		if [[ "${focused_wezterm_pid}" =~ ^[0-9]+$ ]]; then
+			jq -r --argjson pid "${focused_wezterm_pid}" '
+				.[]?
+				| select(.pid == $pid)
+				| .focused_pane_id // empty
+			' <<<"${clients_json}" 2>/dev/null
+		fi
+	else
+		jq -r '.[].focused_pane_id // empty' <<<"${clients_json}" 2>/dev/null
+	fi
 )" || focused_panes=""
 
 if grep -qxF "${pane}" <<<"${focused_panes}"; then
@@ -29,23 +69,38 @@ fi
 
 app_name="Codex pane ${pane}"
 summary="Codex turn complete"
-state_dir="${CODEX_NOCTALIA_STATE_DIR:-/tmp/codex-noctalia-${UID}}"
-map_file="${state_dir}/notifications.tsv"
-lock_file="${state_dir}/notifications.lock"
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 body="$(
-	jq -r '
-		."last-assistant-message"
-		// (."input-messages" | if type == "array" then .[-1] else empty end)
-		// "Codex turn complete"
-	' <<<"${payload}" |
+	wezterm cli list --format json 2>/dev/null |
+		jq -r --arg pane "${pane}" '
+			.[]?
+			| select((.pane_id | tostring) == $pane)
+			| [
+				.tab_title,
+				.title,
+				(.cwd? // "" | split("/") | last)
+			]
+			| map(select(type == "string" and length > 0))
+			| .[0] // empty
+		' |
+		head -n 1 |
 		tr '\n' ' ' |
 		sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//' |
-		cut -c 1-800
-)"
+		cut -c 1-120
+)" || body=""
+if [[ -z "${body}" ]]; then
+	body="Ready"
+fi
 
-mkdir -p "${state_dir}"
-chmod 700 "${state_dir}"
+if ! prepare_state_dir "${state_dir}"; then
+	state_dir="${fallback_state_dir}"
+	ready_dir="${state_dir}/ready-panes"
+	map_file="${state_dir}/notifications.tsv"
+	lock_file="${state_dir}/notifications.lock"
+	prepare_state_dir "${state_dir}" || exit 1
+fi
+
+touch "${ready_dir}/${pane}"
 
 icon_variant="light"
 if command -v gsettings >/dev/null 2>&1; then

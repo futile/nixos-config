@@ -5,14 +5,54 @@ set -euo pipefail
 
 pane="${1:?pane id required}"
 app_name="Codex pane ${pane}"
-state_dir="${CODEX_NOCTALIA_STATE_DIR:-/tmp/codex-noctalia-${UID}}"
-map_file="${state_dir}/notifications.tsv"
-lock_file="${state_dir}/notifications.lock"
+default_state_dir="${XDG_RUNTIME_DIR:-}"
+if [[ -n "${default_state_dir}" ]]; then
+	default_state_dir="${default_state_dir}/codex-noctalia"
+else
+	default_state_dir="/tmp/codex-noctalia-${UID}"
+fi
+
+state_dir="${CODEX_NOCTALIA_STATE_DIR:-${default_state_dir}}"
+fallback_state_dir="/tmp/codex-noctalia-${UID}"
 
 noctalia_shell="${NOCTALIA_SHELL:-noctalia-shell}"
 
-mkdir -p "${state_dir}"
-chmod 700 "${state_dir}"
+state_dirs=("${state_dir}")
+if [[ "${state_dir}" != "${fallback_state_dir}" ]]; then
+	state_dirs+=("${fallback_state_dir}")
+fi
+
+close_notification() {
+	local notification_id="${1:?notification id required}"
+
+	if [[ ! "${notification_id}" =~ ^[0-9]+$ ]]; then
+		return 0
+	fi
+
+	gdbus call \
+		--session \
+		--dest org.freedesktop.Notifications \
+		--object-path /org/freedesktop/Notifications \
+		--method org.freedesktop.Notifications.CloseNotification \
+		"${notification_id}" >/dev/null 2>&1 || true
+}
+
+for candidate_state_dir in "${state_dirs[@]}"; do
+	mkdir -p "${candidate_state_dir}" 2>/dev/null || true
+	chmod 700 "${candidate_state_dir}" 2>/dev/null || true
+	rm -f "${candidate_state_dir}/ready-panes/${pane}"
+done
+
+for candidate_state_dir in "${state_dirs[@]}"; do
+	map_file="${candidate_state_dir}/notifications.tsv"
+
+	if [[ -f "${map_file}" ]]; then
+		awk -v pane="${pane}" '$2 == pane { print $1 }' "${map_file}" |
+			while IFS= read -r notification_id; do
+				close_notification "${notification_id}"
+			done
+	fi
+done
 
 "${noctalia_shell}" ipc call notifications getHistory |
 	jq -r --arg app_name "${app_name}" '
@@ -22,15 +62,21 @@ chmod 700 "${state_dir}"
 	' |
 	while IFS= read -r notification_id; do
 		if [[ -n "${notification_id}" ]]; then
+			close_notification "${notification_id}"
 			"${noctalia_shell}" ipc call notifications removeFromHistory "${notification_id}" >/dev/null
 		fi
 	done
 
-if [[ -f "${map_file}" ]]; then
-	(
-		flock 9
-		tmp_file="$(mktemp "${map_file}.XXXXXX")"
-		awk -v pane="${pane}" '$2 != pane' "${map_file}" >"${tmp_file}"
-		mv "${tmp_file}" "${map_file}"
-	) 9>"${lock_file}"
-fi
+for candidate_state_dir in "${state_dirs[@]}"; do
+	map_file="${candidate_state_dir}/notifications.tsv"
+	lock_file="${candidate_state_dir}/notifications.lock"
+
+	if [[ -f "${map_file}" ]]; then
+		(
+			flock 9
+			tmp_file="$(mktemp "${map_file}.XXXXXX")"
+			awk -v pane="${pane}" '$2 != pane' "${map_file}" >"${tmp_file}"
+			mv "${tmp_file}" "${map_file}"
+		) 9>"${lock_file}"
+	fi
+done

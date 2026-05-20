@@ -52,16 +52,25 @@ The hook:
 1. Reads the Codex JSON payload.
 2. Ignores events whose `.type` is not `agent-turn-complete`.
 3. Reads the originating WezTerm pane id from `WEZTERM_PANE`.
-4. Skips notification creation if that pane is already focused according to `wezterm cli list-clients --format json`.
+4. Skips notification creation if that pane is selected in the currently focused WezTerm window. On Niri, this combines `wezterm cli list-clients --format json` with `niri msg -j focused-window`; outside Niri it falls back to WezTerm's selected pane.
 5. Sends a freedesktop notification through `org.freedesktop.Notifications.Notify`.
 6. Sets the notification app name to `Codex pane <pane-id>`.
-7. Adds a default action, `['default', 'Open pane']`, so Noctalia left-clicks invoke an action instead of only focusing by app name.
-8. Chooses a local Codex SVG icon based on the current light/dark preference.
-9. Stores a local mapping from freedesktop notification id to pane id in:
+7. Sets the notification body to a short pane label from WezTerm metadata: explicit tab title, active pane title, current directory basename, or `Ready`.
+8. Adds a default action, `['default', 'Open pane']`, so Noctalia left-clicks invoke an action instead of only focusing by app name.
+9. Chooses a local Codex SVG icon based on the current light/dark preference.
+10. Marks the pane as ready for the WezTerm tab bar in:
 
 ```text
-/tmp/codex-noctalia-$UID/notifications.tsv
+$XDG_RUNTIME_DIR/codex-noctalia/ready-panes/<pane-id>
 ```
+
+11. Stores a local mapping from freedesktop notification id to pane id in:
+
+```text
+$XDG_RUNTIME_DIR/codex-noctalia/notifications.tsv
+```
+
+If `XDG_RUNTIME_DIR` is unset or the Codex sandbox cannot write there, the notify hook falls back to `/tmp/codex-noctalia-$UID`. WezTerm and the action watcher check both locations so sandboxed Codex hooks and unsandboxed GUI processes stay in sync.
 
 The mapping file has three tab-separated columns:
 
@@ -70,6 +79,8 @@ notification_id  pane_id  unix_timestamp
 ```
 
 This file is runtime state only. It is used to translate a clicked notification back into the WezTerm pane that produced it. Mappings are removed when a pane's tagged notifications are cleared and after a click action is handled, so stale notification ids do not keep pointing at panes indefinitely.
+
+The ready-pane marker is also runtime state only. It is represented as one file per pane rather than a shared TSV file, so concurrent Codex hook invocations do not need to append to or rewrite one shared readiness file. The marker is idempotent: creating it means "this pane has a completed Codex turn that has not been selected yet"; removing it means "this pane has been seen."
 
 The pane id is WezTerm's internal `pane_id`, not the visible tab index. A notification labelled `Codex pane 3` can therefore correspond to a tab that appears in position 1 or 2 in the tab bar.
 
@@ -119,12 +130,13 @@ else
 end
 ```
 
-`dotfiles/wezterm/codex-noctalia.lua` registers two WezTerm events:
+`dotfiles/wezterm/codex-noctalia.lua` registers three WezTerm events:
 
 - `window-focus-changed`: clears notifications for the active pane when the WezTerm window regains focus.
 - `update-status`: tracks the active pane while the window is focused and clears notifications when the active pane id changes.
+- `format-tab-title`: adds a `●` marker to inactive tabs whose active pane has a ready marker.
 
-Both paths call:
+The cleanup paths call:
 
 ```sh
 /home/felix/nixos/bin/codex-clear-noctalia-for-pane <pane-id>
@@ -149,7 +161,7 @@ org.freedesktop.Notifications.ActionInvoked (uint32 <notification-id>, 'default'
 ```
 
 4. The watcher sees the signal.
-5. The watcher looks up `<notification-id>` in `/tmp/codex-noctalia-$UID/notifications.tsv`.
+5. The watcher looks up `<notification-id>` in `$XDG_RUNTIME_DIR/codex-noctalia/notifications.tsv` and `/tmp/codex-noctalia-$UID/notifications.tsv`.
 6. The watcher runs:
 
 ```sh
@@ -175,7 +187,7 @@ If a pane changes unexpectedly, check this log first. If there is no matching li
 
 ### Cleanup Path
 
-`bin/codex-clear-noctalia-for-pane` removes Noctalia history entries for one pane:
+`bin/codex-clear-noctalia-for-pane` closes active popup notifications and removes Noctalia history entries for one pane:
 
 ```sh
 bin/codex-clear-noctalia-for-pane 1
@@ -193,9 +205,9 @@ and removes entries where:
 appName == "Codex pane <pane-id>"
 ```
 
-This avoids touching unrelated WezTerm notifications and avoids clearing notifications from other Codex tabs.
+For notification ids recorded in the local pane map, it first calls `org.freedesktop.Notifications.CloseNotification` so any currently visible popup disappears immediately instead of waiting for its timeout. This avoids touching unrelated WezTerm notifications and avoids clearing notifications from other Codex tabs.
 
-The cleanup script also removes local notification-id mappings for that pane from `/tmp/codex-noctalia-$UID/notifications.tsv`.
+The cleanup script also removes local notification-id mappings and ready markers for that pane from both `$XDG_RUNTIME_DIR/codex-noctalia` and `/tmp/codex-noctalia-$UID`.
 
 ## Local Findings
 
@@ -560,7 +572,9 @@ noctalia-shell ipc call notifications getHistory |
 Check the notification-id to pane-id map:
 
 ```sh
-cat "/tmp/codex-noctalia-$UID/notifications.tsv"
+state_dir="${CODEX_NOCTALIA_STATE_DIR:-${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/codex-noctalia}}"
+state_dir="${state_dir:-/tmp/codex-noctalia-$UID}"
+cat "$state_dir/notifications.tsv"
 ```
 
 The map is only needed for click activation. Noctalia history cleanup uses `appName = "Codex pane <pane-id>"`.

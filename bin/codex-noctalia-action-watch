@@ -4,12 +4,25 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-state_dir="${CODEX_NOCTALIA_STATE_DIR:-/tmp/codex-noctalia-${UID}}"
-map_file="${state_dir}/notifications.tsv"
-lock_file="${state_dir}/notifications.lock"
+default_state_dir="${XDG_RUNTIME_DIR:-}"
+if [[ -n "${default_state_dir}" ]]; then
+	default_state_dir="${default_state_dir}/codex-noctalia"
+else
+	default_state_dir="/tmp/codex-noctalia-${UID}"
+fi
 
-mkdir -p "${state_dir}"
-chmod 700 "${state_dir}"
+state_dir="${CODEX_NOCTALIA_STATE_DIR:-${default_state_dir}}"
+fallback_state_dir="/tmp/codex-noctalia-${UID}"
+
+state_dirs=("${state_dir}")
+if [[ "${state_dir}" != "${fallback_state_dir}" ]]; then
+	state_dirs+=("${fallback_state_dir}")
+fi
+
+for candidate_state_dir in "${state_dirs[@]}"; do
+	mkdir -p "${candidate_state_dir}" 2>/dev/null || true
+	chmod 700 "${candidate_state_dir}" 2>/dev/null || true
+done
 
 focus_wezterm_window_for_pane() {
 	local pane="${1:?pane id required}"
@@ -57,7 +70,13 @@ activate_pane_for_notification() {
 	local notification_id="${1:?notification id required}"
 	local pane
 
-	pane="$(awk -v id="${notification_id}" '$1 == id { pane = $2 } END { print pane }' "${map_file}" 2>/dev/null || true)"
+	for candidate_state_dir in "${state_dirs[@]}"; do
+		pane="$(awk -v id="${notification_id}" '$1 == id { pane = $2 } END { print pane }' "${candidate_state_dir}/notifications.tsv" 2>/dev/null || true)"
+		if [[ "${pane}" =~ ^[0-9]+$ ]]; then
+			break
+		fi
+	done
+
 	if [[ ! "${pane}" =~ ^[0-9]+$ ]]; then
 		return 0
 	fi
@@ -71,16 +90,21 @@ activate_pane_for_notification() {
 remove_notification_mapping() {
 	local notification_id="${1:?notification id required}"
 
-	if [[ ! -f "${map_file}" ]]; then
-		return 0
-	fi
+	for candidate_state_dir in "${state_dirs[@]}"; do
+		map_file="${candidate_state_dir}/notifications.tsv"
+		lock_file="${candidate_state_dir}/notifications.lock"
 
-	(
-		flock 9
-		tmp_file="$(mktemp "${map_file}.XXXXXX")"
-		awk -v id="${notification_id}" '$1 != id' "${map_file}" >"${tmp_file}"
-		mv "${tmp_file}" "${map_file}"
-	) 9>"${lock_file}"
+		if [[ ! -f "${map_file}" ]]; then
+			continue
+		fi
+
+		(
+			flock 9
+			tmp_file="$(mktemp "${map_file}.XXXXXX")"
+			awk -v id="${notification_id}" '$1 != id' "${map_file}" >"${tmp_file}"
+			mv "${tmp_file}" "${map_file}"
+		) 9>"${lock_file}"
+	done
 }
 
 while true; do
