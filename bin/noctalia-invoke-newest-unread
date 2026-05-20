@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Invoke the newest unread Noctalia notification default action.
+set -euo pipefail
+
+noctalia_shell="${NOCTALIA_SHELL:-noctalia-shell}"
+cache_home="${XDG_CACHE_HOME:-${HOME}/.cache}"
+history_file="${NOCTALIA_HISTORY_FILE:-${cache_home}/noctalia/notifications.json}"
+
+state_json="$("${noctalia_shell}" ipc call state all 2>/dev/null || true)"
+if [[ -z "${state_json}" ]]; then
+	exit 0
+fi
+
+last_seen="$(
+	jq -r '.state.notificationsState.lastSeenTs // 0' <<<"${state_json}" 2>/dev/null || true
+)"
+if [[ ! "${last_seen}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+	last_seen=0
+fi
+
+history_json="$("${noctalia_shell}" ipc call notifications getHistory 2>/dev/null || true)"
+if [[ -z "${history_json}" ]]; then
+	exit 0
+fi
+
+actions_json="[]"
+if [[ -r "${history_file}" ]]; then
+	actions_json="$(jq -c '.notifications // []' "${history_file}" 2>/dev/null || printf '[]')"
+fi
+
+mapfile -t unread_ids < <(
+	jq -r --argjson last_seen "${last_seen}" '
+		sort_by(.timestamp // 0)
+		| reverse
+		| .[]?
+		| select((.timestamp // 0) > $last_seen)
+		| .id // empty
+	' <<<"${history_json}" 2>/dev/null
+)
+
+has_default_action() {
+	local notification_id="${1:?notification id required}"
+	jq -r --arg id "${notification_id}" '
+			(map(select(.id == $id)) | first) as $item
+			| if $item == null then
+				"unknown"
+			else
+				($item.actionsJson // "[]"
+					| fromjson? // []
+					| map(.identifier)
+					| if index("default") then "yes" else "no" end)
+			end
+		' <<<"${actions_json}" 2>/dev/null || printf 'unknown'
+}
+
+invoke_default() {
+	local notification_id="${1:?notification id required}"
+	local result
+
+	result="$(
+		"${noctalia_shell}" ipc call notifications invokeAction "${notification_id}" default 2>/dev/null || true
+	)"
+
+	grep -qx 'true' <<<"${result}"
+}
+
+for notification_id in "${unread_ids[@]}"; do
+	action_state=""
+	if [[ -z "${notification_id}" ]]; then
+		continue
+	fi
+
+	action_state="$(has_default_action "${notification_id}")"
+	case "${action_state}" in
+		yes) ;;
+		no) continue ;;
+		*) exit 0 ;;
+	esac
+
+	if invoke_default "${notification_id}"; then
+		"${noctalia_shell}" ipc call notifications removeFromHistory "${notification_id}" >/dev/null 2>&1 || true
+		exit 0
+	fi
+done

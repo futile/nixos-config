@@ -421,6 +421,7 @@ binds {
     Mod+T hotkey-overlay-title="Open a Terminal: wezterm" { spawn "wezterm"; }
     // Mod+D hotkey-overlay-title="Run an Application: rofi" { spawn "rofi" "-show" "combi" "-combi-modes" "run,games" "-modes" "combi" "-theme" "material"; }
     Mod+Space { spawn-sh "noctalia-shell ipc call launcher toggle"; }
+    F6 { spawn "/home/felix/nixos/bin/noctalia-invoke-newest-unread"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock" "--screenshot" "--effect-blur" "4x4" "--show-failed-attempts" "--show-keyboard-layout" "--ignore-empty-password"; }
 
     // figured this one out using `wev`
