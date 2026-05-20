@@ -382,7 +382,7 @@ in
         # unless cf-portal actually needs fresh OAuth credentials.
         set -l cf_portal_auth_status (opencode mcp auth list | string collect | string replace -ar '\e\[[0-9;]*m' "")
 
-        if not string match -q "*cf-portal*authenticated*" -- $cf_portal_auth_status
+        if string match -q "*cf-portal*not*authenticated*" -- $cf_portal_auth_status
           opencode mcp auth cf-portal
           or return $status
         end
