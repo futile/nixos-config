@@ -390,6 +390,16 @@ The hook receives one JSON argument. Documented common fields include:
 
 As of the checked docs, `notify` is documented as supporting `agent-turn-complete`. Built-in TUI notifications support more TUI events, including `approval-requested`; observed Noctalia entries also included `Plan mode prompt: ...` summaries from Codex.
 
+#### Codex 0.133.0 lifecycle findings
+
+Codex 0.133.0 added more extension lifecycle surfaces, including subagent start/stop, tool execution, turn metadata, async approval review, and async turn-item processing. This does not appear to expand the top-level `notify` hook: the public docs still say `notify` only supports `agent-turn-complete`.
+
+What is additionally practical for this setup:
+
+- `plan-mode-prompt` can be added to `[tui].notifications` if plan prompts should use the existing WezTerm/OSC path.
+- Pane-tagged approval notifications should use Codex `PermissionRequest` hooks rather than `notify`. The hook can call the existing Noctalia notifier path without returning an approval decision, preserving user approval in the TUI while creating a tagged desktop notification.
+- The new extension APIs are relevant if we are willing to write or patch Rust-side Codex extensions, but they are more invasive than needed for desktop notification routing.
+
 ## Options
 
 ### Option 1: Tagged Codex Notify Hook
@@ -838,6 +848,7 @@ The Home Manager module intentionally does not symlink the live file because Cod
 
 - Codex advanced notifications config: <https://developers.openai.com/codex/config-advanced>
 - Codex config reference for TUI notification keys: <https://developers.openai.com/codex/config-reference>
+- Codex 0.133.0 release notes: <https://github.com/openai/codex/releases/tag/rust-v0.133.0>
 - LobeHub Codex icon page: <https://lobehub.com/icons/codex>
 - Lobe Icons repository and license: <https://github.com/lobehub/lobe-icons>
 - Lobe Icons agent instructions: <https://lobehub.com/icons/skill.md>
