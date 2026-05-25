@@ -44,6 +44,7 @@ in
       "${home-modules}/nushell.nix"
       "${home-modules}/desktop-common.nix"
       "${home-modules}/desktop-gdrive.nix"
+      "${home-modules}/signal-desktop.nix"
       # "${home-modules}/vivaldi.nix"
 
       # "${home-modules}/hyprland.nix"
@@ -139,7 +140,6 @@ in
           # claude-code
 
           # messengers
-          signal-desktop
           telegram-desktop
           discord
           # slack
