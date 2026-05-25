@@ -33,6 +33,13 @@ if true then
   return {
     autoDarkMode,
 
+    -- provides `:Map` as an improved variant of `:map`
+    -- https://github.com/cmtonkinson/map-list.nvim
+    {
+      "cmtonkinson/map-list.nvim",
+      opts = {},
+    },
+
     {
       "nvimtools/none-ls.nvim",
       optional = true,

@@ -140,7 +140,7 @@
                     "showCpuTemp": true,
                     "showCpuUsage": true,
                     "showDiskAvailable": false,
-                    "showDiskUsage": false,
+                    "showDiskUsage": true,
                     "showDiskUsageAsPercent": false,
                     "showGpuTemp": false,
                     "showLoadAverage": false,
