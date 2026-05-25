@@ -8,6 +8,21 @@
 }:
 let
   flakeRoot = flake-inputs.self.outPath;
+  # KeePassXC sometimes opens a normal window even with --minimized on Niri.
+  # Once the tray exists, closing that window follows KeePassXC's
+  # MinimizeOnClose/MinimizeToTray settings and leaves it running in the tray.
+  closeKeePassXCStartupWindow = pkgs.writeShellScript "close-keepassxc-startup-window" ''
+    sleep 1
+
+    window_id="$(
+      ${pkgs.niri}/bin/niri msg -j windows \
+        | ${pkgs.jq}/bin/jq -r 'map(select(.app_id == "org.keepassxc.KeePassXC")) | first | .id // empty'
+    )"
+
+    if [[ -n "$window_id" ]]; then
+      ${pkgs.niri}/bin/niri msg action close-window --id "$window_id"
+    fi
+  '';
 in
 {
   imports =
@@ -75,6 +90,17 @@ in
         "noctalia/settings.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/settings.json";
         "noctalia/user-templates.toml".source =
           config.lib.file.mkOutOfStoreSymlink "${noctalia}/user-templates.toml";
+
+        # systemd-xdg-autostart-generator ignores KeePassXC's desktop-file
+        # tray/delay hints. Delay the generated unit until the shell tray is up,
+        # then close any initial window that KeePassXC still opens.
+        "systemd/user/app-org.keepassxc.KeePassXC@autostart.service.d/delay-start.conf".text = ''
+          [Service]
+          ExecStartPre=${pkgs.coreutils}/bin/sleep 7
+          ExecStart=
+          ExecStart=${config.programs.keepassxc.package}/bin/keepassxc --minimized
+          ExecStartPost=${closeKeePassXCStartupWindow}
+        '';
       };
   };
 
