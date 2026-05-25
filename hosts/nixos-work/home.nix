@@ -38,6 +38,7 @@ in
       "${home-modules}/jj.nix"
       "${home-modules}/agents.nix"
       "${home-modules}/codex.nix"
+      "${home-modules}/codex-token-optimization.nix"
       "${home-modules}/gascity.nix"
       "${home-modules}/nix-profile-snapshot.nix"
       "${home-modules}/fish.nix"

@@ -36,4 +36,6 @@ If unsure, you MUST explicitly ASK what should be done!
 
 ## Tool Usage
 
+- Prefer `rtk <command>` for shell commands that may produce noisy output when exact raw output is not required, especially `git status`, `git diff`, build/test/lint commands, package-manager commands, and logs. Examples: `rtk git diff --cached`, `rtk just check`, `rtk cargo test`, `rtk journalctl --user --since "10 min ago"`.
+- Use raw commands when exact byte-for-byte output matters, when invoking interactive tools, or when debugging RTK itself. Use RTK metadata commands directly: `rtk gain`, `rtk gain --history`, `rtk discover`, and `rtk proxy <cmd>`.
 - When using DeepWiki, repository names may be case-sensitive. Use the exact GitHub owner/repository casing from the URL when a lowercase or guessed name fails. For example, BitCraft public server docs are indexed as `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
