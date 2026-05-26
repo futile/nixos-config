@@ -100,3 +100,6 @@ trusted_hash = "sha256:31000ddeb20ac6bb8e1dea70dfe819f66f6cfe7b00fd627a5dd475be2
 [mcp_servers.context-mode]
 command = "context-mode"
 env = { CONTEXT_MODE_PLATFORM = "codex" }
+
+[mcp_servers.context-mode.tools.ctx_stats]
+approval_mode = "approve"
