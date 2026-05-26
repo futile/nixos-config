@@ -106,3 +106,6 @@ approval_mode = "approve"
 
 [mcp_servers.context-mode.tools.ctx_search]
 approval_mode = "approve"
+
+[mcp_servers.context-mode.tools.ctx_batch_execute]
+approval_mode = "approve"

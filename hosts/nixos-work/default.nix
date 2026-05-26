@@ -185,7 +185,14 @@ in
     # Enable touchpad support (enabled default in most desktopManager).
     libinput.enable = true;
 
-    udev.packages = with pkgs; [ gnome-settings-daemon ];
+    udev = {
+      packages = with pkgs; [ gnome-settings-daemon ];
+
+      extraRules = ''
+        # Switch Realtek USB Wi-Fi/Bluetooth dongles out of driver-CD mode.
+        ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="1a2b", RUN+="${pkgs.usb-modeswitch}/bin/usb_modeswitch -v 0bda -p 1a2b --std-eject"
+      '';
+    };
 
     blueman.enable = true;
   };
