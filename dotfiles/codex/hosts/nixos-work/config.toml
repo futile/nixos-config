@@ -103,3 +103,6 @@ env = { CONTEXT_MODE_PLATFORM = "codex" }
 
 [mcp_servers.context-mode.tools.ctx_stats]
 approval_mode = "approve"
+
+[mcp_servers.context-mode.tools.ctx_search]
+approval_mode = "approve"
