@@ -40,6 +40,7 @@ let
   custom-packages-overlay = final: prev: {
     my-custom-packages = {
       agent-safehouse = final.callPackage ../custom-packages/agent-safehouse.nix { };
+      context-mode = final.callPackage ../custom-packages/context-mode.nix { };
       gascity = final.callPackage ../custom-packages/gascity.nix { };
       llm-wiki = final.callPackage ../custom-packages/llm-wiki.nix { };
       marker = final.callPackage ../custom-packages/marker.nix { };

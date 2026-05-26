@@ -133,6 +133,10 @@
       ];
       system = "x86_64-linux";
       pkgsForSystem = nixpkgs.legacyPackages.${system};
+      pkgsForSystemAllowUnfree = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
       withRustSccache =
         package:
         if pkgsForSystem.stdenv.hostPlatform.isLinux then
@@ -155,6 +159,7 @@
     {
       packages.${system} = {
         # these are here mostly for debugging, for actual use I base on the `nixpkgs`-instance of a configured system, see overlay in `core.nix`.
+        context-mode = pkgsForSystemAllowUnfree.callPackage ./custom-packages/context-mode.nix { };
         gascity = pkgsForSystem.callPackage ./custom-packages/gascity.nix { };
         llm-wiki = withRustSccache (pkgsForSystem.callPackage ./custom-packages/llm-wiki.nix { });
         marker = pkgsForSystem.callPackage ./custom-packages/marker.nix { };
