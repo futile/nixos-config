@@ -1,0 +1,102 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+model = "gpt-5.5"
+model_reasoning_effort = "high"
+model_verbosity = "medium"
+personality = "pragmatic"
+notify = ["/home/felix/nixos/bin/codex-notify-noctalia"]
+
+[tools]
+view_image = true
+
+[tui]
+notifications = ["approval-requested"]
+notification_method = "osc9"
+notification_condition = "unfocused"
+status_line = ["model-with-reasoning", "context-remaining", "current-dir", "git-branch", "five-hour-limit", "weekly-limit"]
+terminal_title = ["spinner", "project", "app-name"]
+status_line_use_colors = true
+session_picker_view = "dense"
+theme = "catppuccin-latte"
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4
+
+[features]
+hooks = true
+multi_agent = true
+
+[sandbox_workspace_write]
+writable_roots = [
+  "/home/felix/.cache/sccache",
+  "/home/felix/.codex/context-mode",
+]
+# 2026-05-06 gonna try this out for a bit
+network_access = true
+
+[projects."/home/felix/gits/pale-darks-online"]
+trust_level = "trusted"
+
+[projects."/home/felix/.codex"]
+trust_level = "trusted"
+
+[projects."/home/felix/nixos"]
+trust_level = "trusted"
+
+[projects."/home/felix/gits/nixpkgs"]
+trust_level = "trusted"
+
+[projects."/home/felix/gits/cargo-worktrees-caching-testing"]
+trust_level = "trusted"
+
+[projects."/home/felix/gits/Marker"]
+trust_level = "trusted"
+
+[projects."/home/felix/gits/llm_wiki"]
+trust_level = "trusted"
+
+[mcp_servers.DeepWiki]
+url = "https://mcp.deepwiki.com/mcp"
+
+[mcp_servers.DeepWiki.tools.read_wiki_structure]
+approval_mode = "approve"
+
+[mcp_servers.DeepWiki.tools.ask_question]
+approval_mode = "approve"
+
+[plugins."superpowers@openai-curated"]
+enabled = true
+
+[plugins."gmail@openai-curated"]
+enabled = false
+
+[plugins."google-calendar@openai-curated"]
+enabled = false
+
+[plugins."google-drive@openai-curated"]
+enabled = false
+
+[hooks.state]
+
+[hooks.state."/home/felix/.codex/hooks.json:pre_tool_use:0:0"]
+trusted_hash = "sha256:f73b416457561f1d4fd3566778008fa25bea2a86878e3c9d25c126ed6a7ffc92"
+enabled = true
+
+[hooks.state."/home/felix/.codex/hooks.json:post_tool_use:0:0"]
+trusted_hash = "sha256:aa44d413be08f0f8f92876e5e69382cfd0a92e1cb02dc26d64a8459b0d32f206"
+
+[hooks.state."/home/felix/.codex/hooks.json:pre_compact:0:0"]
+trusted_hash = "sha256:e6df7abc3c0299dcfae587aa2dc19d425f71bec6ceb7d650892819281a82ece8"
+
+[hooks.state."/home/felix/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:db5e6496b539a8a2482aae406c52ea78bca2faa58e19e031c6c01f4ca8515302"
+
+[hooks.state."/home/felix/.codex/hooks.json:user_prompt_submit:0:0"]
+trusted_hash = "sha256:c4092693e18178e251c8c28b1f91d7101c1a851875b4d8f1db9d7eec38ac6c46"
+
+[hooks.state."/home/felix/.codex/hooks.json:stop:0:0"]
+trusted_hash = "sha256:31000ddeb20ac6bb8e1dea70dfe819f66f6cfe7b00fd627a5dd475be22078a2c"
+
+[mcp_servers.context-mode]
+command = "context-mode"
+env = { CONTEXT_MODE_PLATFORM = "codex" }

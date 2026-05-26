@@ -72,6 +72,8 @@ in
       "${home-modules}/vscode.nix"
     ];
 
+  my.codex.configToml = "${thisFlakePath}/dotfiles/codex/hosts/nixos-work/config.toml";
+
   xdg = {
     enable = true;
     autostart.enable = true;
