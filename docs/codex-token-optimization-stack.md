@@ -18,8 +18,8 @@ a different source of waste:
 | Layer | Tool | Original purpose | Codex transfer |
 |---|---|---|---|
 | 1 | Codebase Memory MCP | Avoid file reads for code exploration by querying a local graph. | Useful. Configure as a Codex MCP server. |
-| 2 | context-mode | Keep large command/file/web output in a local searchable store and return summaries. | Useful. Package it for Nix instead of adding Node globally. |
-| 3 | RTK | Compress shell output before it enters context. | Useful now. `pkgs.rtk` exists in this flake's nixpkgs. |
+| 2 | context-mode | Keep large command/file/web output in a local searchable store and return summaries. | Implemented for `nixos-work` as a Bun-backed Nix package, Codex MCP server, and hook provider. |
+| 3 | RTK | Compress shell output before it enters context. | Implemented for `nixos-work` through `pkgs.rtk` and `AGENTS.md` guidance. |
 | 4 | Headroom | Anthropic API proxy that compresses request payloads. | Defer. It adds an API service/proxy and is not the first thing to adopt. |
 | 5 | Caveman | Make agent replies shorter and compress memory files. | Optional. Codex is already fairly concise, but a light version can still help. |
 
@@ -72,8 +72,9 @@ configuration. Existing sessions and subagents may keep stale config.
 
 ## Recommended Adoption Order
 
-1. Add RTK through Nix.
-2. Add context-mode as a Nix package and Codex MCP server/hook provider.
+1. Add RTK through Nix. Done for `nixos-work`.
+2. Add context-mode as a Nix package and Codex MCP server/hook provider. Done
+   for `nixos-work`.
 3. Add Codebase Memory MCP via its upstream flake and Codex MCP config.
 4. Add light Caveman-style brevity if it proves useful.
 5. Revisit Headroom later, only after the local-only layers are working.
@@ -83,22 +84,23 @@ already in nixpkgs or have explicit Codex support.
 
 ## RTK
 
-RTK is the easiest first step. In this flake's nixpkgs, `pkgs.rtk` exists and
+RTK was the easiest first step. In this flake's nixpkgs, `pkgs.rtk` exists and
 reports:
 
 ```text
 CLI proxy that reduces LLM token consumption by 60-90% on common dev commands
 ```
 
-The currently evaluated nixpkgs package version is `0.38.0`. Upstream
-`rtk-ai/rtk` has newer tags, so use the packaged version first and only add a
+The currently evaluated nixpkgs package version is `0.38.0`. It is installed
+through `home-modules/codex-token-optimization.nix` for `nixos-work`. Upstream
+`rtk-ai/rtk` has newer tags, so keep using the packaged version and only add a
 custom package if a newer RTK feature matters.
 
-Add it to the relevant Home Manager package set, most likely
-`hosts/nixos-work/home.nix` and/or `hosts/nixos-home/home.nix`:
+Current module shape:
 
 ```nix
 home.packages = with pkgs; [
+  my-custom-packages.context-mode
   rtk
 ];
 ```
@@ -119,11 +121,11 @@ rtk cargo test
 rtk nix flake check
 ```
 
-Codex hook integration can come later. Start by teaching `AGENTS.md` that noisy
-commands should go through RTK when the exact raw stream is not needed. A hook
-that rewrites shell commands is less mature in Codex than it is in Claude Code;
-context-mode's own README notes that Codex PreToolUse currently supports
-blocking/deny behavior, not input rewrites.
+`dotfiles/codex/AGENTS.md` now tells agents to prefer `rtk <command>` for noisy
+shell commands when exact raw output is not needed. Do not add an RTK command
+rewriting hook yet. A hook that rewrites shell commands is less mature in Codex
+than it is in Claude Code; context-mode's own README notes that Codex
+`PreToolUse` currently supports blocking/deny behavior, not input rewrites.
 
 ## context-mode
 
@@ -131,15 +133,21 @@ context-mode is highly relevant because it now has explicit Codex support. Its
 repo says the Codex plugin path provides MCP via `.codex-plugin/mcp.json`,
 skills via `skills/`, and bundled hooks via `.codex-plugin/hooks.json`.
 
-It needs Node.js `>=22.5`, but this machine should not add Node user-wide or
-system-wide just to run context-mode. Prefer a Nix package that wraps
-context-mode with its Node runtime. That gives Codex a `context-mode` executable
-without exposing `node` as a general user package.
+It needs a modern JavaScript runtime, but this machine should not add Node
+user-wide or system-wide just to run context-mode. The implemented package wraps
+context-mode with `pkgs.bun`, not `nodejs_22`. That gives Codex a
+`context-mode` executable without exposing Node as a general user package, and
+`context-mode doctor` reports `Performance: FAST` with JavaScript and
+TypeScript handled by Bun.
 
 Upstream does not currently ship a `flake.nix`, so this is a repo-local package
-candidate. Package it under `custom-packages/context-mode.nix` with
-`buildNpmPackage`, expose it through this flake, and add only the resulting
-`context-mode` package to Home Manager:
+candidate. It is packaged under `custom-packages/context-mode.nix` by fetching
+the npm tarball, copying it to `$out/lib/context-mode`, and wrapping
+`cli.bundle.mjs` with Bun. The wrapper also prefixes Bun onto `PATH`, because
+context-mode's runtime discovery checks child process availability too.
+
+The package is exposed through this flake and installed only through
+`home-modules/codex-token-optimization.nix`:
 
 ```nix
 home.packages = with pkgs; [
@@ -147,7 +155,7 @@ home.packages = with pkgs; [
 ];
 ```
 
-Then use the manual Codex MCP/hook path:
+The local machine config uses the manual Codex MCP/hook path:
 
 ```toml
 [features]
@@ -155,15 +163,31 @@ hooks = true
 
 [mcp_servers.context-mode]
 command = "context-mode"
+env = { CONTEXT_MODE_PLATFORM = "codex" }
 ```
 
-For manual hooks, context-mode documents a `~/.codex/hooks.json` with
+The Codex sandbox also needs write access to context-mode storage:
+
+```toml
+[sandbox_workspace_write]
+writable_roots = [
+  "/home/felix/.cache/sccache",
+  "/home/felix/.codex/context-mode",
+]
+```
+
+For manual hooks, `dotfiles/codex/hooks.json` is linked to
+`~/.codex/hooks.json` and contains the documented
 `PreToolUse`, `PostToolUse`, `SessionStart`, `PreCompact`,
-`UserPromptSubmit`, and `Stop` commands calling:
+`UserPromptSubmit`, and `Stop` commands. Each command forces Codex detection:
 
 ```sh
-context-mode hook codex <event>
+env CONTEXT_MODE_PLATFORM=codex context-mode hook codex <event>
 ```
+
+After changing `.codex/config.toml`, restart Codex. On first use, Codex asks for
+trust approval for the six hook commands; review and trust those commands if
+they still match `dotfiles/codex/hooks.json`.
 
 The Codex plugin path is still useful as a reference and may become preferable
 once plugin packaging can use a Nix-provided runtime cleanly:
@@ -173,7 +197,8 @@ codex plugin marketplace add mksglu/context-mode
 codex plugin add context-mode@context-mode
 ```
 
-If testing that plugin path, enable plugin hooks in `~/.codex/config.toml`:
+If testing that plugin path later, enable plugin hooks in
+`~/.codex/config.toml`:
 
 ```toml
 [features]
@@ -181,28 +206,19 @@ hooks = true
 plugin_hooks = true
 ```
 
-If Codex asks whether to trust the plugin hooks, review and trust them. Verify
-inside a fresh Codex session with:
+The implemented manual path has been verified with:
 
 ```text
-ctx stats
+context-mode doctor
 ```
 
-That verifies MCP availability. To verify hooks, run a command that should match
-the plugin's routing rules and confirm Codex reports or applies context-mode
-routing.
+The post-switch doctor check passed storage access, all six hooks, MCP
+registration, server initialization, and FTS5/SQLite.
 
 Nix caveat: the plugin path downloads plugin content into Codex's plugin cache
-and still needs `node` visible to the Codex process. That conflicts with the
-"no user-wide Node" preference unless the plugin can be pointed at a Nix-wrapped
-runtime. Prefer the packaged manual MCP/hook path first.
-
-Storage: if Codex cannot write context-mode's default storage directory, launch
-Codex with a Nix/HM-managed environment variable such as:
-
-```sh
-CONTEXT_MODE_DIR="$HOME/.codex-context-mode" codex
-```
+and may still assume a runtime visible to the Codex process. That conflicts with
+the "no user-wide Node" preference unless the plugin can be pointed at a
+Nix-wrapped runtime. Prefer the packaged manual MCP/hook path.
 
 ## Codebase Memory MCP
 
@@ -370,8 +386,8 @@ statusMessage = "Loading rule"
 For context-mode, prefer the packaged manual Codex hooks for this machine. The
 upstream Codex plugin hooks are still useful reference material, but the plugin
 path currently conflicts with the "no user-wide Node" preference unless it can
-run through a Nix-wrapped runtime. Use TOML `hooks` or `~/.codex/hooks.json`,
-then test in a fresh Codex session.
+run through a Nix-wrapped runtime. The active setup uses `~/.codex/hooks.json`
+linked from `dotfiles/codex/hooks.json`; test changes in a fresh Codex session.
 
 Potential ports:
 
@@ -396,7 +412,6 @@ managed dotfiles:
 
 ```nix
 home.packages = with pkgs; [
-  jq
   rtk
   my-custom-packages.context-mode
 ];
@@ -427,38 +442,46 @@ For packages not in nixpkgs:
 - Build package-only first.
 - Add to Home Manager only after the package builds.
 
-Likely custom package candidates:
+Custom package status:
 
-- `context-mode`, because it has no upstream flake and should not require
-  user-wide Node.
+- `context-mode` is implemented as a repo-local custom package backed by Bun.
 - `caveman`, if you want the skill files pinned without `npx`.
 - `codebase-memory-mcp` only if consuming the upstream flake is not workable.
 
 ## Suggested First Patch Set
 
-1. Add `home-modules/codex-token-optimization.nix` and import it from the Linux
-   Codex hosts.
-2. In that module, add `rtk` to `home.packages`. Do not add `nodejs_22`
-   user-wide or system-wide.
-3. Package context-mode under `custom-packages/` with a Nix-wrapped Node runtime,
-   expose it through this flake, and add only the resulting package to Home
-   Manager through `codex-token-optimization.nix`.
-4. Configure Codex for packaged context-mode:
-   - enable `[features].hooks = true`
-   - add `[mcp_servers.context-mode] command = "context-mode"`
-   - add the documented `context-mode hook codex <event>` hooks
-5. Check Codebase Memory MCP's upstream flake and cache story:
+Completed:
+
+1. Added `home-modules/codex-token-optimization.nix` and imported it for
+   `nixos-work` only.
+2. Added `rtk` to that module. `nodejs_22` is not installed user-wide or
+   system-wide.
+3. Packaged context-mode under `custom-packages/` with a Nix-wrapped Bun
+   runtime, exposed it through this flake, and added only the resulting package
+   to Home Manager through `codex-token-optimization.nix`.
+4. Configured Codex for packaged context-mode:
+   - enabled `[features].hooks = true`
+   - added `[mcp_servers.context-mode] command = "context-mode"`
+   - added `env = { CONTEXT_MODE_PLATFORM = "codex" }`
+   - added `/home/felix/.codex/context-mode` to sandbox writable roots
+   - linked `dotfiles/codex/hooks.json` to `~/.codex/hooks.json`
+   - trusted the six hook commands after restarting Codex
+5. Verified `context-mode doctor` after `just switch`; it reports Bun-backed
+   JavaScript and TypeScript, `Performance: FAST`, hook registration, MCP
+   registration, storage access, server initialization, and FTS5/SQLite.
+
+Next patch set:
+
+1. Check Codebase Memory MCP's upstream flake and cache story:
    - prefer its upstream `flake.nix`
    - search for Cachix/substituter hints before adding the input
    - if a cache is added, run `just switch` before building CBM
-6. Add Codebase Memory MCP via the upstream flake or a fallback custom package,
+2. Add Codebase Memory MCP via the upstream flake or a fallback custom package,
    then configure the Codex MCP server.
-7. Add a small Codex section to `dotfiles/codex/AGENTS.md`:
-   - RTK for noisy shell output.
-   - context-mode for large outputs once installed.
-   - CBM for structural code exploration once installed.
-8. Restart Codex and verify `ctx stats`.
-9. Try Caveman as a profile, vendored skill, or `SessionStart` hook, not as a
+3. Add CBM guidance to `dotfiles/codex/AGENTS.md` for structural code
+   exploration once installed.
+4. Restart Codex and verify the CBM MCP server in a fresh session.
+5. Try Caveman as a profile, vendored skill, or `SessionStart` hook, not as a
    permanent global default.
 
 ## Sources Checked
