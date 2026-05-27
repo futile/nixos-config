@@ -109,3 +109,9 @@ approval_mode = "approve"
 
 [mcp_servers.context-mode.tools.ctx_batch_execute]
 approval_mode = "approve"
+
+[mcp_servers.context-mode.tools.ctx_execute]
+approval_mode = "approve"
+
+[mcp_servers.context-mode.tools.ctx_doctor]
+approval_mode = "approve"
