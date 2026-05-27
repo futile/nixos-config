@@ -17,6 +17,8 @@ Prefer `just` recipes over ad hoc commands:
 
 Use `just --list --unsorted` to discover less common workflows such as `dry-activate` or macOS permission setup.
 
+When running Nix evaluation or build commands directly, lower their CPU scheduling priority with `nice -n 19`, for example `nice -n 19 nix build .#headroom --no-link`. Prefer the same treatment for noisy `just` recipes that mostly wrap Nix builds or checks.
+
 ## Codebase Memory
 This repo may be indexed by codebase-memory-mcp as `home-felix-nixos`.
 

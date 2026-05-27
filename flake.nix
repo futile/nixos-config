@@ -172,6 +172,7 @@
         codebase-memory-mcp = inputs.codebase-memory-mcp.packages.${system}.default;
         context-mode = pkgsForSystemAllowUnfree.callPackage ./custom-packages/context-mode.nix { };
         gascity = pkgsForSystem.callPackage ./custom-packages/gascity.nix { };
+        headroom = withRustSccache (pkgsForSystem.callPackage ./custom-packages/headroom.nix { });
         llm-wiki = withRustSccache (pkgsForSystem.callPackage ./custom-packages/llm-wiki.nix { });
         marker = pkgsForSystem.callPackage ./custom-packages/marker.nix { };
         phinger-cursors-extended =

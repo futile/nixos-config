@@ -276,6 +276,7 @@ in
   my.rustSccache = {
     enable = true;
     customPackageNames = [
+      "headroom"
       "llm-wiki"
     ];
   };

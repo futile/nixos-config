@@ -42,6 +42,7 @@ let
       agent-safehouse = final.callPackage ../custom-packages/agent-safehouse.nix { };
       context-mode = final.callPackage ../custom-packages/context-mode.nix { };
       gascity = final.callPackage ../custom-packages/gascity.nix { };
+      headroom = final.callPackage ../custom-packages/headroom.nix { };
       llm-wiki = final.callPackage ../custom-packages/llm-wiki.nix { };
       marker = final.callPackage ../custom-packages/marker.nix { };
       phinger-cursors-extended = final.callPackage ../custom-packages/phinger-cursors-extended.nix { };

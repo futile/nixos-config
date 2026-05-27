@@ -120,6 +120,24 @@ approval_mode = "approve"
 [mcp_servers.context-mode.tools.ctx_doctor]
 approval_mode = "approve"
 
+[model_providers.headroom]
+name = "OpenAI via Headroom proxy"
+base_url = "http://127.0.0.1:8787/v1"
+supports_websockets = true
+
+[mcp_servers.headroom]
+command = "headroom"
+args = ["mcp", "serve"]
+
+[mcp_servers.headroom.tools.headroom_retrieve]
+approval_mode = "approve"
+
+[mcp_servers.headroom.tools.headroom_compress]
+approval_mode = "approve"
+
+[mcp_servers.headroom.tools.headroom_stats]
+approval_mode = "approve"
+
 [mcp_servers.codebase-memory-mcp]
 command = "codebase-memory-mcp"
 env = { CBM_CACHE_DIR = "/home/felix/.cache/codebase-memory-mcp" }
