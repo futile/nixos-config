@@ -138,3 +138,15 @@ approval_mode = "approve"
 
 [mcp_servers.codebase-memory-mcp.tools.search_graph]
 approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.trace_path]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.get_code_snippet]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.query_graph]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.get_graph_schema]
+approval_mode = "approve"
