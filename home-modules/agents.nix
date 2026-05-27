@@ -7,19 +7,18 @@
 }:
 let
   # Caveman is pinned as a non-flake input so updates stay reviewable in
-  # flake.lock. Apply a tiny local patch to its upstream caveman-compress skill
-  # so Codex can use the running agent for compression when the upstream
-  # `claude`-based CLI path is unavailable.
+  # flake.lock. Reuse upstream helper scripts, but replace SKILL.md with our
+  # repo-owned instructions because the workflow is adapted for Codex and for
+  # explicit source-to-output compression without backup files.
   #
-  # To update: run `nix flake update caveman`, rebuild this derivation, and if
-  # the patch no longer applies, refresh
-  # dotfiles/agents/patches/caveman-compress-current-agent.patch against
-  # `${flake-inputs.caveman}/skills/caveman-compress/SKILL.md`.
-  cavemanCompressSkill = pkgs.applyPatches {
-    name = "caveman-compress-skill";
-    src = "${flake-inputs.caveman}/skills/caveman-compress";
-    patches = [ ../dotfiles/agents/patches/caveman-compress-current-agent.patch ];
-  };
+  # To update: run `nix flake update caveman`, rebuild this derivation, and
+  # review whether upstream `skills/caveman-compress/scripts/` changed in a way
+  # that requires updating dotfiles/agents/skills/caveman-compress/SKILL.md.
+  cavemanCompressSkill = pkgs.runCommand "caveman-compress-skill" { } ''
+    cp -R ${flake-inputs.caveman}/skills/caveman-compress "$out"
+    chmod -R u+w "$out"
+    cp ${../dotfiles/agents/skills/caveman-compress/SKILL.md} "$out/SKILL.md"
+  '';
 in
 {
   home.file.".agents/skills/avoiding-duplicate-builds-in-worktrees".source =

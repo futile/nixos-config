@@ -29,6 +29,7 @@ multi_agent = true
 [sandbox_workspace_write]
 writable_roots = [
   "/home/felix/.cache/sccache",
+  "/home/felix/.cache/codebase-memory-mcp",
   "/home/felix/.codex/context-mode",
 ]
 # 2026-05-06 gonna try this out for a bit
@@ -53,6 +54,9 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/home/felix/gits/llm_wiki"]
+trust_level = "trusted"
+
+[projects."/tmp"]
 trust_level = "trusted"
 
 [mcp_servers.DeepWiki]
@@ -114,4 +118,23 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers.context-mode.tools.ctx_doctor]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp]
+command = "codebase-memory-mcp"
+env = { CBM_CACHE_DIR = "/home/felix/.cache/codebase-memory-mcp" }
+
+[mcp_servers.codebase-memory-mcp.tools.list_projects]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.index_status]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.get_architecture]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.search_code]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.search_graph]
 approval_mode = "approve"

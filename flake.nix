@@ -81,6 +81,11 @@
       flake = false;
     };
 
+    codebase-memory-mcp = {
+      url = "github:DeusData/codebase-memory-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # doom-emacs = {
     #   url = "github:hlissner/doom-emacs";
     #   flake = false;
@@ -164,6 +169,7 @@
     {
       packages.${system} = {
         # these are here mostly for debugging, for actual use I base on the `nixpkgs`-instance of a configured system, see overlay in `core.nix`.
+        codebase-memory-mcp = inputs.codebase-memory-mcp.packages.${system}.default;
         context-mode = pkgsForSystemAllowUnfree.callPackage ./custom-packages/context-mode.nix { };
         gascity = pkgsForSystem.callPackage ./custom-packages/gascity.nix { };
         llm-wiki = withRustSccache (pkgsForSystem.callPackage ./custom-packages/llm-wiki.nix { });

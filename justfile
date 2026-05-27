@@ -79,6 +79,10 @@ format-check:
     nix fmt -- --fail-on-change
     just --unstable --fmt --check
 
+# Regenerate compressed global Codex instructions from the readable source.
+compress-codex-agents model="gpt-5.4-mini":
+    codex exec --ephemeral -c model_reasoning_effort=low --model "{{ model }}" --cd /tmp --skip-git-repo-check --add-dir "{{ justfile_directory() }}" --sandbox workspace-write '$caveman-compress {{ justfile_directory() }}/dotfiles/codex/AGENTS.source.md to {{ justfile_directory() }}/dotfiles/codex/AGENTS.md'
+
 # Show a diff of changes using `nix-diff`
 diff:
     nix-diff /run/current-system ./result

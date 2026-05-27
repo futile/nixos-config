@@ -16,6 +16,26 @@
         "type": "github"
       }
     },
+    "codebase-memory-mcp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1779231057,
+        "narHash": "sha256-OPI2VSLKDC/9LKfISmCelLjx8Y1rNQmkRE3VYd/MsMA=",
+        "owner": "DeusData",
+        "repo": "codebase-memory-mcp",
+        "rev": "6226972f13f867e332dd8721df763946926400de",
+        "type": "github"
+      },
+      "original": {
+        "owner": "DeusData",
+        "repo": "codebase-memory-mcp",
+        "type": "github"
+      }
+    },
     "fish-foreign-env": {
       "flake": false,
       "locked": {
@@ -340,6 +360,7 @@
     "root": {
       "inputs": {
         "caveman": "caveman",
+        "codebase-memory-mcp": "codebase-memory-mcp",
         "fish-foreign-env": "fish-foreign-env",
         "fish-puffer-fish": "fish-puffer-fish",
         "fish-tide": "fish-tide",

@@ -1,11 +1,14 @@
 {
   config,
+  flake-inputs,
   pkgs,
+  system,
   thisFlakePath,
   ...
 }:
 {
   home.packages = with pkgs; [
+    flake-inputs.codebase-memory-mcp.packages.${system}.default
     my-custom-packages.context-mode
     rtk
   ];
