@@ -21,7 +21,7 @@ a different source of waste:
 | 2 | context-mode | Keep large command/file/web output in a local searchable store and return summaries. | Implemented for `nixos-work` as a Bun-backed Nix package, Codex MCP server, and hook provider. |
 | 3 | RTK | Compress shell output before it enters context. | Implemented for `nixos-work` through `pkgs.rtk` and `AGENTS.md` guidance. |
 | 4 | Headroom | Anthropic API proxy that compresses request payloads. | Defer. It adds an API service/proxy and is not the first thing to adopt. |
-| 5 | Caveman | Make agent replies shorter and compress memory files. | Optional. Codex is already fairly concise, but a light version can still help. |
+| 5 | Caveman | Make agent replies shorter and compress memory files. | Partly implemented: only the `caveman-compress` skill is installed, for explicit file compression. Global Caveman speech style is not enabled. |
 
 The companion repo contains:
 
@@ -37,6 +37,27 @@ The companion repo contains:
 
 The useful lesson is not "copy the Claude config". It is "make the efficient
 path the default, and use hooks or instructions to block expensive habits."
+
+## Current Setup Summary
+
+Current `nixos-work` setup:
+
+- RTK is installed from nixpkgs and preferred for noisy shell commands when
+  exact raw output is not needed.
+- context-mode is packaged locally with Bun, installed through Home Manager,
+  registered as a Codex MCP server, and wired through reviewed Codex hooks.
+- `~/.agents/skills` is managed skill-by-skill in `home-modules/agents.nix`.
+  Local skills stay live-editable; upstream skills can be pinned and patched
+  through flake inputs.
+- Caveman is pinned as a non-flake input, but only
+  `skills/caveman-compress` is exposed. A local patch changes that skill to
+  let the running agent compress files when the upstream `claude` CLI path is
+  unavailable.
+- Global Caveman speech style is not enabled. Use Caveman only when explicitly
+  compressing selected memory/instruction files.
+- Codebase Memory MCP and Headroom are not installed yet. CBM is the next
+  local-only candidate; Headroom remains deferred because it changes the API
+  request path.
 
 ## Current Codex Baseline
 
@@ -75,8 +96,9 @@ configuration. Existing sessions and subagents may keep stale config.
 1. Add RTK through Nix. Done for `nixos-work`.
 2. Add context-mode as a Nix package and Codex MCP server/hook provider. Done
    for `nixos-work`.
-3. Add Codebase Memory MCP via its upstream flake and Codex MCP config.
-4. Add light Caveman-style brevity if it proves useful.
+3. Add Caveman's `caveman-compress` skill declaratively for explicit memory-file
+   compression. Done via a pinned non-flake input and local patch.
+4. Add Codebase Memory MCP via its upstream flake and Codex MCP config.
 5. Revisit Headroom later, only after the local-only layers are working.
 
 This order avoids API proxy complexity and starts with tools that are either
@@ -295,46 +317,74 @@ Caveman is no longer only a Claude plugin. Its repo says Codex CLI support is:
 npx skills add JuliusBrussee/caveman -a codex
 ```
 
-That is not a Nix-native install. For this machine, prefer copying or packaging
-the skill content instead of using `npx` as the persistent installer.
+That is not a Nix-native install. Do not use it as persistent setup on this
+machine.
 
-Practical Nix/Codex options:
+Current setup installs only Caveman's `caveman-compress` skill. It does not
+enable Caveman's global speech-style hook. This matches the intended scope:
+compress selected memory/instruction files when explicitly asked, while keeping
+normal Codex replies under the existing `personality = "pragmatic"` and
+`model_verbosity = "medium"` config.
 
-1. Lightweight config only: set `model_verbosity = "low"` in a Codex profile
-   when you want shorter replies.
-2. Codex hook only: Caveman ships `.codex/hooks.json` with a `SessionStart`
-   prompt hook that injects a compact style instruction for `startup|resume`.
-3. Skill-managed: vendor the Caveman skill files into this repo under
-   `dotfiles/codex/skills/` and extend `home-modules/codex.nix` to symlink
-   `~/.codex/skills`.
-4. One-shot trial only if needed: use an ephemeral `nix shell` with Node, run
-   the upstream install command, then inspect what changed and port the useful
-   files into Home Manager. Do not leave Node as a user-wide package.
+The flake has a pinned non-flake input:
 
-The minimal hook from Caveman's repo is essentially:
-
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup|resume",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo 'CAVEMAN MODE ACTIVE. Rules: Drop articles/filler/pleasantries/hedging. Fragments OK. Short synonyms. Pattern: [thing] [action] [reason]. [next step]. Code/commits/security: write normal. User says stop caveman or normal mode to deactivate.'"
-          }
-        ]
-      }
-    ]
-  }
-}
+```nix
+caveman = {
+  url = "github:JuliusBrussee/caveman";
+  flake = false;
+};
 ```
 
-For this Codex setup, I would not make Caveman global by default. Codex already
-has `personality = "pragmatic"` and `model_verbosity = "medium"`. Use a profile
-or a hook-gated mode first, then keep it only if it improves long sessions
-without making final answers too terse.
+`home-modules/agents.nix` exposes agent skills individually under
+`~/.agents/skills` rather than symlinking all of `~/.agents`. Local skills stay
+live-editable through `mkOutOfStoreSymlink`, while `caveman-compress` comes from
+a patched derivation:
+
+```nix
+cavemanCompressSkill = pkgs.applyPatches {
+  name = "caveman-compress-skill";
+  src = "${flake-inputs.caveman}/skills/caveman-compress";
+  patches = [ ../dotfiles/agents/patches/caveman-compress-current-agent.patch ];
+};
+
+home.file.".agents/skills/caveman-compress".source = cavemanCompressSkill;
+```
+
+The patch changes upstream `SKILL.md` so the preferred workflow is "running
+agent does the compression". Upstream's helper scripts are still available for
+detection and validation, but the full CLI pipeline is no longer the default
+because it shells out to `claude` when no Anthropic API client is configured.
+
+When using `$caveman:caveman-compress <file>`:
+
+1. Resolve the file and confirm it is natural-language input, not
+   `*.original.md`.
+2. Create `<filename>.original.md` before overwriting.
+3. Compress only prose, preserving headings, code blocks, inline code, URLs,
+   paths, commands, proper nouns, dates, versions, and environment variables.
+4. Run the upstream validator:
+
+```sh
+python3 -m scripts.validate <backup_path> <compressed_path>
+```
+
+5. Fix only listed validation errors; do not recompress the whole file.
+
+If updating Caveman, run:
+
+```sh
+nix flake update caveman
+nix build --no-link '.#nixosConfigurations.nixos-work.config.home-manager.users.felix.home.file.".agents/skills/caveman-compress".source'
+```
+
+If the patch no longer applies, refresh
+`dotfiles/agents/patches/caveman-compress-current-agent.patch` against
+`${flake-inputs.caveman}/skills/caveman-compress/SKILL.md`, then rerun
+`just format-check` and `just check`.
+
+The first migration away from `~/.agents` as a whole-directory symlink required a
+one-time switch to make `~/.agents` a real directory. The final module no longer
+contains that migration shim.
 
 ## Headroom
 
@@ -402,10 +452,16 @@ Potential ports:
 
 ## NixOS Implementation Sketch
 
-Create a dedicated Home Manager module named
-`home-modules/codex-token-optimization.nix`. The name is explicit, Codex-scoped,
-and broad enough for RTK, context-mode, Codebase Memory MCP, hooks, skills, and
-future Headroom experiments.
+There are two relevant Home Manager modules:
+
+- `home-modules/codex-token-optimization.nix`: installs RTK and context-mode,
+  and links the context-mode hook config.
+- `home-modules/agents.nix`: exposes repo-managed and patched upstream skills
+  under `~/.agents/skills`.
+
+`codex-token-optimization.nix` is explicit, Codex-scoped, and broad enough for
+RTK, context-mode, Codebase Memory MCP, hooks, and future Headroom experiments.
+Skill files that are not Codex-specific belong in `agents.nix`.
 
 For the first pass, keep packages in that module and avoid direct mutation of
 managed dotfiles:
@@ -422,12 +478,10 @@ For Codex-managed config:
 - Keep `~/.codex/config.toml` machine-local for trusted project paths.
 - Add only hand-reviewed snippets to it.
 - Keep shared instructions in `dotfiles/codex/AGENTS.md`.
-- If adding shared skills later, extend `home-modules/codex.nix` with:
-
-```nix
-home.file.".codex/skills".source =
-  config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/codex/skills";
-```
+- General agent skills live under `~/.agents/skills`, managed by
+  `home-modules/agents.nix`.
+- Codex-specific agents still live under `~/.codex/agents`, managed by
+  `home-modules/codex.nix`.
 
 For packages not in nixpkgs:
 
@@ -445,7 +499,8 @@ For packages not in nixpkgs:
 Custom package status:
 
 - `context-mode` is implemented as a repo-local custom package backed by Bun.
-- `caveman`, if you want the skill files pinned without `npx`.
+- `caveman` is a pinned non-flake input, not a package. Only
+  `skills/caveman-compress` is exposed, through `pkgs.applyPatches`.
 - `codebase-memory-mcp` only if consuming the upstream flake is not workable.
 
 ## Suggested First Patch Set
@@ -469,6 +524,15 @@ Completed:
 5. Verified `context-mode doctor` after `just switch`; it reports Bun-backed
    JavaScript and TypeScript, `Performance: FAST`, hook registration, MCP
    registration, storage access, server initialization, and FTS5/SQLite.
+6. Added Caveman as a non-flake flake input and exposed only the patched
+   `caveman-compress` skill through `home-modules/agents.nix`.
+7. Switched `~/.agents` management from one whole-directory symlink to
+   individual skill links:
+   - local `avoiding-duplicate-builds-in-worktrees`
+   - local `find-skills`
+   - patched upstream `caveman-compress`
+8. Compressed `dotfiles/codex/AGENTS.md` with `caveman-compress`; the readable
+   backup is `dotfiles/codex/AGENTS.original.md`.
 
 Next patch set:
 
@@ -481,8 +545,8 @@ Next patch set:
 3. Add CBM guidance to `dotfiles/codex/AGENTS.md` for structural code
    exploration once installed.
 4. Restart Codex and verify the CBM MCP server in a fresh session.
-5. Try Caveman as a profile, vendored skill, or `SessionStart` hook, not as a
-   permanent global default.
+5. Keep observing RTK/context-mode/Caveman-compress gains before considering
+   Headroom or any global Caveman style hook.
 
 ## Sources Checked
 

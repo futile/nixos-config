@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "caveman": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1779273824,
+        "narHash": "sha256-BydREt/vai3j7kO5+e1OxsjXf6Vy+jSY1yA/yyxjHbI=",
+        "owner": "JuliusBrussee",
+        "repo": "caveman",
+        "rev": "655b7d9c5431f822264b7732e9901c5578ac84cf",
+        "type": "github"
+      },
+      "original": {
+        "owner": "JuliusBrussee",
+        "repo": "caveman",
+        "type": "github"
+      }
+    },
     "fish-foreign-env": {
       "flake": false,
       "locked": {
@@ -323,6 +339,7 @@
     },
     "root": {
       "inputs": {
+        "caveman": "caveman",
         "fish-foreign-env": "fish-foreign-env",
         "fish-puffer-fish": "fish-puffer-fish",
         "fish-tide": "fish-tide",

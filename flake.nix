@@ -76,6 +76,11 @@
       flake = false;
     };
 
+    caveman = {
+      url = "github:JuliusBrussee/caveman";
+      flake = false;
+    };
+
     # doom-emacs = {
     #   url = "github:hlissner/doom-emacs";
     #   flake = false;
