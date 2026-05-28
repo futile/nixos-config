@@ -126,6 +126,9 @@ approval_mode = "approve"
 [mcp_servers.context-mode.tools.ctx_fetch_and_index]
 approval_mode = "approve"
 
+[mcp_servers.context-mode.tools.ctx_execute_file]
+approval_mode = "approve"
+
 [mcp_servers.codebase-memory-mcp]
 command = "codebase-memory-mcp"
 env = { CBM_CACHE_DIR = "/home/felix/.cache/codebase-memory-mcp" }
