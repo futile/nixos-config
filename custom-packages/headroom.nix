@@ -10,6 +10,9 @@
   openssl,
 }:
 
+# Kept for manual Headroom experiments. The nixos-work Codex stack does not
+# install or start this package by default; see
+# docs/codex-token-optimization-stack.md#headroom-evaluation.
 python3.pkgs.buildPythonApplication rec {
   pname = "headroom-ai";
   version = "0.22.3";
@@ -40,11 +43,18 @@ python3.pkgs.buildPythonApplication rec {
   ];
 
   postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace-fail 'version = "0.9.1"' 'version = "${version}"'
+        substituteInPlace pyproject.toml \
+          --replace-fail 'version = "0.9.1"' 'version = "${version}"'
 
     substituteInPlace crates/headroom-core/Cargo.toml \
       --replace-fail '"ort-download-binaries-rustls-tls"' '"ort-load-dynamic"'
+
+    patch -p1 < ${./patches/headroom-codex-ws-oversize-preflight.patch}
+
+    substituteInPlace headroom/proxy/models.py \
+      --replace-fail 'from dataclasses import InitVar, dataclass, field' $'from dataclasses import InitVar, dataclass, field\nimport os' \
+      --replace-fail 'from headroom.providers.registry import ProviderApiOverrides' $'from headroom.providers.registry import ProviderApiOverrides\n\n\ndef _env_int_or_none(name: str) -> int | None:\n    raw = os.environ.get(name, "").strip()\n    if not raw:\n        return None\n    try:\n        return int(raw)\n    except ValueError:\n        return None' \
+      --replace-fail 'compression_max_workers: int | None = None' 'compression_max_workers: int | None = field(default_factory=lambda: _env_int_or_none("HEADROOM_COMPRESSION_MAX_WORKERS"))'
   '';
 
   env = {

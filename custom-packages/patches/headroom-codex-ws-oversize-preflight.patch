@@ -1,0 +1,28 @@
+--- a/headroom/proxy/handlers/openai.py
++++ b/headroom/proxy/handlers/openai.py
+@@ -1069,7 +1069,25 @@ class OpenAIHandlerMixin:
+         *,
+         model: str,
+         request_id: str,
+     ) -> tuple[dict[str, Any], bool, int, list[str], str | None, int, int, int, dict[str, float]]:
++        raw_threshold = __import__("os").environ.get(
++            "HEADROOM_WS_COMPRESSION_FAIL_THRESHOLD_BYTES", ""
++        ).strip()
++        oversize_threshold = 256 * 1024
++        if raw_threshold:
++            try:
++                parsed_threshold = int(raw_threshold)
++                if parsed_threshold > 0:
++                    oversize_threshold = parsed_threshold
++            except ValueError:
++                pass
++        payload_bytes = json.dumps(payload).encode("utf-8")
++        if len(payload_bytes) > oversize_threshold:
++            raise asyncio.TimeoutError(
++                f"preflight oversize frame: bytes={len(payload_bytes)} "
++                f"threshold={oversize_threshold}"
++            )
++
+         timing: dict[str, float] = {}
+ 
+         def _compress():  # noqa: ANN202

@@ -397,7 +397,7 @@ contains that migration shim.
 
 ## Headroom
 
-Headroom is deliberately not part of the initial setup.
+Headroom is deliberately not part of the active Codex setup.
 
 Reasons:
 
@@ -407,8 +407,95 @@ Reasons:
   debugging surface than local CLI/MCP tools.
 - RTK is already available independently in nixpkgs.
 
-Revisit Headroom only after RTK, context-mode, CBM, and any Caveman-style
-brevity rules have measurable value.
+The package expression remains in `custom-packages/headroom.nix` and the
+service definition remains gated in `home-modules/codex-token-optimization.nix`
+for future manual experiments. The package is not installed through Home
+Manager, the service is not started, and `nixos-work` does not include Headroom
+in the host `my.rustSccache.customPackageNames` list. This keeps the package
+definition around without making normal `just switch` builds pay for it.
+
+### Headroom Evaluation
+
+Headroom was tested as a Codex OpenAI proxy with `headroom-ai` 0.22.3, first in
+`--mode cache` and then in `--mode token`. The proxy needed local guardrails to
+avoid pathological Codex websocket frames consuming all CPU:
+
+- `HEADROOM_COMPRESSION_MAX_WORKERS=1`
+- `HEADROOM_COMPRESS_WORKERS=1`
+- `HEADROOM_KOMPRESS_MAX_CONCURRENT=1`
+- `HEADROOM_WS_COMPRESSION_FAIL_THRESHOLD_BYTES=1048576`
+- `HEADROOM_WS_FAIL_OPEN_ON_COMPRESSION_FAILURE=1`
+- native-thread caps for `OMP_NUM_THREADS`, `ORT_NUM_THREADS`, and
+  `RAYON_NUM_THREADS`
+
+Those guardrails kept the machine usable, but the measured value for Codex was
+not compelling. In the observed workload, the huge token numbers reported by
+`headroom perf` were cumulative across many requests, not single prompts larger
+than Codex's context window. A typical long Codex session repeatedly sent a
+large stable prefix and a small changing suffix; provider prompt caching handled
+most of the useful savings.
+
+Cache-mode `/stats` snapshot:
+
+| Metric | Value |
+|---|---:|
+| Requests | 127 |
+| Average compression | 1.0% |
+| Best compression | 10.4% |
+| Tokens removed | 49,148 |
+| Total input tokens | 7,180,085 |
+| Attempted compression tokens | 435,784 |
+| Active compression ratio | ~11.3% |
+| Cache read tokens | 6,695,296 |
+| Cache write tokens | 435,641 |
+| Request cache hit rate | 98.4% |
+| Total saved | $0.25 |
+| Cache savings reported separately | $16.74 |
+
+Token-mode `/stats` snapshot after about 30 minutes of normal Codex work:
+
+| Metric | Value |
+|---|---:|
+| Requests | 133 |
+| Average compression | 0.4% |
+| Best compression | 6.9% |
+| Tokens removed | 82,557 |
+| Total input tokens | 22,416,780 |
+| Attempted compression tokens | 508,100 |
+| Active compression ratio | ~16.2% |
+| Cache read tokens | 22,144,000 |
+| Cache write tokens | 190,223 |
+| Request cache hit rate | 99.2% |
+| Total saved | $0.41 |
+| Cache savings reported separately | $55.36 |
+
+Token mode compressed the subset Headroom touched more aggressively, but that
+subset was small relative to the repeated cached prefix. Overall token reduction
+was not better, total savings percentage stayed around 3.1%, and optimization
+overhead increased slightly. The live health endpoint also showed one queued
+compression timeout and one leaked compression thread during token-mode
+observation, so the CPU-risk path was still present even though the service
+stayed alive.
+
+The resulting decision is:
+
+- Keep `custom-packages/headroom.nix` and
+  `custom-packages/patches/headroom-codex-ws-oversize-preflight.patch` for
+  future manual experiments.
+- Do not install Headroom in the normal Codex Home Manager profile.
+- Do not start `headroom.service` by default.
+- Do not keep active Codex `model_providers.headroom`,
+  `mcp_servers.headroom`, or `codex-headroom` aliases while the service is
+  disabled.
+- Prefer context-mode, RTK, and Codebase Memory MCP for the active Codex token
+  optimization stack.
+
+Revisit Headroom only for workloads with large fresh tool outputs where
+compression can act on logs, JSON, search results, stack traces, or generated
+files before they enter the model context. For normal Codex sessions on this
+machine, provider prompt caching appears to carry nearly all of the useful
+economics, and that provider caching remains available without the Headroom
+proxy.
 
 ## Hook Transfer Notes
 

@@ -16,7 +16,7 @@ notification_condition = "unfocused"
 status_line = ["model-with-reasoning", "context-remaining", "current-dir", "git-branch", "five-hour-limit", "weekly-limit"]
 terminal_title = ["spinner", "project", "app-name"]
 status_line_use_colors = true
-session_picker_view = "dense"
+session_picker_view = "comfortable"
 theme = "catppuccin-latte"
 
 [tui.model_availability_nux]
@@ -31,6 +31,7 @@ writable_roots = [
   "/home/felix/.cache/sccache",
   "/home/felix/.cache/codebase-memory-mcp",
   "/home/felix/.codex/context-mode",
+  "/home/felix/.local/share/rtk",
 ]
 # 2026-05-06 gonna try this out for a bit
 network_access = true
@@ -120,22 +121,7 @@ approval_mode = "approve"
 [mcp_servers.context-mode.tools.ctx_doctor]
 approval_mode = "approve"
 
-[model_providers.headroom]
-name = "OpenAI via Headroom proxy"
-base_url = "http://127.0.0.1:8787/v1"
-supports_websockets = true
-
-[mcp_servers.headroom]
-command = "headroom"
-args = ["mcp", "serve"]
-
-[mcp_servers.headroom.tools.headroom_retrieve]
-approval_mode = "approve"
-
-[mcp_servers.headroom.tools.headroom_compress]
-approval_mode = "approve"
-
-[mcp_servers.headroom.tools.headroom_stats]
+[mcp_servers.context-mode.tools.ctx_fetch_and_index]
 approval_mode = "approve"
 
 [mcp_servers.codebase-memory-mcp]

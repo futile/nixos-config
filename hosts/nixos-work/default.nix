@@ -276,7 +276,8 @@ in
   my.rustSccache = {
     enable = true;
     customPackageNames = [
-      "headroom"
+      # Headroom is kept packaged for manual experiments, but is not part of
+      # this host's normal Codex stack. See docs/codex-token-optimization-stack.md#headroom-evaluation.
       "llm-wiki"
     ];
   };

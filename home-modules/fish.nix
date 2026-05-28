@@ -59,7 +59,8 @@
       # let's try this out :) -- works great!
       cat = "bat";
 
-      codex-headroom = "codex -c model_provider=headroom -c openai_base_url=http://127.0.0.1:8787/v1";
+      # Headroom is currently disabled for Codex. See
+      # docs/codex-token-optimization-stack.md#headroom-evaluation.
     };
 
     functions = {
