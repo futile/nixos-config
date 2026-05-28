@@ -99,6 +99,17 @@
       ],
       "url": "path:/nix/store/i2gsp87gqp16whm9mw0ybk9n84zir01x-source?lastModified=1776329215&narHash=sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw%3D&rev=b86751bc4085f48661017fa226dee99fab6c651b"
     },
+    "hydra-check": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.hydra-check",
+      "originalUrl": "flake:unstable",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/rif2gyfsjgjw7nkvi6pjnzwrp1zr797p-hydra-check-2.1.0"
+      ],
+      "url": "path:/nix/store/77dbgds155bbz3vd3qywq1sii07i5ljs-source?lastModified=1778869304&narHash=sha256-30sZNZoA1cqF5JNO9fVX%2BwgiQYjB7HJqqJ4ztCDeBZE%3D&rev=d233902339c02a9c334e7e593de68855ad26c4cb"
+    },
     "janet": {
       "active": true,
       "attrPath": "legacyPackages.x86_64-linux.janet",
