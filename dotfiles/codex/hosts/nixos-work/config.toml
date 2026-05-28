@@ -26,6 +26,7 @@ pet = "disabled"
 [features]
 hooks = true
 multi_agent = true
+apps = false
 
 [sandbox_workspace_write]
 writable_roots = [
