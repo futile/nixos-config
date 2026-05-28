@@ -18,6 +18,7 @@ terminal_title = ["spinner", "project", "app-name"]
 status_line_use_colors = true
 session_picker_view = "comfortable"
 theme = "catppuccin-latte"
+pet = "disabled"
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4

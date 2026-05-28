@@ -1,0 +1,501 @@
+#!/usr/bin/env python3
+"""Audit Codex session logs for raw-vs-RTK command usage.
+
+This is a lightweight Codex equivalent of the RTK `discover`/`session` idea for
+one repository. It reads Codex JSONL session files, extracts actual shell tool
+calls, splits simple shell command chains, and classifies executable segments
+such as:
+
+  env -u RUSTC_WRAPPER cargo test ...
+  env -u RUSTC_WRAPPER rtk cargo nextest run ...
+  rtk git diff --cached
+  just rtk-check
+
+It intentionally ignores prose mentions in prompts, bead close reasons, diffs,
+and command output.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import glob
+import json
+import os
+import re
+import time
+from collections import Counter, defaultdict
+from pathlib import Path
+from typing import Any
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Audit Codex sessions for raw vs RTK cargo/git usage.",
+    )
+    parser.add_argument(
+        "repo",
+        nargs="?",
+        default=os.getcwd(),
+        help="Repository path to audit. Defaults to the current directory.",
+    )
+    parser.add_argument(
+        "--days",
+        type=float,
+        default=2.0,
+        help="Look back this many days from now. Default: 2.",
+    )
+    parser.add_argument(
+        "--since",
+        help=(
+            "ISO timestamp cutoff, e.g. 2026-05-26T00:00:00+02:00. "
+            "Overrides --days."
+        ),
+    )
+    parser.add_argument(
+        "--sessions-root",
+        default=str(Path.home() / ".codex" / "sessions"),
+        help="Codex sessions root. Default: ~/.codex/sessions.",
+    )
+    parser.add_argument(
+        "--examples",
+        type=int,
+        default=25,
+        help="Number of raw/RTK examples to print. Default: 25.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON instead of text.",
+    )
+    return parser.parse_args()
+
+
+def cutoff_timestamp(args: argparse.Namespace) -> float:
+    if args.since:
+        stamp = args.since.replace("Z", "+00:00")
+        return dt.datetime.fromisoformat(stamp).timestamp()
+    return time.time() - args.days * 24 * 60 * 60
+
+
+def parse_timestamp(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def parse_json_object(line: str) -> dict[str, Any] | None:
+    try:
+        value = json.loads(line)
+    except json.JSONDecodeError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def parse_arguments(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
+def session_files(sessions_root: Path, cutoff: float) -> list[Path]:
+    # Codex stores sessions under year/month/day. Looking at every JSONL file is
+    # cheap enough for normal local history, but mtime filtering keeps old large
+    # sessions out of the parse.
+    pattern = str(sessions_root / "**" / "*.jsonl")
+    files = []
+    for name in glob.glob(pattern, recursive=True):
+        path = Path(name)
+        try:
+            if path.stat().st_mtime >= cutoff:
+                files.append(path)
+        except OSError:
+            continue
+    return sorted(files)
+
+
+def split_shell_segments(command: str) -> list[str]:
+    # This is deliberately simple. It matches how Codex commands are usually
+    # entered and avoids pretending to be a complete shell parser.
+    parts = re.split(r"\s*(?:&&|;|\|\||\|)\s*", command)
+    return [" ".join(part.strip().split()) for part in parts if part.strip()]
+
+
+def strip_nice(command: str) -> str:
+    return re.sub(r"^nice\s+-n\s+\d+\s+", "", command.strip())
+
+
+def strip_env(command: str) -> str:
+    tokens = command.split()
+    if not tokens or tokens[0] != "env":
+        return command
+
+    index = 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token == "-u" and index + 1 < len(tokens):
+            index += 2
+            continue
+        if token.startswith("-") and token != "--":
+            index += 1
+            continue
+        if "=" in token and not token.startswith("="):
+            index += 1
+            continue
+        break
+    return " ".join(tokens[index:])
+
+
+def classify_segment(segment: str) -> tuple[str, str] | None:
+    body = strip_env(strip_nice(segment))
+
+    if body.startswith("rtk "):
+        mode = "rtk"
+        command = strip_env(body[4:].strip())
+    else:
+        mode = "raw"
+        command = body
+
+    if command.startswith("cargo "):
+        tool = "cargo"
+    elif command.startswith("git "):
+        tool = "git"
+    elif command.startswith("just "):
+        tool = "just"
+    else:
+        return None
+
+    if tool == "cargo":
+        if re.search(r"\bcargo\s+nextest\b", command):
+            subcommand = "nextest"
+        elif re.search(r"\bcargo\s+test\b", command):
+            subcommand = "test"
+        elif re.search(r"\bcargo\s+check\b", command):
+            subcommand = "check"
+        elif re.search(r"\bcargo\s+clippy\b", command):
+            subcommand = "clippy"
+        elif re.search(r"\bcargo\s+fmt\b", command):
+            subcommand = "fmt"
+        elif re.search(r"\bcargo\s+build\b", command):
+            subcommand = "build"
+        else:
+            subcommand = "cargo-other"
+    elif tool == "git":
+        if re.search(r"\bgit\s+status\b", command):
+            subcommand = "git-status"
+        elif re.search(r"\bgit\s+diff\b", command):
+            subcommand = "git-diff"
+        elif re.search(r"\bgit\s+show\b", command):
+            subcommand = "git-show"
+        elif re.search(r"\bgit\s+log\b", command):
+            subcommand = "git-log"
+        elif re.search(r"\bgit\s+add\b", command):
+            subcommand = "git-add"
+        elif re.search(r"\bgit\s+commit\b", command):
+            subcommand = "git-commit"
+        elif re.search(r"\bgit\s+push\b", command):
+            subcommand = "git-push"
+        else:
+            subcommand = "git-other"
+    elif re.search(r"\b(rtk-check|check)\b", command):
+        subcommand = "just-check"
+    elif re.search(r"\bformat\b", command):
+        subcommand = "just-format"
+    else:
+        subcommand = "just-other"
+
+    return mode, subcommand
+
+
+def is_repo_workdir(workdir: str | None, repo: Path) -> bool:
+    if not workdir:
+        return False
+    try:
+        resolved = Path(workdir).resolve()
+    except OSError:
+        return False
+    return resolved == repo or repo in resolved.parents
+
+
+def add_command_records(
+    records: list[dict[str, Any]],
+    *,
+    timestamp: float,
+    source_file: Path,
+    line_number: int,
+    command: str | None,
+    workdir: str | None,
+    repo: Path,
+    source: str,
+) -> None:
+    if not command or not is_repo_workdir(workdir, repo):
+        return
+
+    for segment in split_shell_segments(command):
+        kind = classify_segment(segment)
+        if not kind:
+            continue
+        records.append(
+            {
+                "timestamp": timestamp,
+                "file": str(source_file),
+                "line": line_number,
+                "segment": segment,
+                "kind": f"{kind[0]} {kind[1]}",
+                "mode": kind[0],
+                "family": family_for_subcommand(kind[1]),
+                "subcommand": kind[1],
+                "source": source,
+            }
+        )
+
+
+def family_for_subcommand(subcommand: str) -> str:
+    if subcommand.startswith("git-"):
+        return "git"
+    if subcommand.startswith("just-"):
+        return "just"
+    return "cargo"
+
+
+def collect_records(repo: Path, sessions_root: Path, cutoff: float) -> tuple[list[dict[str, Any]], int]:
+    records: list[dict[str, Any]] = []
+    repo_sessions = 0
+
+    for path in session_files(sessions_root, cutoff):
+        session_cwd: str | None = None
+        session_counted = False
+
+        try:
+            handle = path.open("r", errors="ignore")
+        except OSError:
+            continue
+
+        with handle:
+            for line_number, line in enumerate(handle, 1):
+                if "function_call" not in line and "session_meta" not in line:
+                    continue
+
+                obj = parse_json_object(line)
+                if not obj:
+                    continue
+
+                timestamp = parse_timestamp(obj.get("timestamp")) or path.stat().st_mtime
+                if timestamp < cutoff:
+                    continue
+
+                payload = obj.get("payload") or {}
+                if obj.get("type") == "session_meta":
+                    session_cwd = payload.get("cwd")
+                    if not session_counted and is_repo_workdir(session_cwd, repo):
+                        repo_sessions += 1
+                        session_counted = True
+                    continue
+
+                if payload.get("type") != "function_call":
+                    continue
+
+                name = payload.get("name")
+                arguments = parse_arguments(payload.get("arguments"))
+
+                if name == "exec_command":
+                    add_command_records(
+                        records,
+                        timestamp=timestamp,
+                        source_file=path,
+                        line_number=line_number,
+                        command=arguments.get("cmd"),
+                        workdir=arguments.get("workdir") or session_cwd,
+                        repo=repo,
+                        source="exec_command",
+                    )
+                elif name == "parallel" and isinstance(arguments.get("tool_uses"), list):
+                    for tool_use in arguments["tool_uses"]:
+                        if tool_use.get("recipient_name") not in {
+                            "functions.exec_command",
+                            "exec_command",
+                        }:
+                            continue
+                        params = tool_use.get("parameters") or {}
+                        add_command_records(
+                            records,
+                            timestamp=timestamp,
+                            source_file=path,
+                            line_number=line_number,
+                            command=params.get("cmd"),
+                            workdir=params.get("workdir") or session_cwd,
+                            repo=repo,
+                            source="parallel.exec_command",
+                        )
+                elif name == "ctx_batch_execute":
+                    for command_spec in arguments.get("commands") or []:
+                        add_command_records(
+                            records,
+                            timestamp=timestamp,
+                            source_file=path,
+                            line_number=line_number,
+                            command=command_spec.get("command"),
+                            workdir=session_cwd,
+                            repo=repo,
+                            source="ctx_batch_execute",
+                        )
+                elif name == "ctx_execute" and arguments.get("language") == "shell":
+                    add_command_records(
+                        records,
+                        timestamp=timestamp,
+                        source_file=path,
+                        line_number=line_number,
+                        command=arguments.get("code"),
+                        workdir=session_cwd,
+                        repo=repo,
+                        source="ctx_execute.shell",
+                    )
+
+    seen: set[tuple[str, int, str]] = set()
+    unique: list[dict[str, Any]] = []
+    for record in records:
+        key = (record["file"], record["line"], record["segment"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(record)
+
+    return unique, repo_sessions
+
+
+def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
+    counts = Counter(record["kind"] for record in records)
+    by_day: dict[str, Counter[str]] = defaultdict(Counter)
+    for record in records:
+        day = dt.datetime.fromtimestamp(record["timestamp"]).strftime("%Y-%m-%d")
+        by_day[day][record["kind"]] += 1
+
+    by_family: dict[str, dict[str, int]] = {}
+    for family in sorted({record["family"] for record in records} | {"cargo", "git", "just"}):
+        family_records = [record for record in records if record["family"] == family]
+        by_family[family] = {
+            "segments": len(family_records),
+            "rtk": sum(1 for record in family_records if record["mode"] == "rtk"),
+            "raw": sum(1 for record in family_records if record["mode"] == "raw"),
+        }
+
+    return {
+        "all_segments": len(records),
+        "all_rtk": sum(1 for record in records if record["mode"] == "rtk"),
+        "all_raw": sum(1 for record in records if record["mode"] == "raw"),
+        "by_family": by_family,
+        "counts": dict(sorted(counts.items())),
+        "by_day": {
+            day: dict(sorted(day_counts.items()))
+            for day, day_counts in sorted(by_day.items())
+        },
+    }
+
+
+def format_record(record: dict[str, Any]) -> str:
+    timestamp = dt.datetime.fromtimestamp(record["timestamp"]).strftime("%Y-%m-%d %H:%M:%S %Z")
+    location = f"{Path(record['file']).name}:{record['line']}"
+    return f"- {timestamp} {record['kind']}: {record['segment']} [{location}]"
+
+
+def main() -> int:
+    args = parse_args()
+    repo = Path(args.repo).expanduser().resolve()
+    sessions_root = Path(args.sessions_root).expanduser().resolve()
+    cutoff = cutoff_timestamp(args)
+
+    records, repo_sessions = collect_records(repo, sessions_root, cutoff)
+    summary = summarize(records)
+
+    def examples_for(*, family: str, mode: str) -> list[dict[str, Any]]:
+        matching = [
+            record
+            for record in records
+            if record["family"] == family and record["mode"] == mode
+        ]
+        matching.sort(key=lambda record: record["timestamp"], reverse=True)
+        return matching
+
+    raw_cargo = examples_for(family="cargo", mode="raw")
+    rtk_cargo = examples_for(family="cargo", mode="rtk")
+    raw_git = examples_for(family="git", mode="raw")
+    rtk_git = examples_for(family="git", mode="rtk")
+
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "repo": str(repo),
+                    "sessions_root": str(sessions_root),
+                    "cutoff": dt.datetime.fromtimestamp(cutoff).isoformat(),
+                    "repo_sessions": repo_sessions,
+                    "summary": summary,
+                    "raw_cargo_examples": raw_cargo[: args.examples],
+                    "rtk_cargo_examples": rtk_cargo[: args.examples],
+                    "raw_git_examples": raw_git[: args.examples],
+                    "rtk_git_examples": rtk_git[: args.examples],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    cutoff_text = dt.datetime.fromtimestamp(cutoff).strftime("%Y-%m-%d %H:%M:%S %Z")
+    print(f"repo: {repo}")
+    print(f"sessions_root: {sessions_root}")
+    print(f"cutoff: {cutoff_text}")
+    print(f"repo_sessions: {repo_sessions}")
+    print(
+        "all_segments: "
+        f"{summary['all_segments']} "
+        f"rtk={summary['all_rtk']} "
+        f"raw={summary['all_raw']}"
+    )
+    print("\nby_family:")
+    for family, family_summary in summary["by_family"].items():
+        print(
+            f"  {family}: "
+            f"segments={family_summary['segments']} "
+            f"rtk={family_summary['rtk']} "
+            f"raw={family_summary['raw']}"
+        )
+
+    print("\ncounts:")
+    for key, value in summary["counts"].items():
+        print(f"  {key}: {value}")
+
+    print("\nby_day:")
+    for day, counts in summary["by_day"].items():
+        print(f"  {day}: {counts}")
+
+    print("\nraw_cargo_examples:")
+    for record in raw_cargo[: args.examples]:
+        print(format_record(record))
+
+    print("\nrtk_cargo_examples:")
+    for record in rtk_cargo[: args.examples]:
+        print(format_record(record))
+
+    print("\nraw_git_examples:")
+    for record in raw_git[: args.examples]:
+        print(format_record(record))
+
+    print("\nrtk_git_examples:")
+    for record in rtk_git[: args.examples]:
+        print(format_record(record))
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
