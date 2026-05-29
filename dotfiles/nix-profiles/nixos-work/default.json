@@ -73,9 +73,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/397dbj9vas9p2yb905wsnx4jvskjnx3h-codex-0.133.0"
+        "/nix/store/apbgp27nc9a1hh8v9568k3igkfx601lc-codex-0.134.0"
       ],
-      "url": "github:NixOS/nixpkgs/6b877741b139e4da7187443a8fa7756251f4ef7d?narHash=sha256-BZhZNQaFxYz/OcFz53kxEnv85%2BnPBLpSNtSywgKzrdM%3D"
+      "url": "github:NixOS/nixpkgs/dd73bc63956d6447f6fb8fc22904dfae4f61e560?narHash=sha256-y8MN9yzGDlTfBInfMbqLin1P0oqVhWr2eN8EMYcKvoU%3D"
     },
     "gh": {
       "active": true,
