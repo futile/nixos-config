@@ -34,6 +34,7 @@ writable_roots = [
   "/home/felix/.cache/codebase-memory-mcp",
   "/home/felix/.codex/context-mode",
   "/home/felix/.local/share/rtk",
+  "/home/felix/.serena",
 ]
 # 2026-05-06 gonna try this out for a bit
 network_access = true
@@ -104,6 +105,12 @@ trusted_hash = "sha256:c4092693e18178e251c8c28b1f91d7101c1a851875b4d8f1db9d7eec3
 [hooks.state."/home/felix/.codex/hooks.json:stop:0:0"]
 trusted_hash = "sha256:31000ddeb20ac6bb8e1dea70dfe819f66f6cfe7b00fd627a5dd475be22078a2c"
 
+[hooks.state."/home/felix/.codex/hooks.json:session_start:0:1"]
+trusted_hash = "sha256:01a21acadcbd06488387cb1d14311fac33d4cff9f74403cdffb929e570ef4185"
+
+[hooks.state."/home/felix/.codex/hooks.json:stop:0:1"]
+trusted_hash = "sha256:f1b26fc4f5e7255a0b276c5cb2f44f01985d1f28488f3e16bb75de0a4a7af356"
+
 [mcp_servers.context-mode]
 command = "context-mode"
 env = { CONTEXT_MODE_PLATFORM = "codex" }
@@ -127,6 +134,14 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers.context-mode.tools.ctx_execute_file]
+approval_mode = "approve"
+
+[mcp_servers.serena]
+startup_timeout_sec = 15
+command = "serena"
+args = ["start-mcp-server", "--project-from-cwd", "--context=codex"]
+
+[mcp_servers.serena.tools.write_memory]
 approval_mode = "approve"
 
 [mcp_servers.codebase-memory-mcp]

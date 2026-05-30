@@ -27,6 +27,10 @@
           {
             "type": "command",
             "command": "env CONTEXT_MODE_PLATFORM=codex context-mode hook codex sessionstart"
+          },
+          {
+            "type": "command",
+            "command": "serena-hooks activate --client=codex"
           }
         ]
       }
@@ -57,6 +61,10 @@
           {
             "type": "command",
             "command": "env CONTEXT_MODE_PLATFORM=codex context-mode hook codex stop"
+          },
+          {
+            "type": "command",
+            "command": "serena-hooks cleanup --client=codex"
           }
         ]
       }
