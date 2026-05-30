@@ -52,6 +52,7 @@ Use this skill when working in this repository on packages under `custom-package
 ## Common Mistakes
 
 - Writing the package first without checking how this repo exposes custom packages
+- Manually creating a package from scratch instead of checking how `~/gits/nixpkgs` packages similar cases
 - Copying a nixpkgs package with the wrong toolchain generation for the upstream app
 - Guessing dependency hashes instead of letting Nix report them
 - Forgetting that new files in a flake must be tracked by git before evaluation sees them
