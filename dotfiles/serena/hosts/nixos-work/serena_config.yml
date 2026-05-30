@@ -110,9 +110,9 @@ excluded_tools: []
 
 # list of optional tools (which are disabled by default) to be included
 included_optional_tools:
-  - open_dashboard
-  - restart_language_server
-  - serena_info
+- open_dashboard
+- restart_language_server
+- serena_info
 
 # fixed set of tools to use as the base tool set (if non-empty), replacing Serena's default set of tools.
 # This cannot be combined with non-empty excluded_tools or included_optional_tools.
@@ -124,8 +124,8 @@ fixed_tools: []
 # If this is undefined/empty, no base modes are included.
 # See https://oraios.github.io/serena/02-usage/050_configuration.html#modes
 base_modes:
-  - interactive
-  - editing
+- interactive
+- editing
 default_modes:
 
 # Used as default for tools where the apply method has a default maximal answer length.
@@ -164,4 +164,5 @@ project_serena_folder_location: "$projectDir/.serena"
 
 # the list of registered project paths (updated automatically).
 projects:
-  - /home/felix/nixos
+- /home/felix/gits/pale-darks-online
+- /home/felix/nixos
