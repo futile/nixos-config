@@ -46,9 +46,8 @@ let
       llm-wiki = final.callPackage ../custom-packages/llm-wiki.nix { };
       marker = final.callPackage ../custom-packages/marker.nix { };
       phinger-cursors-extended = final.callPackage ../custom-packages/phinger-cursors-extended.nix { };
-      serena = final.callPackage ../custom-packages/serena-custom.nix {
-        src = flake-inputs.serena;
-        version = "1.5.4.dev0";
+      serena = final.callPackage ../custom-packages/serena-with-editor-tools.nix {
+        serenaInput = flake-inputs.serena;
         editorTools = final.lib.my.editorTools;
       };
       serena-custom = final.callPackage ../custom-packages/serena-custom.nix { };

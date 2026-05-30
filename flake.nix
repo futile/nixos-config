@@ -183,9 +183,8 @@
         phinger-cursors-extended =
           pkgsForSystem.callPackage ./custom-packages/phinger-cursors-extended.nix
             { };
-        serena = pkgsForSystem.callPackage ./custom-packages/serena-custom.nix {
-          src = inputs.serena;
-          version = "1.5.4.dev0";
+        serena = pkgsForSystem.callPackage ./custom-packages/serena-with-editor-tools.nix {
+          serenaInput = inputs.serena;
           editorTools = import ./modules/editor-tools.nix pkgsForSystem;
         };
         serena-custom = pkgsForSystem.callPackage ./custom-packages/serena-custom.nix {

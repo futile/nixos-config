@@ -4,7 +4,7 @@
   fetchFromGitHub,
   editorTools ? [ ],
   version ? "1.5.3",
-  src ? fetchFromGitHub {
+  serenaSrc ? fetchFromGitHub {
     owner = "oraios";
     repo = "serena";
     tag = "v${version}";
@@ -14,7 +14,8 @@
 
 python3Packages.buildPythonApplication rec {
   pname = "serena-custom";
-  inherit version src;
+  inherit version;
+  src = serenaSrc;
   pyproject = true;
   __structuredAttrs = true;
 

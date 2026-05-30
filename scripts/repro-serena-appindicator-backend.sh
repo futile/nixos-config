@@ -5,6 +5,34 @@ target="${1:-}"
 wrapper_bin="${2:-}"
 python_bin=""
 
+resolve_effective_wrapper() {
+  local wrapper="$1"
+  local next
+
+  while true; do
+    next="$(
+      python3 - "$wrapper" <<'PY' || true
+import re
+import sys
+from pathlib import Path
+
+text = Path(sys.argv[1]).read_text(errors="replace")
+match = re.search(r'exec(?: -a "\$0")? "([^"]+/bin/serena)"', text)
+if not match:
+    raise SystemExit(1)
+print(match.group(1))
+PY
+    )"
+
+    if [[ -z "$next" || "$next" == "$wrapper" ]]; then
+      printf '%s\n' "$wrapper"
+      return 0
+    fi
+
+    wrapper="$next"
+  done
+}
+
 resolve_python_from_wrapper() {
   local wrapper="$1"
   local serena_entry
@@ -46,6 +74,7 @@ if [[ -n "$target" ]]; then
 fi
 
 if [[ -n "$wrapper_bin" && -z "$python_bin" ]]; then
+  wrapper_bin="$(resolve_effective_wrapper "$wrapper_bin")"
   python_bin="$(resolve_python_from_wrapper "$wrapper_bin")"
 fi
 
