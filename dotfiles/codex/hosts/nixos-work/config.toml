@@ -147,6 +147,9 @@ approval_mode = "approve"
 [mcp_servers.serena.tools.safe_delete_symbol]
 approval_mode = "approve"
 
+[mcp_servers.serena.tools.edit_memory]
+approval_mode = "approve"
+
 [mcp_servers.codebase-memory-mcp]
 command = "codebase-memory-mcp"
 env = { CBM_CACHE_DIR = "/home/felix/.cache/codebase-memory-mcp" }
