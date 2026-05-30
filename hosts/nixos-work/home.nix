@@ -209,6 +209,7 @@ in
       # can also put this into ~/.cargo/config.toml, but I don't have this on all systems atm.
       # ref: https://github.com/mozilla/sccache?tab=readme-ov-file#usage
       RUSTC_WRAPPER = "sccache";
+      SCCACHE_CACHE_SIZE = "50G";
     };
 
     stateVersion = "22.11";
