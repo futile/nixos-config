@@ -57,6 +57,10 @@ Current `nixos-work` setup:
 - Codebase Memory MCP is installed from its upstream flake and registered as a
   Codex MCP server on `nixos-work`. Headroom remains deferred because it changes
   the API request path.
+- Serena is packaged locally as `my-custom-packages.serena` and installed in
+  the Codex token optimization profile. Its CLI is wrapped with the shared
+  editor/LSP tool bundle so the LSP backend can see the same tools used by
+  editors.
 
 ## Current Codex Baseline
 
@@ -99,7 +103,9 @@ configuration. Existing sessions and subagents may keep stale config.
    compression. Done via a pinned non-flake input, upstream helper scripts, and
    a repo-owned `SKILL.md`.
 4. Add Codebase Memory MCP via its upstream flake and Codex MCP config.
-5. Revisit Headroom later, only after the local-only layers are working.
+5. Add Serena as an optional semantic code MCP/server layer, using the existing
+   editor tool bundle for language-server availability. Done for `nixos-work`.
+6. Revisit Headroom later, only after the local-only layers are working.
 
 This order avoids API proxy complexity and starts with tools that are either
 already in nixpkgs or have explicit Codex support.
@@ -123,6 +129,7 @@ Current module shape:
 ```nix
 home.packages = with pkgs; [
   my-custom-packages.context-mode
+  my-custom-packages.serena
   rtk
 ];
 ```
@@ -308,6 +315,37 @@ or when the graph is missing/stale.
 Do not ban `rg` outright in this repo. The repository guidance explicitly says
 to prefer `rg` for text/file search. A better rule is "CBM for structural code
 questions; `rg` for text and repository navigation."
+
+## Serena
+
+Serena is packaged locally as `custom-packages/serena.nix` rather than installed
+with upstream's `uv tool install` path. The package tracks `serena-agent` 1.5.3
+from the upstream GitHub release and is exposed as both `.#serena` and
+`pkgs.my-custom-packages.serena`.
+
+The package keeps `__structuredAttrs = true` and uses separate wrapper argv
+entries for `makeWrapperArgs`. It removes the deprecated `dotenv` stub
+dependency and relaxes upstream's exact Python dependency pins to the nixpkgs
+versions.
+
+Serena's LSP backend needs language-server tools at runtime. Instead of giving
+Serena a separate list, the package accepts `editorTools` and the Home Manager
+overlay passes `final.lib.my.editorTools`. That keeps Serena aligned with the
+same LSP/formatter bundle used by Helix, Neovim, Zed, Doom Emacs, and VS Code.
+The `.#serena` flake package imports the same list from `modules/editor-tools.nix`.
+
+Basic checks:
+
+```sh
+nix build .#serena --no-link
+serena --version
+serena start-mcp-server --help
+```
+
+The current integration only installs Serena. It does not yet add a Codex MCP
+server entry, because Serena can be used either as a per-client setup command or
+as an explicitly configured MCP server depending on the desired transport and
+project-selection behavior.
 
 ## Caveman
 
@@ -551,7 +589,7 @@ Potential ports:
 There are two relevant Home Manager modules:
 
 - `home-modules/codex-token-optimization.nix`: installs RTK and context-mode,
-  and links the context-mode hook config.
+  Codebase Memory MCP, Serena, and links the context-mode hook config.
 - `home-modules/agents.nix`: exposes repo-managed skills and upstream-backed
   helper assets under `~/.agents/skills`.
 
@@ -566,6 +604,7 @@ managed dotfiles:
 home.packages = with pkgs; [
   rtk
   my-custom-packages.context-mode
+  my-custom-packages.serena
 ];
 ```
 
@@ -599,6 +638,9 @@ Custom package status:
   `skills/caveman-compress` is exposed; upstream scripts are reused with a
   repo-owned `SKILL.md`.
 - `codebase-memory-mcp` is consumed from its upstream flake.
+- `serena` is implemented as a repo-local custom package, exposed through the
+  flake and `pkgs.my-custom-packages`, and installed through
+  `codex-token-optimization.nix`.
 
 ## Suggested First Patch Set
 
@@ -628,8 +670,12 @@ Completed:
    - local `avoiding-duplicate-builds-in-worktrees`
    - local `find-skills`
    - repo-owned `caveman-compress` instructions with upstream helper scripts
-8. Keep readable global Codex instructions in `dotfiles/codex/AGENTS.source.md`
-   and regenerate compressed `dotfiles/codex/AGENTS.md` with:
+9. Added Serena as a local custom package, exposed it through the flake and
+   `pkgs.my-custom-packages`, and installed it through
+   `home-modules/codex-token-optimization.nix`.
+10. Keep readable global Codex instructions in
+    `dotfiles/codex/AGENTS.source.md` and regenerate compressed
+    `dotfiles/codex/AGENTS.md` with:
 
 ```sh
 just compress-codex-agents

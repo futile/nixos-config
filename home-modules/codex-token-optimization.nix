@@ -16,6 +16,7 @@ in
   home.packages = with pkgs; [
     flake-inputs.codebase-memory-mcp.packages.${system}.default
     my-custom-packages.context-mode
+    my-custom-packages.serena
     rtk
   ];
 
