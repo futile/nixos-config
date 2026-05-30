@@ -178,6 +178,9 @@
         phinger-cursors-extended =
           pkgsForSystem.callPackage ./custom-packages/phinger-cursors-extended.nix
             { };
+        serena = pkgsForSystem.callPackage ./custom-packages/serena.nix {
+          editorTools = import ./modules/editor-tools.nix pkgsForSystem;
+        };
       };
 
       nixosConfigurations.nixos-home = nixpkgs.lib.nixosSystem {
