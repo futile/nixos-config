@@ -138,7 +138,7 @@ approval_mode = "approve"
 
 [mcp_servers.serena]
 startup_timeout_sec = 15
-command = "serena"
+command = "/home/felix/nixos/bin/serena-mcp-with-desktop-env"
 args = ["start-mcp-server", "--project-from-cwd", "--context=codex"]
 
 [mcp_servers.serena.tools.write_memory]

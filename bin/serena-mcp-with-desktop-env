@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
+  export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+fi
+
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" && -S "$XDG_RUNTIME_DIR/bus" ]]; then
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi
+
+get_systemd_user_environment() {
+  systemctl --user show-environment 2>/dev/null && return 0
+  systemctl --user --machine="$(id -un)@.host" show-environment 2>/dev/null || true
+}
+
+systemd_user_environment="$(get_systemd_user_environment)"
+
+import_systemd_user_env() {
+  local wanted="$1"
+  local name value
+
+  while IFS='=' read -r name value; do
+    if [[ "$name" == "$wanted" && -n "${value:-}" ]]; then
+      export "$name=$value"
+      return 0
+    fi
+  done <<<"$systemd_user_environment"
+}
+
+for name in \
+  DISPLAY \
+  WAYLAND_DISPLAY \
+  XDG_CURRENT_DESKTOP \
+  DESKTOP_SESSION \
+  XDG_SESSION_DESKTOP \
+  XDG_SESSION_TYPE \
+  XDG_RUNTIME_DIR \
+  DBUS_SESSION_BUS_ADDRESS
+do
+  import_systemd_user_env "$name"
+done
+
+export PYSTRAY_BACKEND=appindicator
+
+exec serena "$@"
