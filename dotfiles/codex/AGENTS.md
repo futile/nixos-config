@@ -4,8 +4,6 @@
 
 When creating git worktrees, isolated workspaces, or subagent work areas, check whether duplicated build outputs, caches, or dependency downloads cause expensive cold rebuilds, repeated setup, or wasted disk.
 
-Use local skill `avoiding-duplicate-builds-in-worktrees` when available.
-
 For Rust packages in `~/gits/nixpkgs` or another nixpkgs checkout, prefer `~/nixos/bin/nix-build-sccached` over plain `nix build` when build should use shared sccache. See `~/nixos/docs/nix-sccache.md`.
 
 After creating or changing `.codex/config.toml`, restart Codex before relying on new config. Subagents created before restart may keep stale config and must not prove new config is active. Verify with fresh Codex session or fresh subagent after restart.

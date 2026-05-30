@@ -15,13 +15,13 @@ wrappers, installs some tools outside Nix, and enables Headroom by default.
 The article's core idea is that context savings compound when each layer catches
 a different source of waste:
 
-| Layer | Tool | Original purpose | Codex transfer |
-|---|---|---|---|
-| 1 | Codebase Memory MCP | Avoid file reads for code exploration by querying a local graph. | Useful. Configure as a Codex MCP server. |
-| 2 | context-mode | Keep large command/file/web output in a local searchable store and return summaries. | Implemented for `nixos-work` as a Bun-backed Nix package, Codex MCP server, and hook provider. |
-| 3 | RTK | Compress shell output before it enters context. | Implemented for `nixos-work` through `pkgs.rtk` and `AGENTS.md` guidance. |
-| 4 | Headroom | Anthropic API proxy that compresses request payloads. | Defer. It adds an API service/proxy and is not the first thing to adopt. |
-| 5 | Caveman | Make agent replies shorter and compress memory files. | Partly implemented: only the `caveman-compress` skill is installed, for explicit file compression. Global Caveman speech style is not enabled. |
+| Layer | Tool                | Original purpose                                                                     | Codex transfer                                                                                                                                 |
+| ----- | ------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | Codebase Memory MCP | Avoid file reads for code exploration by querying a local graph.                     | Useful. Configure as a Codex MCP server.                                                                                                       |
+| 2     | context-mode        | Keep large command/file/web output in a local searchable store and return summaries. | Implemented for `nixos-work` as a Bun-backed Nix package, Codex MCP server, and hook provider.                                                 |
+| 3     | RTK                 | Compress shell output before it enters context.                                      | Implemented for `nixos-work` through `pkgs.rtk` and `AGENTS.md` guidance.                                                                      |
+| 4     | Headroom            | Anthropic API proxy that compresses request payloads.                                | Defer. It adds an API service/proxy and is not the first thing to adopt.                                                                       |
+| 5     | Caveman             | Make agent replies shorter and compress memory files.                                | Partly implemented: only the `caveman-compress` skill is installed, for explicit file compression. Global Caveman speech style is not enabled. |
 
 The companion repo contains:
 
@@ -490,37 +490,37 @@ most of the useful savings.
 
 Cache-mode `/stats` snapshot:
 
-| Metric | Value |
-|---|---:|
-| Requests | 127 |
-| Average compression | 1.0% |
-| Best compression | 10.4% |
-| Tokens removed | 49,148 |
-| Total input tokens | 7,180,085 |
-| Attempted compression tokens | 435,784 |
-| Active compression ratio | ~11.3% |
-| Cache read tokens | 6,695,296 |
-| Cache write tokens | 435,641 |
-| Request cache hit rate | 98.4% |
-| Total saved | $0.25 |
-| Cache savings reported separately | $16.74 |
+| Metric                            |     Value |
+| --------------------------------- | --------: |
+| Requests                          |       127 |
+| Average compression               |      1.0% |
+| Best compression                  |     10.4% |
+| Tokens removed                    |    49,148 |
+| Total input tokens                | 7,180,085 |
+| Attempted compression tokens      |   435,784 |
+| Active compression ratio          |    ~11.3% |
+| Cache read tokens                 | 6,695,296 |
+| Cache write tokens                |   435,641 |
+| Request cache hit rate            |     98.4% |
+| Total saved                       |     $0.25 |
+| Cache savings reported separately |    $16.74 |
 
 Token-mode `/stats` snapshot after about 30 minutes of normal Codex work:
 
-| Metric | Value |
-|---|---:|
-| Requests | 133 |
-| Average compression | 0.4% |
-| Best compression | 6.9% |
-| Tokens removed | 82,557 |
-| Total input tokens | 22,416,780 |
-| Attempted compression tokens | 508,100 |
-| Active compression ratio | ~16.2% |
-| Cache read tokens | 22,144,000 |
-| Cache write tokens | 190,223 |
-| Request cache hit rate | 99.2% |
-| Total saved | $0.41 |
-| Cache savings reported separately | $55.36 |
+| Metric                            |      Value |
+| --------------------------------- | ---------: |
+| Requests                          |        133 |
+| Average compression               |       0.4% |
+| Best compression                  |       6.9% |
+| Tokens removed                    |     82,557 |
+| Total input tokens                | 22,416,780 |
+| Attempted compression tokens      |    508,100 |
+| Active compression ratio          |     ~16.2% |
+| Cache read tokens                 | 22,144,000 |
+| Cache write tokens                |    190,223 |
+| Request cache hit rate            |      99.2% |
+| Total saved                       |      $0.41 |
+| Cache savings reported separately |     $55.36 |
 
 Token mode compressed the subset Headroom touched more aggressively, but that
 subset was small relative to the repeated cached prefix. Overall token reduction
@@ -590,14 +590,14 @@ linked from `dotfiles/codex/hooks.json`; test changes in a fresh Codex session.
 
 Potential ports:
 
-| Claude hook | Codex status |
-|---|---|
-| `bash-ban-raw-tools` | Possible as a blocking `PreToolUse` hook, but it conflicts with this repo's normal `rg`-first search habit if copied exactly. |
-| `cbm-code-discovery-gate` | Possible, but should be softer for Codex: remind once, do not block docs/config/literal searches. |
-| `cbm-mcp-marker` | Needs Codex MCP tool name confirmation before porting. |
-| `cbm-session-reminder` | Better as `AGENTS.md` guidance or a `SessionStart` hook. |
-| `context-mode hook claude-code ...` | Do not use. Use `context-mode hook codex ...` or plugin hooks. |
-| `rtk hook claude` | Do not use unless RTK documents a Codex hook mode. Use explicit `rtk <cmd>` first. |
+| Claude hook                         | Codex status                                                                                                                  |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `bash-ban-raw-tools`                | Possible as a blocking `PreToolUse` hook, but it conflicts with this repo's normal `rg`-first search habit if copied exactly. |
+| `cbm-code-discovery-gate`           | Possible, but should be softer for Codex: remind once, do not block docs/config/literal searches.                             |
+| `cbm-mcp-marker`                    | Needs Codex MCP tool name confirmation before porting.                                                                        |
+| `cbm-session-reminder`              | Better as `AGENTS.md` guidance or a `SessionStart` hook.                                                                      |
+| `context-mode hook claude-code ...` | Do not use. Use `context-mode hook codex ...` or plugin hooks.                                                                |
+| `rtk hook claude`                   | Do not use unless RTK documents a Codex hook mode. Use explicit `rtk <cmd>` first.                                            |
 
 ## NixOS Implementation Sketch
 
@@ -687,15 +687,14 @@ Completed:
    `caveman-compress` skill through `home-modules/agents.nix`.
 7. Switched `~/.agents` management from one whole-directory symlink to
    individual skill links:
-   - local `avoiding-duplicate-builds-in-worktrees`
    - local `find-skills`
    - repo-owned `caveman-compress` instructions with upstream helper scripts
 8. Added Serena first as a local custom package, then switched the active
    installation to upstream's `github:oraios/serena/main` flake while keeping
    the local package as `serena-custom`.
 9. Keep readable global Codex instructions in
-    `dotfiles/codex/AGENTS.source.md` and regenerate compressed
-    `dotfiles/codex/AGENTS.md` with:
+   `dotfiles/codex/AGENTS.source.md` and regenerate compressed
+   `dotfiles/codex/AGENTS.md` with:
 
 ```sh
 just compress-codex-agents

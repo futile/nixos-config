@@ -21,9 +21,6 @@ let
   '';
 in
 {
-  home.file.".agents/skills/avoiding-duplicate-builds-in-worktrees".source =
-    config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/agents/skills/avoiding-duplicate-builds-in-worktrees";
-
   home.file.".agents/skills/find-skills".source =
     config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/agents/skills/find-skills";
 
