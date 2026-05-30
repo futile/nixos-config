@@ -113,6 +113,11 @@
       };
     };
 
+    serena = {
+      url = "github:oraios/serena/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # cf-engineering-nixpkgs = {
     #   url = "git+ssh://git@bitbucket.cfdata.org/~terin/engineering-nixpkgs";
     #   inputs.nixpkgs.follows = "nixpkgs";
@@ -165,6 +170,17 @@
           })
         else
           package;
+      wrapSerenaWithEditorTools =
+        pkgs: pkg:
+        pkgs.symlinkJoin {
+          name = "${pkg.name}-with-editor-tools";
+          paths = [ pkg ];
+          buildInputs = [ pkgs.makeWrapper ];
+          postBuild = ''
+            wrapProgram "$out/bin/serena" \
+              --suffix PATH : "${pkgs.lib.makeBinPath (import ./modules/editor-tools.nix pkgs)}"
+          '';
+        };
     in
     {
       packages.${system} = {
@@ -178,7 +194,8 @@
         phinger-cursors-extended =
           pkgsForSystem.callPackage ./custom-packages/phinger-cursors-extended.nix
             { };
-        serena = pkgsForSystem.callPackage ./custom-packages/serena.nix {
+        serena = wrapSerenaWithEditorTools pkgsForSystem inputs.serena.packages.${system}.serena;
+        serena-custom = pkgsForSystem.callPackage ./custom-packages/serena-custom.nix {
           editorTools = import ./modules/editor-tools.nix pkgsForSystem;
         };
       };

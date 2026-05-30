@@ -16,7 +16,11 @@ in
   home.packages = with pkgs; [
     flake-inputs.codebase-memory-mcp.packages.${system}.default
     my-custom-packages.context-mode
-    my-custom-packages.serena
+    (pkgs.lib.my.mkWrappedWithDeps {
+      pkg = flake-inputs.serena.packages.${system}.serena;
+      pathsToWrap = [ "bin/serena" ];
+      suffix-deps = pkgs.lib.my.editorTools;
+    })
     rtk
   ];
 

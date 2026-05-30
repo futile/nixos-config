@@ -57,10 +57,10 @@ Current `nixos-work` setup:
 - Codebase Memory MCP is installed from its upstream flake and registered as a
   Codex MCP server on `nixos-work`. Headroom remains deferred because it changes
   the API request path.
-- Serena is packaged locally as `my-custom-packages.serena` and installed in
-  the Codex token optimization profile. Its CLI is wrapped with the shared
-  editor/LSP tool bundle so the LSP backend can see the same tools used by
-  editors.
+- Serena is consumed from upstream's `github:oraios/serena/main` flake and
+  installed in the Codex token optimization profile. Only the main `serena` CLI
+  is wrapped with the shared editor/LSP tool bundle so the LSP backend can see
+  the same tools used by editors.
 
 ## Current Codex Baseline
 
@@ -103,8 +103,9 @@ configuration. Existing sessions and subagents may keep stale config.
    compression. Done via a pinned non-flake input, upstream helper scripts, and
    a repo-owned `SKILL.md`.
 4. Add Codebase Memory MCP via its upstream flake and Codex MCP config.
-5. Add Serena as an optional semantic code MCP/server layer, using the existing
-   editor tool bundle for language-server availability. Done for `nixos-work`.
+5. Add Serena from its upstream flake as an optional semantic code MCP/server
+   layer, using the existing editor tool bundle for language-server availability.
+   Done for `nixos-work`.
 6. Revisit Headroom later, only after the local-only layers are working.
 
 This order avoids API proxy complexity and starts with tools that are either
@@ -128,8 +129,13 @@ Current module shape:
 
 ```nix
 home.packages = with pkgs; [
+  flake-inputs.codebase-memory-mcp.packages.${system}.default
   my-custom-packages.context-mode
-  my-custom-packages.serena
+  (pkgs.lib.my.mkWrappedWithDeps {
+    pkg = flake-inputs.serena.packages.${system}.serena;
+    pathsToWrap = [ "bin/serena" ];
+    suffix-deps = pkgs.lib.my.editorTools;
+  })
   rtk
 ];
 ```
@@ -318,21 +324,29 @@ questions; `rg` for text and repository navigation."
 
 ## Serena
 
-Serena is packaged locally as `custom-packages/serena.nix` rather than installed
-with upstream's `uv tool install` path. The package tracks `serena-agent` 1.5.3
-from the upstream GitHub release and is exposed as both `.#serena` and
-`pkgs.my-custom-packages.serena`.
+Serena is installed from upstream's own flake at `github:oraios/serena/main`
+rather than from the local Python package. Upstream's flake uses `uv2nix` and
+`pyproject.nix` against Serena's `uv.lock`, builds a Python 3.11 virtualenv, and
+exports the package as `serena`. Using `main` intentionally follows upstream
+development instead of pinning a release tag such as `v1.5.3`; the exact commit
+still lands in this repository's `flake.lock`.
 
-The package keeps `__structuredAttrs = true` and uses separate wrapper argv
-entries for `makeWrapperArgs`. It removes the deprecated `dotenv` stub
-dependency and relaxes upstream's exact Python dependency pins to the nixpkgs
-versions.
+The local flake output `.#serena` and `home-modules/codex-token-optimization.nix`
+wrap only `bin/serena` with `modules/editor-tools.nix`. Serena's LSP backend
+needs language-server tools at runtime, and this keeps it aligned with the same
+LSP/formatter bundle used by Helix, Neovim, Zed, Doom Emacs, and VS Code.
 
-Serena's LSP backend needs language-server tools at runtime. Instead of giving
-Serena a separate list, the package accepts `editorTools` and the Home Manager
-overlay passes `final.lib.my.editorTools`. That keeps Serena aligned with the
-same LSP/formatter bundle used by Helix, Neovim, Zed, Doom Emacs, and VS Code.
-The `.#serena` flake package imports the same list from `modules/editor-tools.nix`.
+The separate `serena-hooks` entrypoint is not wrapped. It is a client-hook CLI
+with commands such as `activate`, `cleanup`, `remind`, and `auto-approve`; it
+reads hook JSON from stdin, emits hook JSON, and stores small per-session state
+under `.serena/hook_data`. It nudges clients toward Serena's symbolic tools but
+does not start language servers itself.
+
+The previous nixpkgs-style package is kept around as
+`custom-packages/serena-custom.nix` and exposed only as `.#serena-custom` /
+`pkgs.my-custom-packages.serena-custom`. It is not installed by Home Manager or
+used by hosts. Keeping it gives us a release-pinned fallback and a comparison
+point, without making it part of the active Codex setup.
 
 Basic checks:
 
@@ -340,6 +354,7 @@ Basic checks:
 nix build .#serena --no-link
 serena --version
 serena start-mcp-server --help
+serena-hooks --help
 ```
 
 The current integration only installs Serena. It does not yet add a Codex MCP
@@ -602,9 +617,14 @@ managed dotfiles:
 
 ```nix
 home.packages = with pkgs; [
-  rtk
+  flake-inputs.codebase-memory-mcp.packages.${system}.default
   my-custom-packages.context-mode
-  my-custom-packages.serena
+  (pkgs.lib.my.mkWrappedWithDeps {
+    pkg = flake-inputs.serena.packages.${system}.serena;
+    pathsToWrap = [ "bin/serena" ];
+    suffix-deps = pkgs.lib.my.editorTools;
+  })
+  rtk
 ];
 ```
 
@@ -638,9 +658,9 @@ Custom package status:
   `skills/caveman-compress` is exposed; upstream scripts are reused with a
   repo-owned `SKILL.md`.
 - `codebase-memory-mcp` is consumed from its upstream flake.
-- `serena` is implemented as a repo-local custom package, exposed through the
-  flake and `pkgs.my-custom-packages`, and installed through
-  `codex-token-optimization.nix`.
+- `serena` is consumed from upstream's `github:oraios/serena/main` flake and
+  installed through `codex-token-optimization.nix`. The local custom package is
+  retained separately as `serena-custom`.
 
 ## Suggested First Patch Set
 
@@ -670,10 +690,10 @@ Completed:
    - local `avoiding-duplicate-builds-in-worktrees`
    - local `find-skills`
    - repo-owned `caveman-compress` instructions with upstream helper scripts
-9. Added Serena as a local custom package, exposed it through the flake and
-   `pkgs.my-custom-packages`, and installed it through
-   `home-modules/codex-token-optimization.nix`.
-10. Keep readable global Codex instructions in
+8. Added Serena first as a local custom package, then switched the active
+   installation to upstream's `github:oraios/serena/main` flake while keeping
+   the local package as `serena-custom`.
+9. Keep readable global Codex instructions in
     `dotfiles/codex/AGENTS.source.md` and regenerate compressed
     `dotfiles/codex/AGENTS.md` with:
 

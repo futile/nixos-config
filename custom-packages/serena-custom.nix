@@ -6,7 +6,7 @@
 }:
 
 python3Packages.buildPythonApplication rec {
-  pname = "serena";
+  pname = "serena-custom";
   version = "1.5.3";
   pyproject = true;
   __structuredAttrs = true;
