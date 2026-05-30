@@ -81,7 +81,40 @@ trace_lsp_communication: false
 # Maps the language key to the options.
 # Have a look at the docstring of the constructors of the LS implementations within solidlsp (e.g., for C# or PHP) to see which options are available.
 # No documentation on options means no options are available.
-ls_specific_settings: {}
+ls_specific_settings:
+  rust:
+    initializationOptions:
+      cargo:
+        allFeatures: true
+      # rust-analyzer documents this as rust-analyzer.cargo.targetDir. Serena's
+      # defaults also send its alias rust.analyzerTargetDir=null, so override
+      # that alias directly here to avoid the default null winning:
+      # https://rust-analyzer.github.io/book/configuration#rust-analyzercargotargetdir
+      # https://github.com/rust-lang/rust-analyzer/blob/master/crates/rust-analyzer/src/config.rs#L4354
+      rust:
+        analyzerTargetDir: true
+      check:
+        command: clippy
+        extraArgs:
+        - --no-deps
+      diagnostics:
+        disabled: []
+        experimental:
+          enable: true
+      procMacro:
+        ignored:
+          async-trait: {}
+      files:
+        exclude:
+        - .direnv
+        - .git
+        - .jj
+        - .github
+        - .gitlab
+        - node_modules
+        - target
+        - venv
+        - .venv
 
 # list of paths to ignore across all projects.
 # Same syntax as gitignore, so you can use * and **.

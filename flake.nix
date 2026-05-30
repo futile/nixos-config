@@ -170,17 +170,6 @@
           })
         else
           package;
-      wrapSerenaWithEditorTools =
-        pkgs: pkg:
-        pkgs.symlinkJoin {
-          name = "${pkg.name}-with-editor-tools";
-          paths = [ pkg ];
-          buildInputs = [ pkgs.makeWrapper ];
-          postBuild = ''
-            wrapProgram "$out/bin/serena" \
-              --suffix PATH : "${pkgs.lib.makeBinPath (import ./modules/editor-tools.nix pkgs)}"
-          '';
-        };
     in
     {
       packages.${system} = {
@@ -194,7 +183,11 @@
         phinger-cursors-extended =
           pkgsForSystem.callPackage ./custom-packages/phinger-cursors-extended.nix
             { };
-        serena = wrapSerenaWithEditorTools pkgsForSystem inputs.serena.packages.${system}.serena;
+        serena = pkgsForSystem.callPackage ./custom-packages/serena-custom.nix {
+          src = inputs.serena;
+          version = "1.5.4.dev0";
+          editorTools = import ./modules/editor-tools.nix pkgsForSystem;
+        };
         serena-custom = pkgsForSystem.callPackage ./custom-packages/serena-custom.nix {
           editorTools = import ./modules/editor-tools.nix pkgsForSystem;
         };

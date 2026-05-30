@@ -830,19 +830,6 @@ return {
                 "venv",
                 ".venv",
               },
-
-              excludeDirs = {
-                ".direnv",
-                ".git",
-                ".jj",
-                ".github",
-                ".gitlab",
-                -- "bin", -- don't ignore this..
-                "node_modules",
-                "target",
-                "venv",
-                ".venv",
-              },
             },
             -- this no worky, think the option doesn't exist anymore :/
             -- server = {

@@ -3,22 +3,26 @@
   python3Packages,
   fetchFromGitHub,
   editorTools ? [ ],
+  version ? "1.5.3",
+  src ? fetchFromGitHub {
+    owner = "oraios";
+    repo = "serena";
+    tag = "v${version}";
+    hash = "sha256-8RHjJG8loqC742LoFK7O3MK7JDEhb1qw8VMBhzj04MM=";
+  },
 }:
 
 python3Packages.buildPythonApplication rec {
   pname = "serena-custom";
-  version = "1.5.3";
+  inherit version src;
   pyproject = true;
   __structuredAttrs = true;
 
   disabled = python3Packages.pythonOlder "3.11";
 
-  src = fetchFromGitHub {
-    owner = "oraios";
-    repo = "serena";
-    tag = "v${version}";
-    hash = "sha256-8RHjJG8loqC742LoFK7O3MK7JDEhb1qw8VMBhzj04MM=";
-  };
+  patches = [
+    ./patches/serena-rust-analyzer-initialization-options.patch
+  ];
 
   postPatch = ''
     substituteInPlace pyproject.toml \
