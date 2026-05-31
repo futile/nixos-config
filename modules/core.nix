@@ -27,6 +27,10 @@ let
   #     over = flake-inputs.nixpkgs-unstable;
   #     extraImportArgs = { overlays = [ flake-inputs.emacs-overlay.overlay ]; };
   #   };
+  nixpkgs-unstable-overlay = mkNixpkgsOverlay {
+    attrName = "nixpkgs-unstable";
+    over = flake-inputs.nixpkgs-pkgs-unstable;
+  };
   # nixpkgs-master-overlay = mkNixpkgsOverlay
   #   {
   #     attrName = "master";
@@ -94,6 +98,7 @@ in
     # add overlays for the different nixpkgs-versions
     nixpkgs.overlays = [
       # nixos-unstable-overlay
+      nixpkgs-unstable-overlay
       # nixpkgs-master-overlay
       # nixpkgs-local-overlay
       custom-packages-overlay
