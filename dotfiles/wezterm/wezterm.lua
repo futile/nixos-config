@@ -27,6 +27,8 @@ local font_size = nil
 local use_ime = nil
 local front_end = nil
 
+local color_scheme = "Lume"
+
 if hostname == "H77QF74G0F" then
 	default_prog = { "/Users/frath/.nix-profile/bin/fish", "--login" }
 	set_environment_variables = {
@@ -41,12 +43,9 @@ elseif hostname == "nixos-work" then
 	-- https://www.reddit.com/r/commandline/comments/1621suy/help_issue_with_wezterm_and_vim_key_repeat/
 	-- it sadly did not :(
 	-- use_ime = false
-end
 
-local color_scheme = "Lume"
-
-if hostname == "nixos-work" then
 	color_scheme = "Noctalia"
+	front_end = "WebGpu"
 end
 
 return {
@@ -99,6 +98,7 @@ return {
 	-- anti_alias_custom_block_glyphs = false,
 
 	max_fps = 120,
+	status_update_interval = 500,
 
 	colors = {
 		tab_bar = {},

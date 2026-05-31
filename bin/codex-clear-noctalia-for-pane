@@ -4,7 +4,13 @@
 set -euo pipefail
 
 pane="${1:?pane id required}"
-app_name="Codex pane ${pane}"
+window_id="${2:-}"
+if [[ "${window_id}" =~ ^[0-9]+$ ]]; then
+	pane_key="${window_id}-${pane}"
+else
+	pane_key="${pane}"
+fi
+app_name="Codex pane ${pane_key}"
 default_state_dir="${XDG_RUNTIME_DIR:-}"
 if [[ -n "${default_state_dir}" ]]; then
 	default_state_dir="${default_state_dir}/codex-noctalia"
@@ -40,14 +46,19 @@ close_notification() {
 for candidate_state_dir in "${state_dirs[@]}"; do
 	mkdir -p "${candidate_state_dir}" 2>/dev/null || true
 	chmod 700 "${candidate_state_dir}" 2>/dev/null || true
-	rm -f "${candidate_state_dir}/ready-panes/${pane}"
+	rm -f "${candidate_state_dir}/ready-panes/${pane}" "${candidate_state_dir}/ready-panes/${pane_key}"
+	if [[ "${pane_key}" == "${pane}" ]]; then
+		rm -f "${candidate_state_dir}"/ready-panes/*-"${pane}" 2>/dev/null || true
+	fi
 done
 
 for candidate_state_dir in "${state_dirs[@]}"; do
 	map_file="${candidate_state_dir}/notifications.tsv"
 
 	if [[ -f "${map_file}" ]]; then
-		awk -v pane="${pane}" '$2 == pane { print $1 }' "${map_file}" |
+		awk -v pane="${pane}" -v pane_key="${pane_key}" '
+			$2 == pane_key || $2 == pane || $3 == pane { print $1 }
+		' "${map_file}" |
 			while IFS= read -r notification_id; do
 				close_notification "${notification_id}"
 			done
@@ -75,7 +86,9 @@ for candidate_state_dir in "${state_dirs[@]}"; do
 		(
 			flock 9
 			tmp_file="$(mktemp "${map_file}.XXXXXX")"
-			awk -v pane="${pane}" '$2 != pane' "${map_file}" >"${tmp_file}"
+			awk -v pane="${pane}" -v pane_key="${pane_key}" '
+				$2 != pane_key && $2 != pane && $3 != pane
+			' "${map_file}" >"${tmp_file}"
 			mv "${tmp_file}" "${map_file}"
 		) 9>"${lock_file}"
 	fi

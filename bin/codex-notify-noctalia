@@ -45,10 +45,7 @@ focused_panes="$(
 
 	if command -v niri >/dev/null 2>&1 && focused_window_json="$(niri msg -j focused-window 2>/dev/null)"; then
 		focused_wezterm_pid="$(
-			jq -r '
-				select(.app_id == "org.wezfurlong.wezterm")
-				| .pid // empty
-			' <<<"${focused_window_json}" 2>/dev/null
+			jq -r '.pid // empty' <<<"${focused_window_json}" 2>/dev/null
 		)"
 
 		if [[ "${focused_wezterm_pid}" =~ ^[0-9]+$ ]]; then
@@ -67,22 +64,31 @@ if grep -qxF "${pane}" <<<"${focused_panes}"; then
 	exit 0
 fi
 
-app_name="Codex pane ${pane}"
 summary="Codex turn complete"
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-body="$(
+pane_info_json="$(
 	wezterm cli list --format json 2>/dev/null |
-		jq -r --arg pane "${pane}" '
-			.[]?
-			| select((.pane_id | tostring) == $pane)
-			| [
-				.tab_title,
-				.title,
-				(.cwd? // "" | split("/") | last)
-			]
-			| map(select(type == "string" and length > 0))
-			| .[0] // empty
-		' |
+		jq -c --arg pane "${pane}" '
+			[.[]? | select((.pane_id | tostring) == $pane)][0] // {}
+		'
+)" || pane_info_json="{}"
+window_id="$(jq -r '.window_id // empty' <<<"${pane_info_json}")"
+if [[ "${window_id}" =~ ^[0-9]+$ ]]; then
+	pane_key="${window_id}-${pane}"
+else
+	pane_key="${pane}"
+fi
+app_name="Codex pane ${pane_key}"
+body="$(
+	jq -r '
+		[
+			.tab_title,
+			.title,
+			(.cwd? // "" | split("/") | last)
+		]
+		| map(select(type == "string" and length > 0))
+		| .[0] // empty
+	' <<<"${pane_info_json}" |
 		head -n 1 |
 		tr '\n' ' ' |
 		sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//' |
@@ -100,7 +106,7 @@ if ! prepare_state_dir "${state_dir}"; then
 	prepare_state_dir "${state_dir}" || exit 1
 fi
 
-touch "${ready_dir}/${pane}"
+touch "${ready_dir}/${pane_key}"
 
 icon_variant="light"
 if command -v gsettings >/dev/null 2>&1; then
@@ -139,6 +145,6 @@ notification_id="$(sed -n 's/^(uint32 \([0-9][0-9]*\),)$/\1/p' <<<"${notificatio
 if [[ -n "${notification_id}" ]]; then
 	(
 		flock 9
-		printf '%s\t%s\t%s\n' "${notification_id}" "${pane}" "$(date +%s)" >>"${map_file}"
+		printf '%s\t%s\t%s\t%s\n' "${notification_id}" "${pane_key}" "${pane}" "$(date +%s)" >>"${map_file}"
 	) 9>"${lock_file}"
 fi
