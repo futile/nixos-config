@@ -40,7 +40,12 @@ If unsure, you MUST explicitly ASK what should be done!
 - Use codebase-memory-mcp when it is configured and useful for indexed codebase exploration: architecture summaries, graph-backed code search, known symbol lookup, call/data-flow tracing, and code snippets. Useful tools include `get_architecture`, `search_code`, `search_graph`, `get_code_snippet`, `trace_path`, and `query_graph`.
 - Do not treat codebase-memory-mcp as a replacement for `rg`. Use `rg` directly for exact strings, file paths, config values, docs, non-code text, or when CBM results look incomplete or noisy.
 - For CBM CLI usage, discover project names with `codebase-memory-mcp cli list_projects '{}'`, query architecture with `codebase-memory-mcp cli get_architecture '{"project":"PROJECT_NAME","aspects":["all"]}'`, and index missing or stale projects with `codebase-memory-mcp cli index_repository '{"repo_path":"/absolute/path/to/repo"}'`.
-- When using DeepWiki, repository names may be case-sensitive. Use the exact GitHub owner/repository casing from the URL when a lowercase or guessed name fails. For example, BitCraft public server docs are indexed as `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
+- For broad CBM orientation, prefer `get_architecture` with `aspects: ["all"]`; targeted or natural-language aspect names may return only thin graph counts.
+- For `get_architecture`, `aspects` is an enum list, not a free-text or semantic query field. Valid values are `all`, `languages`, `packages`, `entry_points`, `routes`, `hotspots`, `boundaries`, `layers`, `file_tree`, `structure`, and `dependencies`. Omit `aspects`, pass an empty array, or use `["all"]` for the full architecture summary. Use specific enum values such as `["structure", "dependencies", "entry_points"]` when only those sections are needed.
+- For `search_code`, pass `regex: true` when using grep-style alternatives such as `foo|bar`; otherwise the pattern may be treated literally.
+- Prefer `search_graph` BM25 `query` for concept discovery. Treat `semantic_query` as experimental and verify its results against `search_graph`, `search_code`, or `rg`.
+- Treat `query_graph` edge queries as suspect unless verified in the current project; when call/data-flow matters, prefer `trace_path`, `search_graph`, and `get_code_snippet`, then confirm with source reads.
+- When using DeepWiki, repository names ARE ALWAYS case-sensitive. Use the exact GitHub owner/repository casing from the URL when available. For example, BitCraft public server docs are indexed as `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
 
 ## Coding and Implementation Guidelines
 

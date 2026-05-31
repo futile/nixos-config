@@ -41,10 +41,11 @@ If unsure, MUST explicitly ASK what to do.
 - Do not treat codebase-memory-mcp as a replacement for `rg`. Use `rg` directly for exact strings, file paths, config values, docs, non-code text, or when CBM results look incomplete or noisy.
 - For CBM CLI usage, discover project names with `codebase-memory-mcp cli list_projects '{}'`, query architecture with `codebase-memory-mcp cli get_architecture '{"project":"PROJECT_NAME","aspects":["all"]}'`, and index missing or stale projects with `codebase-memory-mcp cli index_repository '{"repo_path":"/absolute/path/to/repo"}'`.
 - For broad CBM orientation, prefer `get_architecture` with `aspects: ["all"]`; targeted or natural-language aspect names may return only thin graph counts.
-- For `search_code`, pass `regex: true` when using grep-style alternatives such as `foo|bar`; otherwise the pattern may be treated literally.
+- For `get_architecture`, `aspects` is an enum list, not a free-text or semantic query field. Valid values are `all`, `languages`, `packages`, `entry_points`, `routes`, `hotspots`, `boundaries`, `layers`, `file_tree`, `structure`, and `dependencies`. Omit `aspects`, pass an empty array, or use `["all"]` for full architecture summary. Use specific enum values such as `["structure", "dependencies", "entry_points"]` when only those sections are needed.
+- For `search_code`, pass `regex: true` when using grep-style alternatives such as `foo|bar`; otherwise pattern may be treated literally.
 - Prefer `search_graph` BM25 `query` for concept discovery. Treat `semantic_query` as experimental and verify its results against `search_graph`, `search_code`, or `rg`.
-- Treat `query_graph` edge queries as suspect unless verified in the current project; when call/data-flow matters, prefer `trace_path`, `search_graph`, and `get_code_snippet`, then confirm with source reads.
-- When using DeepWiki, repository names may be case-sensitive. Use exact GitHub owner/repository casing from the URL when a lowercase or guessed name fails. For example, BitCraft public server docs are indexed as `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
+- Treat `query_graph` edge queries as suspect unless verified in current project; when call/data-flow matters, prefer `trace_path`, `search_graph`, and `get_code_snippet`, then confirm with source reads.
+- When using DeepWiki, repository names ARE ALWAYS case-sensitive. Use exact GitHub owner/repository casing from URL when available. For example, BitCraft public server docs are indexed as `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
 
 ## Coding and Implementation Guidelines
 
@@ -60,7 +61,7 @@ Before implementing:
 
 - State assumptions explicitly. If uncertain, ask.
 - If multiple interpretations exist, present them - don't pick silently.
-- If simpler approach exists, say so. Push back when warranted.
+- If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
 <SUBAGENT-STOP>
@@ -69,7 +70,7 @@ If you were dispatched as a subagent to execute a specific task, skip the rest o
 
 ## Inlined Superpowers Startup Skill
 
-This section inlines the full body of the `superpowers:using-superpowers` skill, DO NOT separately load the `superpowers:using-superpowers` skill only to read this same policy to satisfy `superpowers:using-superpowers` startup policy.
+This section inlines full body of `superpowers:using-superpowers` skill. DO NOT separately load `superpowers:using-superpowers` skill just to read same `superpowers:using-superpowers` startup policy.
 
 Other applicable skills MUST still be loaded before use.
 
@@ -93,7 +94,7 @@ If CLAUDE.md, GEMINI.md, or AGENTS.md says "don't use TDD" and a skill says "alw
 
 ### Claude -> Codex Adaptation
 
-Skills sometimes use Claude Code tool names, resolve them using the following mapping.
+Skills sometimes use Claude Code tool names, resolve them using following mapping.
 
 #### Codex Tool Mapping
 
@@ -127,18 +128,18 @@ See `using-git-worktrees` Step 0 and `finishing-a-development-branch` Step 1 for
 
 ##### Codex App Finishing
 
-When the sandbox blocks branch/push operations (detached HEAD in an externally managed worktree), the agent commits all work and informs the user to use the App's native controls:
+When sandbox blocks branch/push operations (detached HEAD in an externally managed worktree), agent commits all work and tells user to use App's native controls:
 
-- **"Create branch"** — names the branch, then commit/push/PR via App UI
-- **"Hand off to local"** — transfers work to the user's local checkout
+- **"Create branch"** — names branch, then commit/push/PR via App UI
+- **"Hand off to local"** — transfers work to user's local checkout
 
-The agent can still run tests, stage files, and output suggested branch names, commit messages, and PR descriptions for the user to copy.
+Agent can still run tests, stage files, and output suggested branch names, commit messages, and PR descriptions for user to copy.
 
 ## Using Skills
 
 ### The Rule
 
-**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+**Invoke relevant or requested skills BEFORE any response or action.** Even 1% chance a skill might apply means invoke skill to check. If invoked skill turns out wrong for situation, you don't need to use it.
 
 ```dot
 digraph skill_flow {
@@ -179,7 +180,7 @@ These thoughts mean STOP-you're rationalizing:
 | "This is just a simple question"    | Questions are tasks. Check for skills.                             |
 | "I need more context first"         | Skill check comes BEFORE clarifying questions.                     |
 | "Let me explore the codebase first" | Skills tell you HOW to explore. Check first.                       |
-| "I can check git/files quickly"     | Files lack conversation context. Check first.                      |
+| "I can check git/files quickly"     | Files lack conversation context. Check for skills.                 |
 | "Let me gather information first"   | Skills tell you HOW to gather information.                         |
 | "This doesn't need a formal skill"  | If a skill exists, use it.                                         |
 | "I remember this skill"             | Skills evolve. Read current version.                               |
@@ -187,13 +188,13 @@ These thoughts mean STOP-you're rationalizing:
 | "The skill is overkill"             | Simple things become complex. Use it.                              |
 | "I'll just do this one thing first" | Check BEFORE doing anything.                                       |
 | "This feels productive"             | Undisciplined action wastes time. Skills prevent this.             |
-| "I know what that means"            | Knowing the concept is not the same as using the skill. Invoke it. |
+| "I know what that means"            | Knowing concept is not same as using skill. Invoke it.             |
 
 ### Skill Priority
 
 When multiple skills could apply, use this order:
 
-1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach task
 2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
 
 "Let's build X" -> brainstorming first, then implementation skills.
@@ -205,7 +206,7 @@ When multiple skills could apply, use this order:
 
 **Flexible** (patterns): Adapt principles to context.
 
-The skill itself tells you which.
+Skill itself tells you which.
 
 ### User Instructions
 
