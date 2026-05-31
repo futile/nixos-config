@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# See docs/wezterm-codex-notification-performance.md for the performance
+# rationale behind these marker/cache checks.
+
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 notify_script="${repo_root}/bin/codex-notify-noctalia"
 clear_script="${repo_root}/bin/codex-clear-noctalia-for-pane"

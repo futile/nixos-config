@@ -3,6 +3,7 @@ local M = {}
 local clear_script = "/home/felix/nixos/bin/codex-clear-noctalia-for-pane"
 local last_pane_by_window = {}
 local ready_panes = {}
+local has_ready_panes = false
 
 local function state_dirs()
 	local configured = os.getenv("CODEX_NOCTALIA_STATE_DIR")
@@ -53,6 +54,7 @@ end
 
 local function refresh_ready_panes(wezterm)
 	local next_ready_panes = {}
+	local next_has_ready_panes = false
 
 	for _, dir in ipairs(state_dirs()) do
 		local ok, entries = pcall(wezterm.read_dir, dir .. "/ready-panes")
@@ -61,12 +63,14 @@ local function refresh_ready_panes(wezterm)
 				local key = basename(entry)
 				if key ~= nil and key:match("^%d+%-%d+$") then
 					next_ready_panes[key] = true
+					next_has_ready_panes = true
 				end
 			end
 		end
 	end
 
 	ready_panes = next_ready_panes
+	has_ready_panes = next_has_ready_panes
 end
 
 local function truncate_right(wezterm, text, max_width)
@@ -88,6 +92,7 @@ local function clear_for_pane(wezterm, window, pane)
 	if key ~= nil then
 		ready_panes[key] = nil
 	end
+	has_ready_panes = next(ready_panes) ~= nil
 
 	wezterm.background_child_process({
 		clear_script,
@@ -124,7 +129,15 @@ function M.setup(wezterm)
 		clear_for_pane(wezterm, window, pane)
 	end)
 
+	-- Keep this callback extremely cheap. Codex updates the terminal title
+	-- while working, so WezTerm may call format-tab-title many times per
+	-- second. Do not do filesystem IO, IPC, process spawning, or other
+	-- blocking work here.
 	wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
+		if not has_ready_panes then
+			return nil
+		end
+
 		local title = tab_title(tab)
 		local key = pane_key(tab_window_id(tab), tab.active_pane.pane_id)
 		local ready = key ~= nil and not tab.is_active and ready_panes[key]
