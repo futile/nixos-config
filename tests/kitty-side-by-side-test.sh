@@ -189,8 +189,8 @@ require_fixed "${work_host}" '"${home-modules}/wezterm.nix"' \
 if (( kitty_module_exists )); then
   require_regex "${kitty_module}" '(lib|pkgs\.lib)\.mkIf pkgs\.stdenv\.isLinux' \
     "${kitty_module} must gate Kitty setup to Linux"
-  require_linux_block_contains "${kitty_module}" 'pkgs.kitty' \
-    "${kitty_module} must install pkgs.kitty inside the Linux-only Kitty setup"
+  require_regex "${kitty_module}" 'home\.packages = pkgs\.lib\.optionals pkgs\.stdenv\.isLinux \[ pkgs\.kitty \];' \
+    "${kitty_module} must install pkgs.kitty only on Linux"
   require_linux_block_contains "${kitty_module}" 'kitty/kitty.conf".source' \
     "${kitty_module} must symlink kitty/kitty.conf inside the Linux-only Kitty setup"
   require_linux_block_contains "${kitty_module}" 'kitty/noctalia.conf.template".source' \

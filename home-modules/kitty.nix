@@ -5,10 +5,10 @@
   thisFlakePath,
   ...
 }:
-pkgs.lib.mkIf pkgs.stdenv.isLinux {
-  home.packages = [ pkgs.kitty ];
+{
+  home.packages = pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.kitty ];
 
-  xdg = {
+  xdg = pkgs.lib.mkIf pkgs.stdenv.isLinux {
     enable = true;
 
     configFile."kitty/kitty.conf".source =
