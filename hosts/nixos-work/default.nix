@@ -154,10 +154,7 @@ in
 
     displayManager = {
       # Enable gdm & GNOME 3 Desktop Environment.
-      gdm = {
-        enable = true;
-        wayland = true;
-      };
+      gdm.enable = true;
 
       # disabling this for now, not using it anyway.
       # windowManager.qtile.enable = true;

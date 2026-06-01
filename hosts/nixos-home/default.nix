@@ -191,7 +191,8 @@ in
     gdm = {
       enable = true;
       # We don't want wayland for now; e.g. screensharing doesn't work (well)
-      wayland = false;
+      # 2026-06-01 wayland = .. not possible anymore, option is gone
+      # wayland = false;
       # When we want wayland, we also want to run with nvidia.
       # This requires some other options (`nixos-rebuild` will tell us which),
       # so disable for now.
