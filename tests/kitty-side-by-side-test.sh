@@ -201,8 +201,10 @@ if (( kitty_module_exists )); then
     "${kitty_module} must reference dotfiles/kitty/kitty.conf inside the Linux-only Kitty setup"
   require_linux_block_contains "${kitty_module}" 'dotfiles/kitty/noctalia.conf.template' \
     "${kitty_module} must reference dotfiles/kitty/noctalia.conf.template inside the Linux-only Kitty setup"
-  require_text_block_contains "${kitty_module}" '"kitty/theme.conf".text' 'include colors/lume.conf' \
-    "${kitty_module} must define the default kitty/theme.conf include with colors/lume.conf"
+  require_linux_block_contains "${kitty_module}" 'kitty/themes/lume.conf".source' \
+    "${kitty_module} must provide Lume as a normal Kitty theme"
+  require_text_block_contains "${kitty_module}" '"kitty/theme.conf".text' 'include themes/lume.conf' \
+    "${kitty_module} must define the default kitty/theme.conf include with themes/lume.conf"
 fi
 
 if (( kitty_conf_exists )); then
@@ -220,8 +222,8 @@ fi
 
 require_fixed "${work_host}" 'kitty/theme.conf' \
   "${work_host} must override kitty/theme.conf"
-require_text_block_contains "${work_host}" '"kitty/theme.conf".text' 'include colors/lume.conf' \
-  "${work_host} Kitty theme override must include colors/lume.conf in xdg.configFile.\"kitty/theme.conf\""
+require_text_block_contains "${work_host}" '"kitty/theme.conf".text' 'include themes/lume.conf' \
+  "${work_host} Kitty theme override must include themes/lume.conf in xdg.configFile.\"kitty/theme.conf\""
   require_text_block_contains "${work_host}" '"kitty/theme.conf".text' 'globinclude themes/noctalia.conf' \
     "${work_host} Kitty theme override must globinclude themes/noctalia.conf in xdg.configFile.\"kitty/theme.conf\""
 

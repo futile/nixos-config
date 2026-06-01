@@ -101,7 +101,7 @@ in
         "noctalia/user-templates.toml".source =
           config.lib.file.mkOutOfStoreSymlink "${noctalia}/user-templates.toml";
         "kitty/theme.conf".text = pkgs.lib.mkForce ''
-          include colors/lume.conf
+          include themes/lume.conf
           globinclude themes/noctalia.conf
         '';
 
