@@ -4,14 +4,14 @@ model = "gpt-5.5"
 model_reasoning_effort = "medium"
 model_verbosity = "medium"
 personality = "pragmatic"
-notify = ["/home/felix/nixos/bin/codex-notify-noctalia"]
+# notify = ["/home/felix/nixos/bin/codex-notify-noctalia"]
 service_tier = "default"
 
 [tools]
 view_image = true
 
 [tui]
-notifications = ["approval-requested"]
+notifications = ["agent-turn-complete", "approval-requested"]
 notification_method = "osc9"
 notification_condition = "unfocused"
 status_line = [
