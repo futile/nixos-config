@@ -100,6 +100,10 @@ in
         "noctalia/settings.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/settings.json";
         "noctalia/user-templates.toml".source =
           config.lib.file.mkOutOfStoreSymlink "${noctalia}/user-templates.toml";
+        "kitty/theme.conf".text = pkgs.lib.mkForce ''
+          include colors/lume.conf
+          globinclude noctalia.conf
+        '';
 
         # systemd-xdg-autostart-generator ignores KeePassXC's desktop-file
         # tray/delay hints. Delay the generated unit until the shell tray is up,

@@ -2,3 +2,7 @@
 input_path = "~/.config/nvim/lua/noctalia-matugen-template.lua"
 output_path = "~/.config/nvim/lua/noctalia-matugen.lua"
 post_hook = 'pkill -SIGUSR1 nvim'
+
+[templates.kitty]
+input_path = "~/.config/kitty/noctalia.conf.template"
+output_path = "~/.config/kitty/noctalia.conf"
