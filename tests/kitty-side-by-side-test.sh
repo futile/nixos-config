@@ -222,16 +222,12 @@ require_fixed "${work_host}" 'kitty/theme.conf' \
   "${work_host} must override kitty/theme.conf"
 require_text_block_contains "${work_host}" '"kitty/theme.conf".text' 'include colors/lume.conf' \
   "${work_host} Kitty theme override must include colors/lume.conf in xdg.configFile.\"kitty/theme.conf\""
-require_text_block_contains "${work_host}" '"kitty/theme.conf".text' 'globinclude noctalia.conf' \
-  "${work_host} Kitty theme override must globinclude noctalia.conf in xdg.configFile.\"kitty/theme.conf\""
+  require_text_block_contains "${work_host}" '"kitty/theme.conf".text' 'globinclude themes/noctalia.conf' \
+    "${work_host} Kitty theme override must globinclude themes/noctalia.conf in xdg.configFile.\"kitty/theme.conf\""
 
 if require_file "${noctalia_templates}"; then
-  require_fixed "${noctalia_templates}" '[templates.kitty]' \
-    "${noctalia_templates} must define [templates.kitty]"
-  require_fixed "${noctalia_templates}" 'input_path = "~/.config/kitty/noctalia.conf.template"' \
-    "${noctalia_templates} must read ~/.config/kitty/noctalia.conf.template"
-  require_fixed "${noctalia_templates}" 'output_path = "~/.config/kitty/noctalia.conf"' \
-    "${noctalia_templates} must write ~/.config/kitty/noctalia.conf"
+  require_no_regex "${noctalia_templates}" '^\[templates\.kitty\]' \
+    "${noctalia_templates} must use Noctalia's built-in Kitty template instead of a custom one"
 fi
 
 if require_file "${niri_config}"; then

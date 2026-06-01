@@ -102,7 +102,7 @@ in
           config.lib.file.mkOutOfStoreSymlink "${noctalia}/user-templates.toml";
         "kitty/theme.conf".text = pkgs.lib.mkForce ''
           include colors/lume.conf
-          globinclude noctalia.conf
+          globinclude themes/noctalia.conf
         '';
 
         # systemd-xdg-autostart-generator ignores KeePassXC's desktop-file
