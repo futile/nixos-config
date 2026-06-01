@@ -14,7 +14,14 @@ view_image = true
 notifications = ["approval-requested"]
 notification_method = "osc9"
 notification_condition = "unfocused"
-status_line = ["model-with-reasoning", "context-remaining", "current-dir", "git-branch", "five-hour-limit", "weekly-limit"]
+status_line = [
+  "model-with-reasoning",
+  "context-remaining",
+  "current-dir",
+  "git-branch",
+  "five-hour-limit",
+  "weekly-limit",
+]
 terminal_title = ["spinner", "project", "app-name"]
 status_line_use_colors = true
 session_picker_view = "comfortable"
@@ -33,6 +40,7 @@ apps = false
 writable_roots = [
   "/home/felix/.cache/sccache",
   "/home/felix/.cache/codebase-memory-mcp",
+  "/home/felix/.cache/nix/fetcher-cache-v4.sqlite",
   "/home/felix/.codex/context-mode",
   "/home/felix/.local/share/rtk",
   "/home/felix/.serena",
