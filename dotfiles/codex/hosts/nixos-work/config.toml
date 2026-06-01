@@ -64,6 +64,9 @@ trust_level = "trusted"
 [projects."/tmp"]
 trust_level = "trusted"
 
+[projects."/home/felix/gits/serena"]
+trust_level = "trusted"
+
 [mcp_servers.DeepWiki]
 url = "https://mcp.deepwiki.com/mcp"
 
