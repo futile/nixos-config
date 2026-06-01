@@ -8,11 +8,11 @@
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "context-mode";
-  version = "1.0.151";
+  version = "1.0.161";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/context-mode/-/context-mode-${finalAttrs.version}.tgz";
-    hash = "sha512-wV8gciRMOpR8bOsZO79KpHm6EbSQ/qBOCZUx2vSH6FwZroubVs4CWDldESOVpZZaJJWinFQ+ruK1kJjWmhvMIA==";
+    hash = "sha256-Y+dWtwFIwqGlb74Ri5+z1D4fBkoznNxvNlik3ac8vIM=";
   };
 
   nativeBuildInputs = [
