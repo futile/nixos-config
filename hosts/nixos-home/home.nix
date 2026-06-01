@@ -32,6 +32,7 @@ in
       "${home-modules}/vivaldi.nix"
       "${home-modules}/firefox.nix"
       "${home-modules}/zoom.nix"
+      "${home-modules}/kitty.nix"
       "${home-modules}/wezterm.nix"
       # "${home-modules}/doom-emacs.nix"
       "${home-modules}/nvim-lazy.nix"

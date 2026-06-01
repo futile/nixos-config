@@ -59,6 +59,7 @@ in
       "${home-modules}/firefox.nix"
 
       "${home-modules}/zoom.nix"
+      "${home-modules}/kitty.nix"
       "${home-modules}/wezterm.nix"
       # "${home-modules}/doom-emacs.nix" # emacs drains cpu for no reason :(
       "${home-modules}/nvim-lazy.nix"
