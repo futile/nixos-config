@@ -3,6 +3,7 @@
   # fonts, mainly for starship-prompt at the time of writing
   # also for "tide" prompt (fish)
   fonts.packages = with pkgs; [
+    jetbrains-mono
     nerd-fonts.jetbrains-mono
     nerd-fonts.liberation # no mono version of this?
     nerd-fonts.fira-code # `fira-mono` also exists
