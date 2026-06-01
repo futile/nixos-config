@@ -41,7 +41,7 @@ apps = false
 writable_roots = [
   "/home/felix/.cache/sccache",
   "/home/felix/.cache/codebase-memory-mcp",
-  "/home/felix/.cache/nix/fetcher-cache-v4.sqlite",
+  "/home/felix/.cache/nix",
   "/home/felix/.codex/context-mode",
   "/home/felix/.local/share/rtk",
   "/home/felix/.serena",
