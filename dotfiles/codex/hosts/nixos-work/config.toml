@@ -2,7 +2,7 @@
 
 model = "gpt-5.5"
 model_reasoning_effort = "medium"
-model_verbosity = "medium"
+model_verbosity = "low"
 personality = "pragmatic"
 # notify = ["/home/felix/nixos/bin/codex-notify-noctalia"]
 service_tier = "default"
@@ -36,6 +36,7 @@ pet = "disabled"
 hooks = true
 multi_agent = true
 apps = false
+terminal_resize_reflow = true
 
 [sandbox_workspace_write]
 writable_roots = [
