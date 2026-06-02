@@ -181,6 +181,7 @@ in
           rustup
           cargo-edit
           cargo-nextest
+          cargo-binstall
           sccache
 
           # misc
