@@ -428,6 +428,9 @@ binds {
     // XF86ScreenSaver { spawn "swaylock" "--screenshot" "--effect-blur" "4x4" "--show-failed-attempts" "--show-keyboard-layout" "--ignore-empty-password"; }
     XF86ScreenSaver { spawn "noctalia-shell" "ipc" "call" "lockScreen" "lock"; }
 
+    // using a more general approach based on `swayidle` now that locks the screen (still through noctalia) before _any_ kind of suspend starts.
+    // XF86Sleep { spawn "noctalia-shell" "ipc" "call" "sessionMenu" "lockAndSuspend"; }
+
     // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
     // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
     // For example, this is a standard bind to toggle the screen reader (orca).

@@ -3,6 +3,10 @@
         {
             "action": "block",
             "pattern": "/Open Razer.*Battery is \\d\\d%.*/"
+        },
+        {
+            "action": "hide",
+            "pattern": "/Blueman.*Connected.*Glove80.*/"
         }
     ]
 }
