@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Regression coverage for kitty notification source footers and focus cleanup.
+# See docs/superpowers/plans/2026-06-04-kitty-noctalia-notification-footers.md.
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"

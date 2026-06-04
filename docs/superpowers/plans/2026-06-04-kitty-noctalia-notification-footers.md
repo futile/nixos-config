@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Clear Noctalia history entries for kitty notifications when the originating kitty tab/window is focused.
+**Goal:** Clear live popups and Noctalia history entries for kitty notifications when the originating kitty tab/window is focused.
 
-**Architecture:** Keep kitty's native notification sending and click-to-focus behavior. Add a kitty `notifications.py` filter script that appends a small source footer to notification bodies before Noctalia stores them, then add a global kitty watcher that clears Noctalia history entries with the matching footer when the source kitty window gains focus.
+**Architecture:** Keep kitty's native notification sending and click-to-focus behavior. Add a kitty `notifications.py` filter script that appends a small source footer to notification bodies before Noctalia stores them, then add a global kitty watcher that closes matching live kitty notifications and clears Noctalia history entries with the same footer when the source kitty window gains focus.
 
 **Tech Stack:** kitty Python config hooks (`notifications.py`, watcher callbacks), shell scripts, freedesktop notification DBus, Noctalia IPC, Home Manager Nix wiring.
 
@@ -20,7 +20,7 @@ The durable correlation key therefore needs to be stored in a field Noctalia doe
 Kitty-Source: <instance-key>:<channel-id>
 ```
 
-The footer should be appended only for notifications that originate inside kitty and should be visually unobtrusive. The cleanup script matches this footer exactly in Noctalia history, removes the matching history entries, and lets kitty keep owning live popup behavior.
+The footer should be appended only for notifications that originate inside kitty and should be visually unobtrusive. The watcher closes live kitty notifications by matching kitty's in-process `NotificationCommand.channel_id`; the cleanup script then matches this footer exactly in Noctalia history and removes the matching history entries.
 
 ## Files
 
@@ -30,7 +30,8 @@ The footer should be appended only for notifications that originate inside kitty
   - Does not filter notifications out.
 - Create: `dotfiles/kitty/codex-noctalia-watcher.py`
   - Global kitty watcher.
-  - Calls the cleanup script when a kitty window gains focus.
+  - Closes live kitty notifications for the focused kitty window.
+  - Calls the Noctalia history cleanup script when a kitty window gains focus.
   - Also checks active-window changes on tab-bar dirtiness.
 - Create: `bin/kitty-clear-noctalia-for-source`
   - Removes Noctalia history entries whose body contains the source footer.
@@ -228,6 +229,22 @@ def _source_key(window) -> str:
     return f"kitty:{_instance_key()}:{window.id}"
 
 
+def _close_live_notifications(boss, window) -> None:
+    notification_manager = getattr(boss, "notification_manager", None)
+    if notification_manager is None:
+        return
+
+    commands = getattr(notification_manager, "in_progress_notification_commands", {})
+    notification_ids = [
+        notification_id
+        for notification_id, command in list(commands.items())
+        if getattr(command, "channel_id", None) == window.id
+    ]
+
+    for notification_id in notification_ids:
+        notification_manager.close_notification(notification_id)
+
+
 def _clear_for_window(window) -> None:
     source_key = _source_key(window)
     now = time.monotonic()
@@ -239,6 +256,7 @@ def _clear_for_window(window) -> None:
 
 def on_focus_change(boss, window, data) -> None:
     if data.get("focused"):
+        _close_live_notifications(boss, window)
         _clear_for_window(window)
 
 
@@ -251,6 +269,7 @@ def on_tab_bar_dirty(boss, window, data) -> None:
     if previous == active.id:
         return
     _last_active_by_os_window[os_window_id] = active.id
+    _close_live_notifications(boss, active)
     _clear_for_window(active)
 ```
 
@@ -365,7 +384,7 @@ noctalia-shell ipc call notifications getHistory |
   jq -r '.[]? | select((.body // "") | contains("Kitty-Source:")) | [.id, .summary, .body] | @tsv'
 ```
 
-Expected: the entry for the focused tab is gone.
+Expected: the live popup closes and the entry for the focused tab is gone from Noctalia history.
 
 - [ ] **Step 5: Verify click-to-focus remains native**
 
@@ -375,6 +394,7 @@ Expected:
 
 - kitty focuses the originating tab/window.
 - the watcher runs after focus.
+- the live popup closes.
 - the matching Noctalia history entry is removed.
 
 ## Task 6: Codex Notification Compatibility
@@ -418,7 +438,7 @@ Skip this commit if no Codex hook changes were needed.
 - Native kitty click-to-focus behavior still works.
 - Native kitty `notify_on_cmd_finish ... notify focus next` live popup cleanup still works.
 - Noctalia history entries created by kitty notifications include a `Kitty-Source:` footer.
-- Manually focusing the originating kitty tab/window removes matching Noctalia history entries.
+- Manually focusing the originating kitty tab/window closes matching live popups and removes matching Noctalia history entries.
 - Focusing one kitty tab does not remove footer-tagged history entries from another kitty tab.
 - Existing WezTerm Codex notification cleanup remains unchanged.
 
