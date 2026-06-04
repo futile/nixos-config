@@ -189,6 +189,7 @@ in
           # zotero
           my-custom-packages.llm-wiki
           # protonvpn-cli
+          nixpkgs-unstable.blender
 
           # hardware stuff
           # v4l-utils # webcam utils
