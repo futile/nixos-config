@@ -3,14 +3,12 @@
   config,
   pkgs,
   # flake-inputs,
-  thisFlakePath,
   ...
 }:
 let
   # swaylock but with fancy background-blurring effect
   swaylockPkg = pkgs.swaylock-effects;
   sudoAskpassPkg = pkgs.lxqt.lxqt-openssh-askpass;
-  noctaliaLockBeforeSleep = "${thisFlakePath}/bin/noctalia-lock-before-sleep";
 in
 {
   xdg = {
@@ -67,51 +65,13 @@ in
     SUDO_ASKPASS = "${sudoAskpassPkg}/bin/lxqt-openssh-askpass";
   };
 
-  # based on  https://yalter.github.io/niri/Example-systemd-Setup.html
-  services.swayidle =
-    let
-      swaylockCmd = "${swaylockPkg}/bin/swaylock --screenshot --effect-blur 4x4 --show-failed-attempts --show-keyboard-layout --ignore-empty-password --daemonize";
-    in
-    {
-      # turned off for noctalia-shell
-      enable = false;
+  services.swayidle = {
+    enable = true;
 
-      timeouts = [
-        {
-          timeout = 3 * 600;
-          command = "${swaylockCmd}";
-        }
-        {
-          timeout = 601;
-          command = "${pkgs.niri}/bin/niri msg action power-off-monitors";
-        }
-      ];
+    timeouts = [ ];
 
-      events = {
-        "before-sleep" = "${swaylockCmd}";
-        "lock" = "${swaylockCmd}";
-      };
+    events = {
+      "before-sleep" = "/run/current-system/sw/bin/noctalia-shell ipc call lockScreen lock";
     };
-
-  systemd.user.services.noctalia-lock-before-sleep = pkgs.lib.mkIf pkgs.stdenv.isLinux {
-    Unit = {
-      Description = "Lock Noctalia before system sleep";
-      After = [ "graphical-session.target" ];
-      PartOf = [ "graphical-session.target" ];
-    };
-
-    Service = {
-      ExecStart = "${pkgs.systemd}/bin/systemd-inhibit --what=sleep --mode=delay --who=noctalia-lock-before-sleep --why='Lock Noctalia before sleep' ${pkgs.bash}/bin/bash ${noctaliaLockBeforeSleep} --wait-once";
-      Restart = "always";
-      RestartSec = "10s";
-      Environment = "PATH=${
-        pkgs.lib.makeBinPath [
-          pkgs.systemd
-          pkgs.gawk
-        ]
-      }:/run/current-system/sw/bin:/etc/profiles/per-user/${config.home.username}/bin";
-    };
-
-    Install.WantedBy = [ "graphical-session.target" ];
   };
 }
