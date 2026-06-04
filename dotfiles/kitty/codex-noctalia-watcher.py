@@ -23,6 +23,22 @@ def _source_key(window) -> str:
     return f"kitty:{_instance_key()}:{window.id}"
 
 
+def _close_live_notifications(boss, window) -> None:
+    notification_manager = getattr(boss, "notification_manager", None)
+    if notification_manager is None:
+        return
+
+    commands = getattr(notification_manager, "in_progress_notification_commands", {})
+    notification_ids = [
+        notification_id
+        for notification_id, command in list(commands.items())
+        if getattr(command, "channel_id", None) == window.id
+    ]
+
+    for notification_id in notification_ids:
+        notification_manager.close_notification(notification_id)
+
+
 def _clear_for_window(window) -> None:
     source_key = _source_key(window)
     now = time.monotonic()
@@ -34,6 +50,7 @@ def _clear_for_window(window) -> None:
 
 def on_focus_change(boss, window, data) -> None:
     if data.get("focused"):
+        _close_live_notifications(boss, window)
         _clear_for_window(window)
 
 
@@ -46,4 +63,5 @@ def on_tab_bar_dirty(boss, window, data) -> None:
     if previous == active.id:
         return
     _last_active_by_os_window[os_window_id] = active.id
+    _close_live_notifications(boss, active)
     _clear_for_window(active)
