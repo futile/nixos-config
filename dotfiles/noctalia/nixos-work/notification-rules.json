@@ -6,7 +6,7 @@
         },
         {
             "action": "hide",
-            "pattern": "/Blueman.*Connected.*Glove80.*/"
+            "pattern": "Automatically connected to Audio and input profiles on Glove80"
         }
     ]
 }
