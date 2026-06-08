@@ -69,13 +69,13 @@
     "codex": {
       "active": true,
       "attrPath": "legacyPackages.x86_64-linux.codex",
-      "originalUrl": "github:NixOS/nixpkgs/master",
+      "originalUrl": "github:NixOS/nixpkgs/nixpkgs-unstable",
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/apbgp27nc9a1hh8v9568k3igkfx601lc-codex-0.134.0"
+        "/nix/store/ggqr3acq15chkhr11a93kf3ki04c4qq6-codex-0.136.0"
       ],
-      "url": "github:NixOS/nixpkgs/dd73bc63956d6447f6fb8fc22904dfae4f61e560?narHash=sha256-y8MN9yzGDlTfBInfMbqLin1P0oqVhWr2eN8EMYcKvoU%3D"
+      "url": "github:NixOS/nixpkgs/cbb5cf358f50aa6acc9efd6113b7bcfbc352cd73?narHash=sha256-IX7G1dlKrOqPOImfbo7ADDfV5yU1%2Bj%2BMRChI3TL4tAA%3D"
     },
     "gh": {
       "active": true,

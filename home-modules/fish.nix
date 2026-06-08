@@ -40,6 +40,10 @@
         command = "git";
         expansion = "status";
       };
+      "d" = {
+        command = "git";
+        expansion = "diff";
+      };
 
       r = "rg.fzf";
     };
