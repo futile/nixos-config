@@ -55,6 +55,8 @@ For each work unit, ask:
 4. Check tool-first alternatives.
    Before recommending a subagent, ask whether `rg`, `ctx_batch_execute`, `ctx_execute_file`, codebase-memory, Serena, or direct shell use would have produced the same compact answer more deterministically. Do not assume the original session used these optimally. Include missed opportunities such as Serena symbolic edits, not just Serena reads.
 
+   Do not treat shell-call count as a proxy for token cost. Some shell tools, especially `rtk`, already compact noisy output aggressively. Quantify returned output by command class when possible. Focus on large raw outputs: broad `sed`/`cat` reads, broad `rg`, broad `git diff`/`git show`, large JSON from issue trackers, logs, and validation output that was read directly into the main thread.
+
 5. Apply the net-savings gate.
    A subagent candidate must have a clear burden removed from the main thread, a compact prompt, a compact expected output, cheap verification, low or bounded downside, and a decision that remains reserved for the main thread.
 
@@ -84,6 +86,9 @@ Use for bounded diffs, specs, or test gaps. Output should be findings first, sev
 
 Tool packet:
 Use when a deterministic command or MCP tool can process the raw context and return a compact result. Prefer this over subagents when reasoning is not the bottleneck.
+
+Output-compression packet:
+Use when the session returned large raw command output to the main thread. Measure output volume first, separating already-compressed tools such as `rtk` from raw commands. Prefer `ctx_batch_execute`, `ctx_execute_file`, narrower command scopes, Serena, or codebase-memory when they can return a compact derived answer without losing exactness needed for editing or review.
 
 ## Output Format
 
@@ -128,6 +133,7 @@ After each analysis, update this guide when there is a reusable lesson:
 - Add anti-patterns that looked cheap but increased total work.
 - Clarify when Superpowers subagent workflows are worth their review cost.
 - Note when main-thread tool use should replace a scout subagent.
+- Refine output-volume heuristics; distinguish compressed command wrappers from genuinely token-heavy raw output.
 - Note when a custom agent config, model route, or AGENTS instruction should change.
 
 Prefer small edits with concrete examples over broad policy expansion. The guide should stay concise enough to use during real work.

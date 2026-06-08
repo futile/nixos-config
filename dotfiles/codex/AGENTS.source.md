@@ -24,21 +24,89 @@ If unsure, you MUST explicitly ASK what should be done!
 - However, if you want to use the skill, you must ALWAYS EXPLICITLY ASK unless you have explicit clear instructions to use it already.
 - DO let the user know when it would be a good time to use the skill.
 
-#### Subagent selection
+#### Subagent routing
 
 - NEVER use a subagent above gpt-5.5-medium without explicit confirmation from the user!
 - DO ask the user if you think an agent above gpt-5.5-medium should be used!
 - DO NOT silently switch to a less-than-ideal subagent model even though a model above gpt-5.5-medium would be appropriate!
-- DO use models below gpt-5.5-medium if you wanted to do so anyway.
+- DO use models below gpt-5.5-medium when the task is bounded, verifiable, and low-risk.
 - DO NOT use gpt-5.5-medium for every model instead of choosing the appropriate model for each task!
+- Before spawning a subagent, apply the net-savings gate:
+  - Would a deterministic tool (`rg`, `ctx_execute_file`, `ctx_batch_execute`, CBM, Serena, RTK) answer this cheaper?
+  - Is the task independent enough that the subagent does not need broad main-thread context?
+  - Can the prompt be smaller than the main-thread context it replaces?
+  - Is the expected output compact and directly usable?
+  - Can the main thread verify the result cheaply?
+- Prefer subagents for bounded scouts, focused review packets, log/output triage, and narrow patch work with clear acceptance criteria.
+- Prefer the main thread for architecture decisions, cross-cutting design, final synthesis, final verification, small edits where context is already loaded, and tightly coupled implementation.
+- Treat names like `reviewer`, `implementer`, `code_mapper`, and `architect` as roles unless matching configured Codex agents actually exist.
+- Main thread owns decisions. Subagents may gather evidence, propose options, or produce bounded changes; they do not decide architecture or completion status.
+
+#### Subagent model guidance
+
+Use these routes only after the tool-first check and net-savings gate pass.
+
+Strongly consider `gpt-5.4-mini` for scout/support packets where the work is high-volume, low-risk, and mostly extraction or summarization:
+
+- Large-file or repo scans that should return compact evidence.
+- Docs/log/transcript/test-output triage.
+- File maps, dependency/config inventories, stale-reference checks.
+- Broad search summaries where exact source references are enough.
+- Issue/bead/thread summarization.
+- Output-compression packets that replace large raw reads.
+
+Do not use `gpt-5.4-mini` when the main thread would need to redo the reasoning, when findings are subtle, or when wrong prioritization would waste significant time.
+
+Strongly consider `gpt-5.4` for higher-judgment support packets that are still bounded and reviewable:
+
+- Focused architecture evidence gathering without final decision authority.
+- Bounded code review where subtle regressions or test gaps matter.
+- Comparing competing implementation options from existing evidence.
+- Debugging scouts where symptoms cross a few files/systems but final fix choice stays with the main thread.
+- Synthesizing several scout/tool outputs into options, risks, and next checks.
+
+Do not use `gpt-5.4` as a substitute for main-thread ownership of architecture, security, final synthesis, or high-risk judgment.
+
+Use `gpt-5.3-codex-spark` only when the task is a bounded, low-risk, verifiable execution packet:
+
+- Small single-file or tightly scoped patches.
+- Tiny UI/CSS/copy/config/test adjustments.
+- Applying an established repo pattern to a clearly identified file.
+- Fixing a known failing test when expected behavior is explicit.
+- Mechanical edits with a cheap diff/test check.
+- Quick experiments where being wrong is cheap and the result will be reviewed.
+
+Do not use Spark for broad refactors, architecture, deep debugging, security-sensitive changes, multi-system planning, or anything where hidden debt is likely. Spark output should be the smallest correct patch, verification run, changed files, and uncertainty.
+
+Escalate back to the main thread or a stronger model when a cheaper subagent hits ambiguity, conflicting evidence, repeated failure, broad context needs, risky edits, or signs that the main thread would need to redo the result.
+
+#### Subagent reuse
+
+- Prefer fresh subagents for independent tasks, high-risk review, or role changes.
+- Reuse a subagent only when it continues the same bounded role over the same scope and its existing context is still accurate.
+- Before reuse, restate the current scope, decisions, changed files, expected output, and stop conditions.
+- Do not reuse a subagent across unrelated beads/tasks, architecture changes, or from implementation into final review.
+
+#### Subagent packet contract
+
+Every subagent prompt should include:
+
+- Role: scout, reviewer, patch worker, log triager, etc.
+- Scope: files, commands, issue/bead, or subsystem boundaries.
+- Goal: concrete question or deliverable.
+- Constraints: allowed edits, forbidden areas, model ceiling, expected tools.
+- Output: concise findings, evidence, changed files, verification run, and open questions.
+- Stop condition: when to return instead of continuing.
 
 ## Tool Usage
 
 - Prefer `rtk <command>` for shell commands that may produce noisy output when exact raw output is not required, especially `git status`, `git diff`, build/test/lint commands, package-manager commands, and logs. Examples: `rtk git diff --cached`, `rtk just check`, `rtk cargo test`, `rtk journalctl --user --since "10 min ago"`.
 - Use raw commands when exact byte-for-byte output matters, when invoking interactive tools, or when debugging RTK itself. Use RTK metadata commands directly: `rtk gain`, `rtk gain --history`, `rtk discover`, and `rtk proxy <cmd>`.
 - Prefer context-mode tools for large or queryable context: use `ctx_execute` / `ctx_execute_file` to process large files or logs without returning raw bytes, `ctx_batch_execute` for multiple noisy commands whose output should be indexed, and `ctx_search` to recall indexed session memory. Use raw commands when exact output is needed for editing or debugging.
+- Do not use shell-call count as a proxy for token cost. `rtk` already compacts noisy output, so prioritize token-saving work around large raw `sed`/`cat`, broad `rg`, `git diff`/`git show`, large JSON/log output, validation output, and repeated source reads. Prefer context-mode or targeted tool summaries before reaching for a subagent.
 - Use codebase-memory-mcp when it is configured and useful for indexed codebase exploration: architecture summaries, graph-backed code search, known symbol lookup, call/data-flow tracing, and code snippets. Useful tools include `get_architecture`, `search_code`, `search_graph`, `get_code_snippet`, `trace_path`, and `query_graph`.
 - Do not treat codebase-memory-mcp as a replacement for `rg`. Use `rg` directly for exact strings, file paths, config values, docs, non-code text, or when CBM results look incomplete or noisy.
+- When a change affects a known whole symbol and Serena is reliable for the language/project, consider Serena symbolic edits before manual broad file editing.
 - For CBM CLI usage, discover project names with `codebase-memory-mcp cli list_projects '{}'`, query architecture with `codebase-memory-mcp cli get_architecture '{"project":"PROJECT_NAME","aspects":["all"]}'`, and index missing or stale projects with `codebase-memory-mcp cli index_repository '{"repo_path":"/absolute/path/to/repo"}'`.
 - For broad CBM orientation, prefer `get_architecture` with `aspects: ["all"]`; targeted or natural-language aspect names may return only thin graph counts.
 - For `get_architecture`, `aspects` is an enum list, not a free-text or semantic query field. Valid values are `all`, `languages`, `packages`, `entry_points`, `routes`, `hotspots`, `boundaries`, `layers`, `file_tree`, `structure`, and `dependencies`. Omit `aspects`, pass an empty array, or use `["all"]` for the full architecture summary. Use specific enum values such as `["structure", "dependencies", "entry_points"]` when only those sections are needed.
@@ -110,6 +178,10 @@ When you encounter these in a skill, use your platform equivalent:
 | `Skill` tool (invoke a skill)    | Skills load natively — just follow the instructions |
 | `Read`, `Write`, `Edit` (files)  | Use your native file tools                          |
 | `Bash` (run commands)            | Use your native shell tools                         |
+
+##### Superpowers And Subagents
+
+Superpowers subagent skills define useful workflows, but still apply the local subagent net-savings gate before spawning agents. Use `subagent-driven-development` when there is a written plan with independent slices large enough to amortize startup cost. For smaller work, prefer main-thread implementation plus bounded scout/review packets.
 
 ##### Environment Detection
 
