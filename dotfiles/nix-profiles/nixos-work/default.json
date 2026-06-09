@@ -62,9 +62,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/zrx7kmcgzax4s6fldam9hf6nmwcw5nks-cargo-watch-8.5.3"
+        "/nix/store/rw0shq2dng8hwqkv98qbmvlgj1m6ndyw-cargo-watch-8.5.3"
       ],
-      "url": "path:/nix/store/gcf1p209bczcpvyd2mwa4prv8znxhx6g-source?lastModified=1771207753&narHash=sha256-b9uG8yN50DRQ6A7JdZBfzq718ryYrlmGgqkRm9OOwCE%3D&rev=d1c15b7d5806069da59e819999d70e1cec0760bf"
+      "url": "path:/nix/store/620xykwgxg0a2hzn1sc48nwxylvyql6a-source?lastModified=1780246643&narHash=sha256-4T1KWX7xWGQMs9hNZ24IOY3aYOi8D6%2B5WtkNRBSttB8%3D&rev=3109eaae18e09d0b8aef23dc2579e7d94b8d4b4e"
     },
     "codex": {
       "active": true,
@@ -73,9 +73,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/ggqr3acq15chkhr11a93kf3ki04c4qq6-codex-0.136.0"
+        "/nix/store/a43n7vrdfh42mdbrbmhjayjr4hxafspb-codex-0.137.0"
       ],
-      "url": "github:NixOS/nixpkgs/cbb5cf358f50aa6acc9efd6113b7bcfbc352cd73?narHash=sha256-IX7G1dlKrOqPOImfbo7ADDfV5yU1%2Bj%2BMRChI3TL4tAA%3D"
+      "url": "github:NixOS/nixpkgs/8c3cede7ddc26bd659d2d383b5610efbd2c7a16e?narHash=sha256-rppURzHviaQN131F%2BnLiLdGfcb0uCd9gGP0E5%2Biw9MI%3D"
     },
     "gh": {
       "active": true,
