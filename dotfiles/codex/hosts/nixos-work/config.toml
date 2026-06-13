@@ -1,7 +1,7 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
 model = "gpt-5.5"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 model_verbosity = "low"
 personality = "pragmatic"
 # notify = ["/home/felix/nixos/bin/codex-notify-noctalia"]
@@ -84,6 +84,9 @@ url = "https://mcp.deepwiki.com/mcp"
 approval_mode = "approve"
 
 [mcp_servers.DeepWiki.tools.ask_question]
+approval_mode = "approve"
+
+[mcp_servers.DeepWiki.tools.read_wiki_contents]
 approval_mode = "approve"
 
 [plugins."superpowers@openai-curated"]

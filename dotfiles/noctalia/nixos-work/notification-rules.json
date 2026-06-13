@@ -5,7 +5,7 @@
             "pattern": "/Open Razer.*Battery is \\d\\d%.*/"
         },
         {
-            "action": "hide",
+            "action": "block",
             "pattern": "Automatically connected to Audio and input profiles on Glove80"
         }
     ]

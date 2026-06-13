@@ -68,14 +68,14 @@
     },
     "codex": {
       "active": true,
-      "attrPath": "legacyPackages.x86_64-linux.codex",
-      "originalUrl": "github:NixOS/nixpkgs/nixpkgs-unstable",
+      "attrPath": "packages.x86_64-linux.codex",
+      "originalUrl": "github:numtide/llm-agents.nix",
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/a43n7vrdfh42mdbrbmhjayjr4hxafspb-codex-0.137.0"
+        "/nix/store/awhqzz8cixi3shkabqr0y0midaibygw6-codex-0.139.0"
       ],
-      "url": "github:NixOS/nixpkgs/8c3cede7ddc26bd659d2d383b5610efbd2c7a16e?narHash=sha256-rppURzHviaQN131F%2BnLiLdGfcb0uCd9gGP0E5%2Biw9MI%3D"
+      "url": "github:numtide/llm-agents.nix/6f4945d637942c06390d0fd765c8981874020157?narHash=sha256-x%2BI/CbXlM6pieeCQV/43l4VYr9tORn2ap0hiHa9JiiY%3D"
     },
     "gh": {
       "active": true,
