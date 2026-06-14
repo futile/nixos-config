@@ -187,7 +187,7 @@ in
           # misc
           # texlive.combined.scheme-full
           # zotero
-          my-custom-packages.llm-wiki
+          # my-custom-packages.llm-wiki
           # protonvpn-cli
           nixpkgs-unstable.blender
 

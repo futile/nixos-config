@@ -262,7 +262,11 @@
               services.gnome.evolution-data-server.enable = true;
 
               environment.systemPackages = [
-                (flake-inputs.noctalia.packages.${system}.default.override { calendarSupport = true; })
+                (flake-inputs.noctalia.packages.${system}.default.override {
+                  # 2026-06-13 option no longer exists, gonna try without,
+                  # let's see (couldn't find out what happened to it)
+                  # calendarSupport = true;
+                })
               ];
             }
           )

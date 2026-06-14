@@ -22,6 +22,17 @@
       ],
       "url": "path:/nix/store/zrfsqn9i68kwvb6idjdfk5nhdbdcf6xk-source?lastModified=1761236834&narHash=sha256-%2Bpthv6hrL5VLW2UqPdISGuLiUZ6SnAXdd2DdUE%2BfV2Q%3D&rev=d5faa84122bc0a1fd5d378492efce4e289f8eac1"
     },
+    "agentsview": {
+      "active": true,
+      "attrPath": "packages.x86_64-linux.agentsview",
+      "originalUrl": "github:numtide/llm-agents.nix",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/lqgnp1857y2nsmb4j430yvw3qkrh6gdg-agentsview-0.33.1"
+      ],
+      "url": "github:numtide/llm-agents.nix/c2660eaf3d895e95ccb8bd63e2eab5a6fedae1ab?narHash=sha256-Ab3xpGclxkEmGcfVNj5v6NFfF/QObraikmBH2nSBjyg%3D"
+    },
     "beads": {
       "active": true,
       "attrPath": "legacyPackages.x86_64-linux.beads",
