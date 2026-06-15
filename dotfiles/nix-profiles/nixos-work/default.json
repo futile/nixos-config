@@ -143,6 +143,17 @@
       ],
       "url": "github:ryantm/nixpkgs-update/b089717082e2a3897411ab52da913a93bff0342d?narHash=sha256-jfR42VgOArea7swkcaaikd0%2Br0V%2BoT7UnVYB5J8fjIE%3D"
     },
+    "out": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.amdgpu_top.out",
+      "originalUrl": "flake:nixpkgs",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/jlmvfs0ghrzhd9pivicy3ka11gwvvdpp-amdgpu_top-0.11.5"
+      ],
+      "url": "path:/nix/store/gw7fxaw8z5szcqlzyzcnrshzi60zj664-source?lastModified=0&narHash=sha256-md8WlXOlfnIeHeOScMTTHFyf2d6iaTwPl2apR5EQ3P4%3D"
+    },
     "skills": {
       "active": true,
       "attrPath": "legacyPackages.x86_64-linux.skills",
