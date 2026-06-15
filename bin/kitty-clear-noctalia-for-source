@@ -5,9 +5,9 @@ set -euo pipefail
 
 source_key="${1:?source key required}"
 footer="Kitty-Source: ${source_key}"
-noctalia_shell="${NOCTALIA_SHELL:-noctalia-shell}"
+noctalia_cmd="${NOCTALIA_CMD:-noctalia}"
 
-"${noctalia_shell}" ipc call notifications getHistory |
+"${noctalia_cmd}" msg notifications getHistory |
 	jq -r --arg footer "${footer}" '
 		.[]?
 		| select((.body // "") | contains($footer))
@@ -15,6 +15,6 @@ noctalia_shell="${NOCTALIA_SHELL:-noctalia-shell}"
 	' |
 	while IFS= read -r notification_id; do
 		if [[ -n "${notification_id}" ]]; then
-			"${noctalia_shell}" ipc call notifications removeFromHistory "${notification_id}" >/dev/null
+			"${noctalia_cmd}" msg notifications removeFromHistory "${notification_id}" >/dev/null
 		fi
 	done

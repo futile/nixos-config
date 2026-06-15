@@ -127,6 +127,10 @@ ls_specific_settings:
 # list of paths to ignore across all projects.
 # Same syntax as gitignore, so you can use * and **.
 # These patterns are merged additively with each project's own ignored_paths.
+
+# list of paths to ignore across all projects.
+# Same syntax as gitignore, so you can use * and **.
+# These patterns are merged additively with each project's own ignored_paths.
 ignored_paths: []
 
 # list of regex patterns which, when matched, mark a memory entry as read‑only.
@@ -216,3 +220,10 @@ projects:
 web_dashboard_trusted_hosts:
 - 127.0.0.1
 - localhost
+
+# command used to launch a JetBrains IDE on demand (only relevant when using the JetBrains language backend)
+# If this is non-empty and, at project activation, the Serena JetBrains Plugin server instance corresponding
+# to the project is not found, use this command to spawn a new instance.
+# Specifically, if this is <cmd>, then `<cmd> <projectDir>` is launched.
+# Provide the full path to the executable/script (e.g., "/usr/bin/idea" or "C:/Users/bob/AppData/Local/JetBrains/Toolbox/scripts/idea.cmd").
+jetbrains_launch_command:

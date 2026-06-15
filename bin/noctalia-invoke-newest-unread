@@ -2,11 +2,11 @@
 # Invoke the newest unread Noctalia notification default action.
 set -euo pipefail
 
-noctalia_shell="${NOCTALIA_SHELL:-noctalia-shell}"
+noctalia_cmd="${NOCTALIA_CMD:-noctalia}"
 cache_home="${XDG_CACHE_HOME:-${HOME}/.cache}"
 history_file="${NOCTALIA_HISTORY_FILE:-${cache_home}/noctalia/notifications.json}"
 
-state_json="$("${noctalia_shell}" ipc call state all 2>/dev/null || true)"
+state_json="$("${noctalia_cmd}" msg state all 2>/dev/null || true)"
 if [[ -z "${state_json}" ]]; then
 	exit 0
 fi
@@ -18,7 +18,7 @@ if [[ ! "${last_seen}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
 	last_seen=0
 fi
 
-history_json="$("${noctalia_shell}" ipc call notifications getHistory 2>/dev/null || true)"
+history_json="$("${noctalia_cmd}" msg notifications getHistory 2>/dev/null || true)"
 if [[ -z "${history_json}" ]]; then
 	exit 0
 fi
@@ -58,7 +58,7 @@ invoke_default() {
 	local result
 
 	result="$(
-		"${noctalia_shell}" ipc call notifications invokeAction "${notification_id}" default 2>/dev/null || true
+		"${noctalia_cmd}" msg notifications invokeAction "${notification_id}" default 2>/dev/null || true
 	)"
 
 	grep -qx 'true' <<<"${result}"
@@ -78,7 +78,7 @@ for notification_id in "${unread_ids[@]}"; do
 	esac
 
 	if invoke_default "${notification_id}"; then
-		"${noctalia_shell}" ipc call notifications removeFromHistory "${notification_id}" >/dev/null 2>&1 || true
+		"${noctalia_cmd}" msg notifications removeFromHistory "${notification_id}" >/dev/null 2>&1 || true
 		exit 0
 	fi
 done

@@ -286,7 +286,7 @@ layout {
 // restart keepassxc service, so it properly joins the tray
 // spawn-sh-at-startup "sleep 7 && systemctl restart --user keepassxc.service"
 
-spawn-sh-at-startup "noctalia-shell"
+spawn-sh-at-startup "noctalia"
 
 // To run a shell command (with variables, pipes, etc.), use spawn-sh-at-startup:
 // spawn-sh-at-startup "qs -c ~/source/qs/MyAwesomeShell"
@@ -420,16 +420,16 @@ binds {
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     Mod+T hotkey-overlay-title="Open a Terminal: kitty" { spawn "kitty"; }
     // Mod+D hotkey-overlay-title="Run an Application: rofi" { spawn "rofi" "-show" "combi" "-combi-modes" "run,games" "-modes" "combi" "-theme" "material"; }
-    Mod+Space { spawn-sh "noctalia-shell ipc call launcher toggle"; }
+    Mod+Space { spawn-sh "noctalia msg panel-toggle launcher"; }
     F6 { spawn "/home/felix/nixos/bin/noctalia-invoke-newest-unread"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock" "--screenshot" "--effect-blur" "4x4" "--show-failed-attempts" "--show-keyboard-layout" "--ignore-empty-password"; }
 
     // figured this one out using `wev`
     // XF86ScreenSaver { spawn "swaylock" "--screenshot" "--effect-blur" "4x4" "--show-failed-attempts" "--show-keyboard-layout" "--ignore-empty-password"; }
-    XF86ScreenSaver { spawn "noctalia-shell" "ipc" "call" "lockScreen" "lock"; }
+    XF86ScreenSaver { spawn "noctalia" "msg" "session" "lock"; }
 
     // using a more general approach based on `swayidle` now that locks the screen (still through noctalia) before _any_ kind of suspend starts.
-    // XF86Sleep { spawn "noctalia-shell" "ipc" "call" "sessionMenu" "lockAndSuspend"; }
+    // XF86Sleep { spawn "noctalia" "msg" "session" "lock-and-suspend"; }
 
     // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
     // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
@@ -689,3 +689,5 @@ binds {
     // moving the mouse or pressing any other key.
     Mod+Shift+P { power-off-monitors; }
 }
+
+include "noctalia.kdl"

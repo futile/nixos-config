@@ -94,12 +94,9 @@ in
         # don't symlink this, it changes whenever light/dark mode changes etc.
         # "noctalia/colors.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/colors.json";
 
+        "noctalia/config.toml".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/config.toml";
         "noctalia/notification-rules.json".source =
           config.lib.file.mkOutOfStoreSymlink "${noctalia}/notification-rules.json";
-        "noctalia/plugins.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/plugins.json";
-        "noctalia/settings.json".source = config.lib.file.mkOutOfStoreSymlink "${noctalia}/settings.json";
-        "noctalia/user-templates.toml".source =
-          config.lib.file.mkOutOfStoreSymlink "${noctalia}/user-templates.toml";
         "kitty/theme.conf".text = pkgs.lib.mkForce ''
           include themes/lume.conf
           globinclude themes/noctalia.conf

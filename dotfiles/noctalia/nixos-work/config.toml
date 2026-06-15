@@ -1,0 +1,196 @@
+[bar.default]
+end = [
+  "tray",
+  "notifications",
+  "clipboard",
+  "network",
+  "bluetooth",
+  "volume",
+  "battery",
+  "theme_mode",
+  "control-center",
+  "session",
+]
+start = [
+  "launcher",
+  "workspaces",
+  "sysmon_cpu",
+  "sysmon_temp",
+  "sysmon_ram",
+  "sysmon_disk",
+  "media",
+]
+widget_spacing = 8
+
+[battery.device."/org/freedesktop/UPower/devices/keyboard_dev_CA_05_C8_20_26_20"]
+warning_threshold = 20
+
+[calendar]
+enabled = true
+
+[calendar.account.100308131219676775770]
+name = "Felix Rath (yahoo+gmail)"
+type = "google"
+
+[control_center]
+sidebar = "full"
+
+[desktop_widgets]
+enabled = false
+schema_version = 2
+widget_order = []
+
+[desktop_widgets.grid]
+cell_size = 16
+major_interval = 4
+visible = true
+
+[desktop_widgets.widget]
+
+[location]
+auto_locate = true
+
+[lockscreen_widgets]
+schema_version = 2
+widget_order = ["lockscreen-login-box@HDMI-A-1", "lockscreen-login-box@eDP-1"]
+
+[lockscreen_widgets.grid]
+cell_size = 16
+major_interval = 4
+visible = true
+
+[lockscreen_widgets.widget."lockscreen-login-box@HDMI-A-1"]
+box_height = 0.0
+box_width = 0.0
+cx = 1280.0
+cy = 1317.0
+output = "HDMI-A-1"
+rotation = 0.0
+type = "login_box"
+
+[lockscreen_widgets.widget."lockscreen-login-box@HDMI-A-1".settings]
+background_color = "surface_variant"
+background_opacity = 0.88
+background_radius = 12.0
+input_opacity = 1.0
+input_radius = 6.0
+show_login_button = true
+
+[lockscreen_widgets.widget."lockscreen-login-box@eDP-1"]
+box_height = 0.0
+box_width = 0.0
+cx = 768.0
+cy = 837.0
+output = "eDP-1"
+rotation = 0.0
+type = "login_box"
+
+[lockscreen_widgets.widget."lockscreen-login-box@eDP-1".settings]
+background_color = "surface_variant"
+background_opacity = 0.88
+background_radius = 12.0
+input_opacity = 1.0
+input_radius = 6.0
+show_login_button = true
+
+[shell]
+polkit_agent = true
+telemetry_enabled = true
+
+[shell.panel]
+launcher_session_search = true
+open_near_click_control_center = true
+
+[theme]
+builtin = "Rosé Pine"
+community_palette = "Oxocarbon"
+mode = "light"
+source = "builtin"
+wallpaper_scheme = "m3-content"
+
+[theme.templates]
+builtin_ids = [
+  "btop",
+  "gtk3",
+  "gtk4",
+  "kcolorscheme",
+  "kitty",
+  "niri",
+  "qt",
+  "wezterm",
+]
+community_ids = [
+  "neovim",
+  "obsidian",
+  "vscode",
+  "rofi",
+  "discord",
+  "steam",
+  "telegram",
+  "yazi",
+]
+
+[wallpaper]
+directory = "/home/felix/Pictures/Wallpapers"
+
+[wallpaper.default]
+path = "/home/felix/Pictures/Wallpapers/ff-stellar-spacecraft-journey-galaxy-scene-desktop-wallpaper-4k.jpg"
+
+[wallpaper.last]
+path = "/home/felix/Pictures/Wallpapers/ff-stellar-spacecraft-journey-galaxy-scene-desktop-wallpaper-4k.jpg"
+
+[wallpaper.monitors.HDMI-A-1]
+path = "/home/felix/Pictures/Wallpapers/ff-stellar-spacecraft-journey-galaxy-scene-desktop-wallpaper-4k.jpg"
+
+[wallpaper.monitors.eDP-1]
+path = "/home/felix/Pictures/Wallpapers/ff-stellar-spacecraft-journey-galaxy-scene-desktop-wallpaper-4k.jpg"
+
+[widget.clipboard]
+capsule = true
+
+[widget.clock]
+format = "{:%Y-%m-%d} | {:%B %d} | {:%H:%M}"
+
+[widget.control-center]
+capsule = true
+
+[widget.launcher]
+glyph = "rocket"
+
+[widget.network]
+show_label = false
+
+[widget.notifications]
+capsule = true
+
+[widget.session]
+capsule = true
+
+[widget.sysmon]
+show_label = false
+stat = "cpu_temp"
+
+[widget.sysmon_cpu]
+show_label = false
+type = "sysmon"
+
+[widget.sysmon_disk]
+show_label = false
+stat = "disk_pct"
+type = "sysmon"
+
+[widget.sysmon_ram]
+show_label = false
+stat = "ram_pct"
+type = "sysmon"
+
+[widget.sysmon_temp]
+show_label = false
+stat = "cpu_temp"
+type = "sysmon"
+
+[widget.theme_mode]
+capsule = true
+
+[widget.volume]
+capsule = true

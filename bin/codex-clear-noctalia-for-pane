@@ -21,7 +21,7 @@ fi
 state_dir="${CODEX_NOCTALIA_STATE_DIR:-${default_state_dir}}"
 fallback_state_dir="/tmp/codex-noctalia-${UID}"
 
-noctalia_shell="${NOCTALIA_SHELL:-noctalia-shell}"
+noctalia_cmd="${NOCTALIA_CMD:-noctalia}"
 
 state_dirs=("${state_dir}")
 if [[ "${state_dir}" != "${fallback_state_dir}" ]]; then
@@ -65,7 +65,7 @@ for candidate_state_dir in "${state_dirs[@]}"; do
 	fi
 done
 
-"${noctalia_shell}" ipc call notifications getHistory |
+"${noctalia_cmd}" msg notifications getHistory |
 	jq -r --arg app_name "${app_name}" '
 		.[]?
 		| select(.appName == $app_name)
@@ -74,7 +74,7 @@ done
 	while IFS= read -r notification_id; do
 		if [[ -n "${notification_id}" ]]; then
 			close_notification "${notification_id}"
-			"${noctalia_shell}" ipc call notifications removeFromHistory "${notification_id}" >/dev/null
+			"${noctalia_cmd}" msg notifications removeFromHistory "${notification_id}" >/dev/null
 		fi
 	done
 

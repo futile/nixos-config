@@ -71,7 +71,7 @@ in
     timeouts = [ ];
 
     events = {
-      "before-sleep" = "/run/current-system/sw/bin/noctalia-shell ipc call lockScreen lock";
+      "before-sleep" = "/run/current-system/sw/bin/noctalia msg session lock";
     };
   };
 }
