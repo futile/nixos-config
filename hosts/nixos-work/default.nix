@@ -192,6 +192,22 @@ in
     };
 
     blueman.enable = true;
+
+    ollama = {
+      # 2026-06-16 tried it out, but my GPU is so shit, no reason to keep this running (:
+      enable = false;
+
+      package = pkgs.ollama-rocm;
+      openFirewall = true;
+
+      # 2026-06-15 from https://wiki.nixos.org/wiki/Ollama#AMD_GPU_with_open_source_driver
+      environmentVariables = {
+        HCC_AMDGPU_TARGET = "gfx1035"; # used to be necessary, but doesn't seem to anymore
+        OLLAMA_IGPU_ENABLE = "1";
+      };
+      # results in environment variable "HSA_OVERRIDE_GFX_VERSION=10.3.0"
+      rocmOverrideGfx = "10.3.0";
+    };
   };
 
   # List packages installed in system profile. To search, run:

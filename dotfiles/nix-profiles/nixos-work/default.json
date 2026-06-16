@@ -132,6 +132,17 @@
       ],
       "url": "path:/nix/store/c999kkcfmsv97myv4h7hp67zlvri8943-source?lastModified=1775732571&narHash=sha256-cd6wKenSQ6G6jikqxFLvyel47TkY30uOSvOBV9gYDX0%3D&rev=02f3fa0374fa13707d42d55d58ecc76b091f223c"
     },
+    "lmstudio": {
+      "active": true,
+      "attrPath": "legacyPackages.x86_64-linux.lmstudio",
+      "originalUrl": "flake:nixpkgs",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/7j8d4pygb5jvad7rr2cidhrq2y1b53qf-lmstudio-0.4.15-2"
+      ],
+      "url": "path:/nix/store/gw7fxaw8z5szcqlzyzcnrshzi60zj664-source?lastModified=0&narHash=sha256-md8WlXOlfnIeHeOScMTTHFyf2d6iaTwPl2apR5EQ3P4%3D"
+    },
     "nixpkgs-update": {
       "active": true,
       "attrPath": "packages.x86_64-linux.default",
@@ -153,6 +164,17 @@
         "/nix/store/jlmvfs0ghrzhd9pivicy3ka11gwvvdpp-amdgpu_top-0.11.5"
       ],
       "url": "path:/nix/store/gw7fxaw8z5szcqlzyzcnrshzi60zj664-source?lastModified=0&narHash=sha256-md8WlXOlfnIeHeOScMTTHFyf2d6iaTwPl2apR5EQ3P4%3D"
+    },
+    "pi": {
+      "active": true,
+      "attrPath": "packages.x86_64-linux.pi",
+      "originalUrl": "github:numtide/llm-agents.nix",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/35d6ccwr3akxnk3g279cqy3z3jwpysjl-pi-0.79.3"
+      ],
+      "url": "github:numtide/llm-agents.nix/4e416a07e64add2ddbb4ef4a8828b807182b212e?narHash=sha256-tWBT2X9llGMcpKLSmjEzMS8YzWisatPWeKiu2XoxyIc%3D"
     },
     "skills": {
       "active": true,
