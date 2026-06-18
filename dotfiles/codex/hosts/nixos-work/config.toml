@@ -7,6 +7,12 @@ personality = "pragmatic"
 # notify = ["/home/felix/nixos/bin/codex-notify-noctalia"]
 service_tier = "default"
 
+[model_providers.onehop]
+name = "Onehop"
+env_key = "ONEHOP_API_KEY"
+base_url = "https://api.onehop.ai/v1"
+requires_openai_auth = false
+
 [tools]
 view_image = true
 
