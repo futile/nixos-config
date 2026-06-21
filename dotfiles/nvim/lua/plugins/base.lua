@@ -1060,6 +1060,7 @@ return {
         "sql",
         "terraform",
         "janet_simple",
+        "cue",
       },
       matchup = {
         enable = true,
