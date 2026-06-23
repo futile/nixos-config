@@ -49,6 +49,7 @@ let
       headroom = final.callPackage ../custom-packages/headroom.nix { };
       llm-wiki = final.callPackage ../custom-packages/llm-wiki.nix { };
       marker = final.callPackage ../custom-packages/marker.nix { };
+      mex = final.callPackage ../custom-packages/mex.nix { };
       phinger-cursors-extended = final.callPackage ../custom-packages/phinger-cursors-extended.nix { };
       serena = final.callPackage ../custom-packages/serena-with-editor-tools.nix {
         serenaInput = flake-inputs.serena;

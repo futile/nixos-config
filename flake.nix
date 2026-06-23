@@ -180,6 +180,7 @@
         headroom = withRustSccache (pkgsForSystem.callPackage ./custom-packages/headroom.nix { });
         llm-wiki = withRustSccache (pkgsForSystem.callPackage ./custom-packages/llm-wiki.nix { });
         marker = pkgsForSystem.callPackage ./custom-packages/marker.nix { };
+        mex = pkgsForSystem.callPackage ./custom-packages/mex.nix { };
         phinger-cursors-extended =
           pkgsForSystem.callPackage ./custom-packages/phinger-cursors-extended.nix
             { };

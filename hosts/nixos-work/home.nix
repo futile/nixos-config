@@ -148,6 +148,7 @@ in
           # AI etc.
           # 2026-04-02 broken until https://nixpk.gs/pr-tracker.html?pr=505911
           # claude-code
+          my-custom-packages.mex
 
           # messengers
           telegram-desktop
