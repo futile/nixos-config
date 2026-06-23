@@ -55,28 +55,6 @@
       ],
       "url": "github:Dicklesworthstone/beads_viewer/b472166565c27b43aa9c2d736511e3891adacdb8?narHash=sha256-yBySx7ERaEGuvVoY8WF5hYOyVxbhpB9/2DqdT96EvNU%3D"
     },
-    "cargo-cache": {
-      "active": true,
-      "attrPath": "legacyPackages.x86_64-linux.cargo-cache",
-      "originalUrl": "github:NixOS/nixpkgs/nixpkgs-unstable",
-      "outputs": null,
-      "priority": 5,
-      "storePaths": [
-        "/nix/store/590vhgn08s0asgyw2f3krv68xb22bcr4-cargo-cache-0.8.3"
-      ],
-      "url": "github:NixOS/nixpkgs/13043924aaa7375ce482ebe2494338e058282925?narHash=sha256-nwASzrRDD1JBEu/o8ekKYEXm/oJW6EMCzCRdrwcLe90%3D"
-    },
-    "cargo-watch": {
-      "active": true,
-      "attrPath": "legacyPackages.x86_64-linux.cargo-watch",
-      "originalUrl": "flake:unstable",
-      "outputs": null,
-      "priority": 5,
-      "storePaths": [
-        "/nix/store/rw0shq2dng8hwqkv98qbmvlgj1m6ndyw-cargo-watch-8.5.3"
-      ],
-      "url": "path:/nix/store/620xykwgxg0a2hzn1sc48nwxylvyql6a-source?lastModified=1780246643&narHash=sha256-4T1KWX7xWGQMs9hNZ24IOY3aYOi8D6%2B5WtkNRBSttB8%3D&rev=3109eaae18e09d0b8aef23dc2579e7d94b8d4b4e"
-    },
     "codex": {
       "active": true,
       "attrPath": "packages.x86_64-linux.codex",
@@ -186,17 +164,6 @@
         "/nix/store/k3mimi9i6mwn2ndknl3827i9qwcmgw8f-skills-1.4.6"
       ],
       "url": "path:/nix/store/i2gsp87gqp16whm9mw0ybk9n84zir01x-source?lastModified=1776329215&narHash=sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw%3D&rev=b86751bc4085f48661017fa226dee99fab6c651b"
-    },
-    "tiled": {
-      "active": true,
-      "attrPath": "legacyPackages.x86_64-linux.tiled",
-      "originalUrl": "git+file:///home/felix/gits/nixpkgs",
-      "outputs": null,
-      "priority": 5,
-      "storePaths": [
-        "/nix/store/n6asp8d324fzrxaw2adz9mn2a50h3k5d-tiled-1.12.0"
-      ],
-      "url": "git+file:///home/felix/gits/nixpkgs?ref=refs/heads/update/tiled-1.12.0&rev=8c968909328b33a59cc0f077a3b8c70287a78391"
     },
     "yarn": {
       "active": true,

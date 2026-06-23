@@ -180,6 +180,8 @@ in
           cargo-edit
           cargo-nextest
           cargo-binstall
+          cargo-cache
+          cargo-watch
           sccache
 
           # misc
@@ -188,6 +190,7 @@ in
           # my-custom-packages.llm-wiki
           # protonvpn-cli
           nixpkgs-unstable.blender
+          nixpkgs-unstable.tiled
 
           # hardware stuff
           # v4l-utils # webcam utils
