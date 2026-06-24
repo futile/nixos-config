@@ -191,6 +191,7 @@ in
           # protonvpn-cli
           nixpkgs-unstable.blender
           nixpkgs-unstable.tiled
+          nixpkgs-unstable.process-compose
 
           # hardware stuff
           # v4l-utils # webcam utils
