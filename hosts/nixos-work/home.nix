@@ -145,6 +145,9 @@ in
           gcc
           gdb
 
+          # 2026-06-25 I give in. _Everything_ seems to need this...
+          nodejs
+
           # AI etc.
           # 2026-04-02 broken until https://nixpk.gs/pr-tracker.html?pr=505911
           # claude-code
