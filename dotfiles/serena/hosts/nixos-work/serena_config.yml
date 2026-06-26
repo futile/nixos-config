@@ -131,6 +131,10 @@ ls_specific_settings:
 # list of paths to ignore across all projects.
 # Same syntax as gitignore, so you can use * and **.
 # These patterns are merged additively with each project's own ignored_paths.
+
+# list of paths to ignore across all projects.
+# Same syntax as gitignore, so you can use * and **.
+# These patterns are merged additively with each project's own ignored_paths.
 ignored_paths: []
 
 # list of regex patterns which, when matched, mark a memory entry as read‑only.
@@ -211,6 +215,7 @@ project_serena_folder_location: "$projectDir/.serena"
 projects:
 - /home/felix/gits/pale-darks-online
 - /home/felix/gits/serena
+- /home/felix/gits/spacetimedb-test-harness-rs
 - /home/felix/nixos
 
 # trusted hosts used to access the web dashboard.
