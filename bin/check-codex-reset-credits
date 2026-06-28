@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""Show banked Codex reset-credit expiry times without redeeming them."""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from datetime import UTC, datetime
+from datetime import tzinfo
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+ENDPOINT = "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits"
+AUTH_NAMESPACE = "https://api.openai.com/auth"
+
+
+def text(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def jwt_payload(token: str | None) -> dict[str, Any] | None:
+    if not token or token.count(".") < 2:
+        return None
+    payload = token.split(".")[1]
+    payload += "=" * ((4 - len(payload) % 4) % 4)
+    try:
+        decoded = json.loads(base64.urlsafe_b64decode(payload))
+    except Exception:
+        return None
+    return decoded if isinstance(decoded, dict) else None
+
+
+def account_id_from_token(token: str | None) -> str | None:
+    payload = jwt_payload(token)
+    auth = payload.get(AUTH_NAMESPACE) if payload else None
+    return text(auth.get("chatgpt_account_id")) if isinstance(auth, dict) else None
+
+
+def load_auth(codex_home: Path) -> tuple[str, str | None]:
+    auth_path = codex_home / "auth.json"
+    auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    tokens = auth.get("tokens")
+    if not isinstance(tokens, dict):
+        raise SystemExit(f"could not read Codex tokens from {auth_path}")
+
+    access_token = text(tokens.get("access_token"))
+    if not access_token:
+        raise SystemExit(f"could not find tokens.access_token in {auth_path}")
+
+    account_id = (
+        account_id_from_token(text(tokens.get("id_token")))
+        or account_id_from_token(access_token)
+        or text(tokens.get("account_id"))
+    )
+    return access_token, account_id
+
+
+def fetch(codex_home: Path, timeout: float) -> Any:
+    access_token, account_id = load_auth(codex_home)
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "originator": "Codex Desktop",
+        "OAI-Product-Sku": "CODEX",
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 CodexDesktop/0.1.0",
+    }
+    if account_id:
+        headers["ChatGPT-Account-Id"] = account_id
+
+    request = urllib.request.Request(ENDPOINT, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read())
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", "replace")[:300]
+        raise SystemExit(f"HTTP {exc.code}: {body}") from exc
+
+
+def iter_credit_rows(value: Any) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, list):
+            if all(isinstance(item, dict) for item in node):
+                for item in node:
+                    keys = {str(key).lower() for key in item}
+                    if keys & {"expires_at", "expiresat", "expires", "status", "redeemed"}:
+                        rows.append(item)
+            for item in node:
+                walk(item)
+        elif isinstance(node, dict):
+            for child in node.values():
+                walk(child)
+
+    walk(value)
+    return rows
+
+
+def parse_time(value: Any) -> datetime | None:
+    if isinstance(value, int | float):
+        return datetime.fromtimestamp(value / 1000 if value > 10_000_000_000 else value, UTC)
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC)
+        except ValueError:
+            return None
+    return None
+
+
+def is_available(row: dict[str, Any]) -> bool:
+    status = row.get("status") or row.get("state")
+    redeemed = row.get("redeemed") or row.get("redeemed_at") or row.get("redeemedAt")
+    return status == "available" or (not redeemed and status not in {"expired", "redeemed", "used"})
+
+
+def normalized(row: dict[str, Any], now: datetime, local_tz: tzinfo) -> dict[str, Any]:
+    expires = row.get("expires_at") or row.get("expiresAt") or row.get("expires")
+    expires_at = parse_time(expires)
+    remaining_seconds = int((expires_at - now).total_seconds()) if expires_at else None
+    return {
+        "id": row.get("id") or row.get("limit_id") or row.get("limitId"),
+        "status": row.get("status") or row.get("state"),
+        "expires_at_utc": expires_at.isoformat().replace("+00:00", "Z") if expires_at else expires,
+        "expires_at_local": expires_at.astimezone(local_tz).isoformat() if expires_at else None,
+        "remaining_seconds": remaining_seconds,
+    }
+
+
+def human_duration(seconds: int | None) -> str:
+    if seconds is None:
+        return "unknown"
+    sign = "-" if seconds < 0 else ""
+    seconds = abs(seconds)
+    days, seconds = divmod(seconds, 86_400)
+    hours, seconds = divmod(seconds, 3_600)
+    minutes = seconds // 60
+    return f"{sign}{days}d {hours}h {minutes}m"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--codex-home", default=os.environ.get("CODEX_HOME", "~/.codex"))
+    parser.add_argument("--timeout", type=float, default=20.0)
+    parser.add_argument("--timezone", default=os.environ.get("TZ") or "localtime")
+    parser.add_argument("--include-inactive", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args()
+
+    local_tz = datetime.now().astimezone().tzinfo if args.timezone == "localtime" else ZoneInfo(args.timezone)
+
+    now = datetime.now(UTC)
+    rows = iter_credit_rows(fetch(Path(args.codex_home).expanduser(), args.timeout))
+    credits = [
+        normalized(row, now, local_tz)
+        for row in rows
+        if args.include_inactive or is_available(row)
+    ]
+
+    if args.json:
+        print(json.dumps({"checked_at": now.isoformat(), "credits": credits}, indent=2))
+        return 0
+
+    print(f"Checked: {now.astimezone(local_tz).strftime('%Y-%m-%d %H:%M:%S %Z')}")
+    print(f"Available credits: {len(credits)}")
+    for index, credit in enumerate(credits, 1):
+        print(
+            f"- credit {index}: expires {credit['expires_at_local']} "
+            f"({credit['expires_at_utc']}), in {human_duration(credit['remaining_seconds'])}"
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
