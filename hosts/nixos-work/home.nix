@@ -195,6 +195,7 @@ in
           nixpkgs-unstable.blender
           nixpkgs-unstable.tiled
           nixpkgs-unstable.process-compose
+          nixpkgs-unstable.mgba
 
           # hardware stuff
           # v4l-utils # webcam utils
