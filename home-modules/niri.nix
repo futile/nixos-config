@@ -62,6 +62,9 @@ in
     # for discord etc.
     NIXOS_OZONE_WL = "1";
 
+    # fix Tiled, Mgba, and other QT apps.
+    QT_QPA_PLATFORM = "xcb";
+
     SUDO_ASKPASS = "${sudoAskpassPkg}/bin/lxqt-openssh-askpass";
   };
 
