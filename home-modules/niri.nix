@@ -63,7 +63,8 @@ in
     NIXOS_OZONE_WL = "1";
 
     # fix Tiled, Mgba, and other QT apps.
-    QT_QPA_PLATFORM = "xcb";
+    # 2026-07-04 need to apply this to individual apps or things go awry.
+    # QT_QPA_PLATFORM = "xcb";
 
     SUDO_ASKPASS = "${sudoAskpassPkg}/bin/lxqt-openssh-askpass";
   };
