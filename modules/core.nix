@@ -50,12 +50,22 @@ let
       llm-wiki = final.callPackage ../custom-packages/llm-wiki.nix { };
       marker = final.callPackage ../custom-packages/marker.nix { };
       mex = final.callPackage ../custom-packages/mex.nix { };
+      mgba-xcb = final.lib.my.mkWrappedWithDeps {
+        pkg = final.nixpkgs-unstable.mgba;
+        pathsToWrap = [ "bin/mgba" ];
+        extraWrapProgramArgs = [ "--set QT_QPA_PLATFORM xcb" ];
+      };
       phinger-cursors-extended = final.callPackage ../custom-packages/phinger-cursors-extended.nix { };
       serena = final.callPackage ../custom-packages/serena-with-editor-tools.nix {
         serenaInput = flake-inputs.serena;
         editorTools = final.lib.my.editorTools;
       };
       serena-custom = final.callPackage ../custom-packages/serena-custom.nix { };
+      tiled-xcb = final.lib.my.mkWrappedWithDeps {
+        pkg = final.nixpkgs-unstable.tiled;
+        pathsToWrap = [ "bin/tiled" ];
+        extraWrapProgramArgs = [ "--set QT_QPA_PLATFORM xcb" ];
+      };
     };
   };
 in

@@ -193,9 +193,9 @@ in
           # my-custom-packages.llm-wiki
           # protonvpn-cli
           nixpkgs-unstable.blender
-          nixpkgs-unstable.tiled
+          my-custom-packages.tiled-xcb
           nixpkgs-unstable.process-compose
-          nixpkgs-unstable.mgba
+          my-custom-packages.mgba-xcb
 
           # hardware stuff
           # v4l-utils # webcam utils
