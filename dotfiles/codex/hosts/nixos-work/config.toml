@@ -141,13 +141,13 @@ trusted_hash = "sha256:01a21acadcbd06488387cb1d14311fac33d4cff9f74403cdffb929e57
 trusted_hash = "sha256:f1b26fc4f5e7255a0b276c5cb2f44f01985d1f28488f3e16bb75de0a4a7af356"
 
 [hooks.state."ponytail@ponytail:hooks/claude-codex-hooks.json:session_start:0:0"]
-trusted_hash = "sha256:35ad4fd900da217d98e6eb60198465bd10d55e21eacd72758621dc385145cc05"
+trusted_hash = "sha256:10e0ac0497512b279dc2b073d0d559fb9fb252bc18b9c943d2f0a6d58152b1f4"
 
 [hooks.state."ponytail@ponytail:hooks/claude-codex-hooks.json:user_prompt_submit:0:0"]
-trusted_hash = "sha256:22db2f951755c593f9deba5e69cd1be1c87e0c9b2f5538a13b5dd9911141793f"
+trusted_hash = "sha256:2a3c9015a1fe10f0809ffec8da3d67c326e27c38ebf720725099283b1e2085a8"
 
 [hooks.state."ponytail@ponytail:hooks/claude-codex-hooks.json:subagent_start:0:0"]
-trusted_hash = "sha256:28c43eada804ad00a4e651d6af6320c01e763b1df060af0ab74865a55bc1c9a9"
+trusted_hash = "sha256:4765354e31cc783c9cc7379f8beac7ac7ff68743c3cd7dad333d1f6a64e7a6f3"
 
 [marketplaces.ponytail]
 last_updated = "2026-07-02T17:25:30Z"
