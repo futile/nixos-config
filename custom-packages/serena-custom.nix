@@ -22,7 +22,7 @@ python3Packages.buildPythonApplication rec {
   disabled = python3Packages.pythonOlder "3.11";
 
   patches = [
-    ./patches/serena-rust-analyzer-initialization-options.patch
+    ./patches/serena-rust-analyzer-initialization-options-1.5.3.patch
   ];
 
   postPatch = ''
