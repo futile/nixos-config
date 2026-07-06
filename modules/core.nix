@@ -52,7 +52,7 @@ let
       mex = final.callPackage ../custom-packages/mex.nix { };
       mgba-xcb = final.lib.my.mkWrappedWithDeps {
         pkg = final.nixpkgs-unstable.mgba;
-        pathsToWrap = [ "bin/mgba" ];
+        pathsToWrap = [ "bin/mgba-qt" ];
         extraWrapProgramArgs = [ "--set QT_QPA_PLATFORM xcb" ];
       };
       phinger-cursors-extended = final.callPackage ../custom-packages/phinger-cursors-extended.nix { };

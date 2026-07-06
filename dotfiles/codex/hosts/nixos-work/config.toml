@@ -230,3 +230,6 @@ approval_mode = "approve"
 
 [mcp_servers.codebase-memory-mcp.tools.get_graph_schema]
 approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.index_repository]
+approval_mode = "approve"
