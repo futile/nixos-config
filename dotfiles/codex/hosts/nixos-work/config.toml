@@ -45,6 +45,9 @@ multi_agent = true
 apps = false
 terminal_resize_reflow = true
 
+# temporary until https://github.com/openai/codex/issues/31831 is fixed
+code_mode_host = false
+
 [sandbox_workspace_write]
 writable_roots = [
   "/home/felix/.cache/sccache",
