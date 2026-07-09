@@ -150,8 +150,8 @@ trusted_hash = "sha256:2a3c9015a1fe10f0809ffec8da3d67c326e27c38ebf720725099283b1
 trusted_hash = "sha256:4765354e31cc783c9cc7379f8beac7ac7ff68743c3cd7dad333d1f6a64e7a6f3"
 
 [marketplaces.ponytail]
-last_updated = "2026-07-02T17:25:30Z"
-last_revision = "40e50d9e03242aa5dd53ac771950f9127362b25f"
+last_updated = "2026-07-09T02:42:45Z"
+last_revision = "8e69b4a55f735e1319999064f82786b838cb3d7b"
 source_type = "git"
 source = "https://github.com/DietrichGebert/ponytail.git"
 
