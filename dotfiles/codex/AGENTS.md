@@ -26,11 +26,6 @@ If unsure, MUST explicitly ASK what to do.
 
 #### Subagent routing
 
-- NEVER use subagent above gpt-5.5-medium without explicit user confirmation!
-- DO ask user if agent above gpt-5.5-medium seems needed!
-- DO NOT silently switch to less-than-ideal subagent model when model above gpt-5.5-medium would fit!
-- DO use models below gpt-5.5-medium when task bounded, verifiable, low-risk.
-- DO NOT use gpt-5.5-medium for every model instead of task-appropriate model!
 - Before spawning subagent, apply net-savings gate:
   - Would deterministic tool (`rg`, `ctx_execute_file`, `ctx_batch_execute`, CBM, Serena, RTK) answer cheaper?
   - Is task independent enough that subagent needs little main-thread context?
@@ -249,20 +244,20 @@ digraph skill_flow {
 
 These thoughts mean STOP-you're rationalizing:
 
-| Thought                             | Reality                                                            |
-| ----------------------------------- | ------------------------------------------------------------------ |
-| "This is just a simple question"    | Questions are tasks. Check for skills.                             |
-| "I need more context first"         | Skill check comes BEFORE clarifying questions.                     |
-| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first.                       |
-| "I can check git/files quickly"     | Files lack conversation context. Check for skills.                 |
-| "Let me gather information first"   | Skills tell you HOW to gather information.                         |
-| "This doesn't need a formal skill"  | If a skill exists, use it.                                         |
-| "I remember this skill"             | Skills evolve. Read current version.                               |
-| "This doesn't count as a task"      | Action = task. Check for skills.                                   |
-| "The skill is overkill"             | Simple things become complex. Use it.                              |
-| "I'll just do this one thing first" | Check BEFORE doing anything.                                       |
-| "This feels productive"             | Undisciplined action wastes time. Skills prevent this.             |
-| "I know what that means"            | Knowing concept is not same as using skill. Invoke it.             |
+| Thought                             | Reality                                                |
+| ----------------------------------- | ------------------------------------------------------ |
+| "This is just a simple question"    | Questions are tasks. Check for skills.                 |
+| "I need more context first"         | Skill check comes BEFORE clarifying questions.         |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first.           |
+| "I can check git/files quickly"     | Files lack conversation context. Check for skills.     |
+| "Let me gather information first"   | Skills tell you HOW to gather information.             |
+| "This doesn't need a formal skill"  | If a skill exists, use it.                             |
+| "I remember this skill"             | Skills evolve. Read current version.                   |
+| "This doesn't count as a task"      | Action = task. Check for skills.                       |
+| "The skill is overkill"             | Simple things become complex. Use it.                  |
+| "I'll just do this one thing first" | Check BEFORE doing anything.                           |
+| "This feels productive"             | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means"            | Knowing concept is not same as using skill. Invoke it. |
 
 ### Skill Priority
 

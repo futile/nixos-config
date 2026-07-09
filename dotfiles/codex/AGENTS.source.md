@@ -26,11 +26,6 @@ If unsure, you MUST explicitly ASK what should be done!
 
 #### Subagent routing
 
-- NEVER use a subagent above gpt-5.5-medium without explicit confirmation from the user!
-- DO ask the user if you think an agent above gpt-5.5-medium should be used!
-- DO NOT silently switch to a less-than-ideal subagent model even though a model above gpt-5.5-medium would be appropriate!
-- DO use models below gpt-5.5-medium when the task is bounded, verifiable, and low-risk.
-- DO NOT use gpt-5.5-medium for every model instead of choosing the appropriate model for each task!
 - Before spawning a subagent, apply the net-savings gate:
   - Would a deterministic tool (`rg`, `ctx_execute_file`, `ctx_batch_execute`, CBM, Serena, RTK) answer this cheaper?
   - Is the task independent enough that the subagent does not need broad main-thread context?
