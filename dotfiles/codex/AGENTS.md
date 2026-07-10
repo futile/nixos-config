@@ -41,7 +41,33 @@ If unsure, MUST explicitly ASK what to do.
 
 Use these routes only after tool-first check and net-savings gate pass.
 
-Strongly consider `gpt-5.4-mini` for scout/support packets where work high-volume, low-risk, mostly extraction or summary:
+Model names age faster than these role boundaries. When the user asks for the
+best/current model, model choice materially affects the result, or a newer
+family is available, verify current official OpenAI model guidance and the
+models callable in the active surface. Prefer verified current-surface
+availability when it conflicts with public docs. Preserve an explicitly
+requested model. Otherwise map newer models to the capability tiers below
+instead of treating the literal versions as permanent.
+
+For the current GPT-5.6 family:
+
+- Prefer `gpt-5.6-luna` for efficient, high-volume, low-risk scout/support
+  packets.
+- Prefer `gpt-5.6-terra` for balanced bounded work where prioritization and
+  judgment matter, including ordinary focused review.
+- Prefer `gpt-5.6-sol` (or the `gpt-5.6` alias) for the most subtle,
+  consequential, or quality-first bounded reviews and debugging packets.
+
+Use `medium` as the normal balanced reasoning baseline. Use `high` or
+`xhigh` when the task has subtle interactions and the extra reasoning is
+likely to produce a material quality gain. Reserve `max` for the hardest
+quality-first packets; compare it with `xhigh` rather than assuming the
+highest setting is automatically best. When migrating a proven route to
+GPT-5.6, start at the existing effort and also consider one level lower because
+the newer family may reach the same quality more efficiently.
+
+Strongly consider the efficient scout tier (currently `gpt-5.6-luna`) where
+work is high-volume, low-risk, and mostly extraction or summary:
 
 - Large-file or repo scans returning compact evidence.
 - Docs/log/transcript/test-output triage.
@@ -50,9 +76,12 @@ Strongly consider `gpt-5.4-mini` for scout/support packets where work high-volum
 - Issue/bead/thread summary.
 - Output-compression packets replacing large raw reads.
 
-Do not use `gpt-5.4-mini` when main thread must redo reasoning, findings subtle, or wrong prioritization wastes significant time.
+Do not use the efficient scout tier when main thread must redo reasoning,
+findings are subtle, or wrong prioritization would waste significant time.
 
-Strongly consider `gpt-5.4` for higher-judgment support packets still bounded and reviewable:
+Strongly consider the balanced or frontier tier (currently `gpt-5.6-terra`
+or `gpt-5.6-sol`) for higher-judgment support packets that remain bounded and
+reviewable:
 
 - Focused architecture evidence gathering without final decision authority.
 - Bounded code review where subtle regressions or test gaps matter.
@@ -60,9 +89,13 @@ Strongly consider `gpt-5.4` for higher-judgment support packets still bounded an
 - Debugging scouts where symptoms cross few files/systems but final fix choice stays main thread.
 - Synthesizing scout/tool outputs into options, risks, next checks.
 
-Do not use `gpt-5.4` as substitute for main-thread ownership of architecture, security, final synthesis, or high-risk judgment.
+Use the frontier tier for subtle, high-value review; use the balanced tier when
+its quality is sufficient and cost or latency matters. Do not use either as a
+substitute for main-thread ownership of architecture, security, final
+synthesis, or high-risk judgment.
 
-Use `gpt-5.3-codex-spark` only for bounded, low-risk, verifiable execution packet:
+Use a configured fast execution model such as `gpt-5.3-codex-spark` only when
+it is available and the packet is bounded, low-risk, and cheaply verifiable:
 
 - Small single-file or tightly scoped patches.
 - Tiny UI/CSS/copy/config/test adjustments.
@@ -71,7 +104,10 @@ Use `gpt-5.3-codex-spark` only for bounded, low-risk, verifiable execution packe
 - Mechanical edits with cheap diff/test check.
 - Quick experiments where wrong is cheap and result reviewed.
 
-Do not use Spark for broad refactors, architecture, deep debugging, security-sensitive changes, multi-system planning, or likely hidden debt. Spark output should be smallest correct patch, verification run, changed files, uncertainty.
+Do not use a fast execution model for broad refactors, architecture, deep
+debugging, security-sensitive changes, multi-system planning, or likely hidden
+debt. Its output should be the smallest correct patch, verification run,
+changed files, and uncertainty.
 
 Escalate back to main thread or stronger model when cheaper subagent hits ambiguity, conflicting evidence, repeated failure, broad context needs, risky edits, or signs main thread would need redo.
 
