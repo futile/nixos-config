@@ -45,6 +45,11 @@ multi_agent = true
 apps = false
 terminal_resize_reflow = true
 
+[features.multi_agent_v2]
+# workaround for Sol not being able to spawn subagents properly: https://github.com/openai/codex/issues/31814
+hide_spawn_agent_metadata = false
+tool_namespace = "agents"
+
 [sandbox_workspace_write]
 writable_roots = [
   "/home/felix/.cache/sccache",
