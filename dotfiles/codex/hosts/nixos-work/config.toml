@@ -1,7 +1,7 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
 model = "gpt-5.6-sol"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "high"
 model_verbosity = "low"
 personality = "pragmatic"
 # notify = ["/home/felix/nixos/bin/codex-notify-noctalia"]
@@ -37,16 +37,13 @@ pet = "disabled"
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
-"gpt-5.6-sol" = 2
+"gpt-5.6-sol" = 3
 
 [features]
 hooks = true
 multi_agent = true
 apps = false
 terminal_resize_reflow = true
-
-# temporary until https://github.com/openai/codex/issues/31831 is fixed
-code_mode_host = false
 
 [sandbox_workspace_write]
 writable_roots = [
@@ -154,8 +151,8 @@ trusted_hash = "sha256:2a3c9015a1fe10f0809ffec8da3d67c326e27c38ebf720725099283b1
 trusted_hash = "sha256:4765354e31cc783c9cc7379f8beac7ac7ff68743c3cd7dad333d1f6a64e7a6f3"
 
 [marketplaces.ponytail]
-last_updated = "2026-07-09T18:41:40Z"
-last_revision = "523e9dc051a073a85592e74c1f292ac93e3633da"
+last_updated = "2026-07-10T13:40:53Z"
+last_revision = "14a0d79548d4de8fc2de95c1b94bb0de63a739d3"
 source_type = "git"
 source = "https://github.com/DietrichGebert/ponytail.git"
 
