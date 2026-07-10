@@ -41,7 +41,33 @@ If unsure, you MUST explicitly ASK what should be done!
 
 Use these routes only after the tool-first check and net-savings gate pass.
 
-Strongly consider `gpt-5.4-mini` for scout/support packets where the work is high-volume, low-risk, and mostly extraction or summarization:
+Model names age faster than these role boundaries. When the user asks for the
+best/current model, model choice materially affects the result, or a newer
+family is available, verify current official OpenAI model guidance and the
+models callable in the active surface. Prefer verified current-surface
+availability when it conflicts with public docs. Preserve an explicitly
+requested model. Otherwise map newer models to the capability tiers below
+instead of treating the literal versions as permanent.
+
+For the current GPT-5.6 family:
+
+- Prefer `gpt-5.6-luna` for efficient, high-volume, low-risk scout/support
+  packets.
+- Prefer `gpt-5.6-terra` for balanced bounded work where prioritization and
+  judgment matter, including ordinary focused review.
+- Prefer `gpt-5.6-sol` (or the `gpt-5.6` alias) for the most subtle,
+  consequential, or quality-first bounded reviews and debugging packets.
+
+Use `medium` as the normal balanced reasoning baseline. Use `high` or
+`xhigh` when the task has subtle interactions and the extra reasoning is
+likely to produce a material quality gain. Reserve `max` for the hardest
+quality-first packets; compare it with `xhigh` rather than assuming the
+highest setting is automatically best. When migrating a proven route to
+GPT-5.6, start at the existing effort and also consider one level lower because
+the newer family may reach the same quality more efficiently.
+
+Strongly consider the efficient scout tier (currently `gpt-5.6-luna`) where
+work is high-volume, low-risk, and mostly extraction or summary:
 
 - Large-file or repo scans that should return compact evidence.
 - Docs/log/transcript/test-output triage.
@@ -50,9 +76,13 @@ Strongly consider `gpt-5.4-mini` for scout/support packets where the work is hig
 - Issue/bead/thread summarization.
 - Output-compression packets that replace large raw reads.
 
-Do not use `gpt-5.4-mini` when the main thread would need to redo the reasoning, when findings are subtle, or when wrong prioritization would waste significant time.
+Do not use the efficient scout tier when the main thread would need to redo the
+reasoning, when findings are subtle, or when wrong prioritization would waste
+significant time.
 
-Strongly consider `gpt-5.4` for higher-judgment support packets that are still bounded and reviewable:
+Strongly consider the balanced or frontier tier (currently `gpt-5.6-terra`
+or `gpt-5.6-sol`) for higher-judgment support packets that remain bounded and
+reviewable:
 
 - Focused architecture evidence gathering without final decision authority.
 - Bounded code review where subtle regressions or test gaps matter.
@@ -60,9 +90,13 @@ Strongly consider `gpt-5.4` for higher-judgment support packets that are still b
 - Debugging scouts where symptoms cross a few files/systems but final fix choice stays with the main thread.
 - Synthesizing several scout/tool outputs into options, risks, and next checks.
 
-Do not use `gpt-5.4` as a substitute for main-thread ownership of architecture, security, final synthesis, or high-risk judgment.
+Use the frontier tier for subtle, high-value review; use the balanced tier when
+its quality is sufficient and cost or latency matters. Do not use either as a
+substitute for main-thread ownership of architecture, security, final
+synthesis, or high-risk judgment.
 
-Use `gpt-5.3-codex-spark` only when the task is a bounded, low-risk, verifiable execution packet:
+Use a configured fast execution model such as `gpt-5.3-codex-spark` only when
+it is available and the packet is bounded, low-risk, and cheaply verifiable:
 
 - Small single-file or tightly scoped patches.
 - Tiny UI/CSS/copy/config/test adjustments.
@@ -71,7 +105,10 @@ Use `gpt-5.3-codex-spark` only when the task is a bounded, low-risk, verifiable 
 - Mechanical edits with a cheap diff/test check.
 - Quick experiments where being wrong is cheap and the result will be reviewed.
 
-Do not use Spark for broad refactors, architecture, deep debugging, security-sensitive changes, multi-system planning, or anything where hidden debt is likely. Spark output should be the smallest correct patch, verification run, changed files, and uncertainty.
+Do not use a fast execution model for broad refactors, architecture, deep
+debugging, security-sensitive changes, multi-system planning, or likely hidden
+debt. Its output should be the smallest correct patch, verification run,
+changed files, and uncertainty.
 
 Escalate back to the main thread or a stronger model when a cheaper subagent hits ambiguity, conflicting evidence, repeated failure, broad context needs, risky edits, or signs that the main thread would need to redo the result.
 
@@ -108,6 +145,8 @@ Every subagent prompt should include:
 - For `search_code`, pass `regex: true` when using grep-style alternatives such as `foo|bar`; otherwise the pattern may be treated literally.
 - Prefer `search_graph` BM25 `query` for concept discovery. Treat `semantic_query` as experimental and verify its results against `search_graph`, `search_code`, or `rg`.
 - Treat `query_graph` edge queries as suspect unless verified in the current project; when call/data-flow matters, prefer `trace_path`, `search_graph`, and `get_code_snippet`, then confirm with source reads.
+- Before broadly reading an external GitHub dependency's source, use DeepWiki for repository-level orientation: architecture, subsystem relationships, data/control flow, public API concepts, and likely implementation locations. Use the result to narrow subsequent source inspection.
+- Treat DeepWiki as an orientation and discovery source, not as authority for the revision pinned by this repository. Verify version-sensitive behavior, exact APIs, implementation details, and claims that affect code or configuration against the pinned source; the pinned source wins on conflict.
 - When using DeepWiki, repository names ARE ALWAYS case-sensitive. Use the exact GitHub owner/repository casing from the URL when available. For example, BitCraft public server docs are indexed as `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
 
 ## Coding and Implementation Guidelines
