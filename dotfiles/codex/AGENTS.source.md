@@ -51,12 +51,15 @@ instead of treating the literal versions as permanent.
 
 For the current GPT-5.6 family:
 
-- Prefer `gpt-5.6-luna` for efficient, high-volume, low-risk scout/support
-  packets.
-- Prefer `gpt-5.6-terra` for balanced bounded work where prioritization and
-  judgment matter, including ordinary focused review.
+- Prefer `gpt-5.6-luna` at `xhigh` for efficient, high-volume, low-risk
+  scout/support packets and balanced bounded work where prioritization and
+  judgment matter, including ordinary focused review. Use `max` for the
+  hardest higher-judgment Luna packets.
 - Prefer `gpt-5.6-sol` (or the `gpt-5.6` alias) for the most subtle,
   consequential, or quality-first bounded reviews and debugging packets.
+
+Do not use `gpt-5.6-luna` below `xhigh` unless the human operator explicitly
+allows a lower reasoning effort.
 
 Use `medium` as the normal balanced reasoning baseline. Use `high` or
 `xhigh` when the task has subtle interactions and the extra reasoning is
@@ -80,8 +83,8 @@ Do not use the efficient scout tier when the main thread would need to redo the
 reasoning, when findings are subtle, or when wrong prioritization would waste
 significant time.
 
-Strongly consider the balanced or frontier tier (currently `gpt-5.6-terra`
-or `gpt-5.6-sol`) for higher-judgment support packets that remain bounded and
+Strongly consider `gpt-5.6-luna` at `max` or the frontier tier (currently
+`gpt-5.6-sol`) for higher-judgment support packets that remain bounded and
 reviewable:
 
 - Focused architecture evidence gathering without final decision authority.
@@ -90,8 +93,8 @@ reviewable:
 - Debugging scouts where symptoms cross a few files/systems but final fix choice stays with the main thread.
 - Synthesizing several scout/tool outputs into options, risks, and next checks.
 
-Use the frontier tier for subtle, high-value review; use the balanced tier when
-its quality is sufficient and cost or latency matters. Do not use either as a
+Use the frontier tier for subtle, high-value review; use Luna at `max` when its
+quality is sufficient and cost or latency matters. Do not use either as a
 substitute for main-thread ownership of architecture, security, final
 synthesis, or high-risk judgment.
 

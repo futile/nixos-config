@@ -43,13 +43,14 @@ Model names age faster than role boundaries. If user asks for best/current model
 
 For the current GPT-5.6 family:
 
-- Prefer `gpt-5.6-luna` for efficient, high-volume, low-risk scout/support packets.
-- Prefer `gpt-5.6-terra` for balanced bounded work where prioritization and judgment matter, including ordinary focused review.
+- Prefer `gpt-5.6-luna` at `xhigh` for efficient, high-volume, low-risk scout/support packets and balanced bounded work where prioritization and judgment matter, including ordinary focused review. Use `max` for the hardest higher-judgment Luna packets.
 - Prefer `gpt-5.6-sol` (or the `gpt-5.6` alias) for the most subtle, consequential, or quality-first bounded reviews and debugging packets.
+
+Do not use `gpt-5.6-luna` below `xhigh` unless the human operator explicitly allows a lower reasoning effort.
 
 Use `medium` as the normal balanced reasoning baseline. Use `high` or `xhigh` when the task has subtle interactions and the extra reasoning is likely to produce material quality gain. Reserve `max` for the hardest quality-first packets; compare it with `xhigh` rather than assuming the highest setting is automatically best. When migrating a proven route to GPT-5.6, start at the existing effort and consider one level lower because the newer family may reach same quality more efficiently.
 
-Strongly consider the efficient scout tier (`gpt-5.6-luna`) where work is high-volume, low-risk, and mostly extraction or summary:
+Strongly consider the efficient scout tier (`gpt-5.6-luna` at `xhigh`) where work is high-volume, low-risk, and mostly extraction or summary:
 
 - Large-file or repo scans returning compact evidence.
 - Docs/log/transcript/test-output triage.
@@ -60,7 +61,7 @@ Strongly consider the efficient scout tier (`gpt-5.6-luna`) where work is high-v
 
 Do not use the efficient scout tier when the main thread must redo reasoning, findings are subtle, or wrong prioritization would waste significant time.
 
-Strongly consider the balanced or frontier tier (`gpt-5.6-terra` or `gpt-5.6-sol`) for higher-judgment support packets that remain bounded and reviewable:
+Strongly consider `gpt-5.6-luna` at `max` or the frontier tier (`gpt-5.6-sol`) for higher-judgment support packets that remain bounded and reviewable:
 
 - Focused architecture evidence gathering without final decision authority.
 - Bounded code review where subtle regressions or test gaps matter.
@@ -68,7 +69,7 @@ Strongly consider the balanced or frontier tier (`gpt-5.6-terra` or `gpt-5.6-sol
 - Debugging scouts where symptoms cross few files/systems but final fix choice stays main thread.
 - Synthesizing scout/tool outputs into options, risks, and next checks.
 
-Use the frontier tier for subtle, high-value review; use the balanced tier when its quality is sufficient and cost or latency matters. Do not use either as a substitute for main-thread ownership of architecture, security, final synthesis, or high-risk judgment.
+Use the frontier tier for subtle, high-value review; use Luna at `max` when its quality is sufficient and cost or latency matters. Do not use either as a substitute for main-thread ownership of architecture, security, final synthesis, or high-risk judgment.
 
 Use a configured fast execution model such as `gpt-5.3-codex-spark` only when it is available and the packet is bounded, low-risk, and cheaply verifiable:
 
