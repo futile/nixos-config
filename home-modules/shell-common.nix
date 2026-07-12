@@ -33,7 +33,7 @@
 
     # use this custom command to ignore hidden and ignored files by default.
     # also follow symlinks, and '$dir' in fish allows prefixes such as `/var/<ctrl-t>` to work.
-    fileWidgetCommand = "fd --type f --follow . \\$dir";
+    fileWidget.command = "fd --type f --follow . \\$dir";
   };
 
   programs.zoxide = {

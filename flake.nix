@@ -57,7 +57,8 @@
     # };
 
     noctalia = {
-      url = "github:noctalia-dev/noctalia-shell";
+      # 2026-07-12 need to pin because `main` is broken currently
+      url = "github:noctalia-dev/noctalia-shell/v5.0.0-beta2";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -246,6 +247,7 @@
               lib,
               flake-inputs,
               system,
+              pkgs,
               ...
             }:
             {
