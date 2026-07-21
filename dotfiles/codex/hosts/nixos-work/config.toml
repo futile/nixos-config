@@ -92,6 +92,9 @@ trust_level = "trusted"
 [projects."/home/felix/gits/spacetimedb-test-harness-rs"]
 trust_level = "trusted"
 
+[projects."/home/felix"]
+trust_level = "trusted"
+
 [mcp_servers.DeepWiki]
 url = "https://mcp.deepwiki.com/mcp"
 
@@ -156,8 +159,8 @@ trusted_hash = "sha256:2a3c9015a1fe10f0809ffec8da3d67c326e27c38ebf720725099283b1
 trusted_hash = "sha256:4765354e31cc783c9cc7379f8beac7ac7ff68743c3cd7dad333d1f6a64e7a6f3"
 
 [marketplaces.ponytail]
-last_updated = "2026-07-10T13:40:53Z"
-last_revision = "14a0d79548d4de8fc2de95c1b94bb0de63a739d3"
+last_updated = "2026-07-16T13:23:50Z"
+last_revision = "16f29800fd2681bdf24f3eb4ccffe38be3baec6b"
 source_type = "git"
 source = "https://github.com/DietrichGebert/ponytail.git"
 
@@ -238,4 +241,7 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers.codebase-memory-mcp.tools.index_repository]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.detect_changes]
 approval_mode = "approve"

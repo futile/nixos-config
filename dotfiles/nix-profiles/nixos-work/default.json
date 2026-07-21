@@ -73,9 +73,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/wyhzmvqjp0xzlvq0spd2bs87bjaa6mvl-codex-0.144.4"
+        "/nix/store/2pppi725qa1aqm3r27sm86xpzaly9jin-codex-0.144.6"
       ],
-      "url": "github:numtide/llm-agents.nix/5335f311c4d3293d1882c66f5c720412b5f26858?narHash=sha256-MBmRFDnxer42NKlVxGZs4xnJAmFDe6nC73FsjqmR9%2BY%3D"
+      "url": "github:numtide/llm-agents.nix/26b51974319a3931a16ae9eb7dd3f4b8b1c67fd9?narHash=sha256-/A%2B1q5cjAdh/HH30MMzi7JDu1CM3mBoj2jFewUbq520%3D"
     },
     "gh": {
       "active": true,
