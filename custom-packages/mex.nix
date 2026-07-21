@@ -6,22 +6,26 @@
 
 buildNpmPackage rec {
   pname = "mex";
-  version = "0.6.2";
+  version = "0.6.3";
 
   src = fetchFromGitHub {
     owner = "mex-memory";
     repo = "mex";
     rev = "v${version}";
-    hash = "sha256-5hVecdT9NIfoz+vv7LyIIpnHK9HwsVUrHNDG+ZyyK4Y=";
+    hash = "sha256-bZ8xLbnIo3TXSRwNJvU5i76BFCSh7y3UVTmdd0ncJis=";
   };
 
-  npmDepsHash = "sha256-slCu4cuJVAol1GJfBnIb9KxjbHZ9wmZ4sALuQguCAlU=";
+  npmDepsHash = "sha256-LAso3ZZAuOQ3I35zJITKrlkzSCxxR9jnWbgPuQhwhQQ=";
 
   npmBuildScript = "build";
+
+  dontNpmPrune = true;
 
   postInstall = ''
     mkdir -p "$out/lib/node_modules/mex-agent/templates"
     cp -r templates/* "$out/lib/node_modules/mex-agent/templates/"
+    mkdir -p "$out/lib/node_modules/mex-agent/packages"
+    cp -r packages/* "$out/lib/node_modules/mex-agent/packages/"
   '';
 
   meta = {
