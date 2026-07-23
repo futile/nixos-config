@@ -47,6 +47,9 @@ terminal_resize_reflow = true
 
 [features.multi_agent_v2]
 # workaround for Sol not being able to spawn subagents properly: https://github.com/openai/codex/issues/31814
+# 2026-07-23 codex 0.145.0 apparently fixed this, so commenting these out again and testing
+# - Luna subagents still broken, due to https://github.com/openai/codex/issues/34301 🙃
+# - this doesn't help against that anymore either.. haaah..
 hide_spawn_agent_metadata = false
 tool_namespace = "agents"
 
@@ -244,4 +247,7 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers.codebase-memory-mcp.tools.detect_changes]
+approval_mode = "approve"
+
+[mcp_servers.codebase-memory-mcp.tools.check_index_coverage]
 approval_mode = "approve"
