@@ -1,5 +1,5 @@
 diff --git a/src/solidlsp/language_servers/rust_analyzer.py b/src/solidlsp/language_servers/rust_analyzer.py
-index 74ce2d3..d8f0260 100644
+index 5b53c17e..728d9117 100644
 --- a/src/solidlsp/language_servers/rust_analyzer.py
 +++ b/src/solidlsp/language_servers/rust_analyzer.py
 @@ -9,6 +9,9 @@ import platform
@@ -12,7 +12,7 @@ index 74ce2d3..d8f0260 100644
  
  from overrides import override
  
-@@ -17,6 +20,16 @@ from solidlsp.settings import SolidLSPSettings
+@@ -26,6 +29,16 @@ from solidlsp.util.subprocess_util import subprocess_run
  log = logging.getLogger(__name__)
  
  
@@ -29,7 +29,7 @@ index 74ce2d3..d8f0260 100644
  class RustAnalyzer(SolidLanguageServer):
      """
      Provides Rust specific instantiation of the LanguageServer class. Contains various configurations and settings specific to Rust.
-@@ -668,6 +681,15 @@ class RustAnalyzer(SolidLanguageServer):
+@@ -682,6 +695,15 @@ class RustAnalyzer(SolidLanguageServer):
              },
              "trace": "verbose",
          }
@@ -44,23 +44,38 @@ index 74ce2d3..d8f0260 100644
 +
          return initialize_params
  
-     def _start_server(self) -> None:
+     @override
 diff --git a/test/solidlsp/rust/test_rust_analyzer_settings.py b/test/solidlsp/rust/test_rust_analyzer_settings.py
-new file mode 100644
-index 0000000..6098f39
---- /dev/null
+index 3d9b46e9..9a921876 100644
+--- a/test/solidlsp/rust/test_rust_analyzer_settings.py
 +++ b/test/solidlsp/rust/test_rust_analyzer_settings.py
-@@ -0,0 +1,77 @@
-+import pytest
-+
-+from solidlsp.language_servers.rust_analyzer import RustAnalyzer
+@@ -6,12 +6,21 @@ import pytest
+ 
+ from solidlsp import SolidLanguageServer
+ from solidlsp.language_servers.rust_analyzer import RustAnalyzer
 +from solidlsp.settings import SolidLSPSettings
+ 
+ pytestmark = pytest.mark.rust
+ 
+ 
+ def _make_server() -> RustAnalyzer:
+-    return object.__new__(RustAnalyzer)
++    analyzer = object.__new__(RustAnalyzer)
++    analyzer._custom_settings = SolidLSPSettings.CustomLSSettings({})
++    return analyzer
 +
 +
 +def _rust_analyzer(custom_settings: dict) -> RustAnalyzer:
-+    analyzer = object.__new__(RustAnalyzer)
++    analyzer = _make_server()
 +    analyzer._custom_settings = SolidLSPSettings.CustomLSSettings(custom_settings)
 +    return analyzer
+ 
+ 
+ def test_initialization_uses_lightweight_indexing_settings() -> None:
+@@ -47,3 +56,76 @@ def test_diagnostics_request_triggers_check_on_save(monkeypatch: pytest.MonkeyPa
+ 
+     assert server.request_text_document_diagnostics("src/lib.rs") == []
+     server_interface.notify.did_save_text_document.assert_called_once_with({"textDocument": {"uri": uri}})
 +
 +
 +def test_rust_analyzer_initialization_options_deep_merge() -> None:

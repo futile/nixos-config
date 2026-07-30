@@ -59,7 +59,7 @@
     noctalia = {
       # 2026-07-12 need to pin because `main` is broken currently
       # 2026-07-21 updated the pin, gonna keep it pinned to tags maybe 🤔🤷
-      url = "github:noctalia-dev/noctalia-shell/v5.0.0-beta.3";
+      url = "github:noctalia-dev/noctalia-shell/v5.0.0-beta.6";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
