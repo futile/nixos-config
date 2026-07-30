@@ -73,9 +73,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/y6jdbd4zpqi8g8ijbaa54jlavi0w95bh-codex-0.145.0"
+        "/nix/store/56q67z8vx9i7mq06rapq04cdxbfn6maq-codex-0.146.0"
       ],
-      "url": "github:numtide/llm-agents.nix/de9fa923ea0ebed9093f758468d7ed7c5da09739?narHash=sha256-woSpbXXGmy1zUnetetY6WiVdXz0WFGAsxHgCc%2B87oqU%3D"
+      "url": "github:numtide/llm-agents.nix/ce99071da939d9d7997e27d35cf4d6c5e44bc32a?narHash=sha256-ZrkupCDmDaM2lZZoOZ4bR5ioHBxyBdIUTSeXbx%2B383c%3D"
     },
     "gh": {
       "active": true,
@@ -98,6 +98,17 @@
         "/nix/store/5lnkq0q0wiaqp8jzilckmgy1zk59x6jn-hexchat-2.16.2"
       ],
       "url": "path:/nix/store/i2gsp87gqp16whm9mw0ybk9n84zir01x-source?lastModified=1776329215&narHash=sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw%3D&rev=b86751bc4085f48661017fa226dee99fab6c651b"
+    },
+    "hunk": {
+      "active": true,
+      "attrPath": "packages.x86_64-linux.hunk",
+      "originalUrl": "github:numtide/llm-agents.nix",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/818y1j8bgp12i64ljqxsjmvm2kyr5mf5-hunk-0.17.6"
+      ],
+      "url": "github:numtide/llm-agents.nix/d4a6e87fd4b9d7f551b0d2aba1514213617502a5?narHash=sha256-n1PgEKstIBdMxilWJpqagnWNF3roP/Fucvdms1DpEFQ%3D"
     },
     "hydra-check": {
       "active": true,
