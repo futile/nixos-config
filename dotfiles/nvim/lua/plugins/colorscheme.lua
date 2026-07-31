@@ -195,10 +195,19 @@ return {
   -- https://github.com/nyoom-engineering/oxocarbon.nvim
   {
     "nyoom-engineering/oxocarbon.nvim",
+    enabled = false,
     -- Add in any other configuration;
     --   event = foo,
     --   config = bar
     --   end,
+    -- 2026-07-31 had to disable these because I don't have luarocks set up
+    -- but still didn't work, so disabling :(
+    opts = {
+      rocks = {
+        enabled = false,
+        hererocks = false,
+      },
+    },
   },
 
   -- https://github.com/cocopon/iceberg.vim
