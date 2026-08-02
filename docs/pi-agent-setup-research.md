@@ -1,6 +1,6 @@
 # Pi agent setup research
 
-Status: research complete; configuration not yet implemented
+Status: research complete and initial policies selected; configuration not yet implemented
 
 Last checked: 2026-08-02
 
@@ -13,7 +13,7 @@ This document records the investigation for adding a repository-managed Pi codin
 The desired result is:
 
 - one global instruction source shared by Codex and Pi;
-- Serena, DeepWiki, and codebase-memory graph tools available in Pi, with context-mode researched but deferred from the initial setup;
+- Serena, DeepWiki, codebase-memory graph tools, and self-hosted web search available in Pi, with context-mode researched but deferred from the initial setup;
 - a maintained subagent extension;
 - declarative Home Manager wiring without taking ownership of Pi's executable, credentials, sessions, or caches.
 
@@ -28,8 +28,9 @@ The recommended shape is:
 3. Continue using `~/.agents/skills` for skills shared by both harnesses.
 4. Use `pi-mcp-adapter` for DeepWiki, Serena, and codebase-memory-mcp.
 5. Exclude context-mode from the initial Pi package list and MCP configuration. The existing Nix-provided context-mode installation remains available to Codex; the Pi research below is retained for a possible later phase.
-6. Use fdietze's SDK-based subagents and context-prune extensions from a pinned non-flake input. Keep `noExtensions: true` for children and add only audited headless/reentrant extensions through `additionalExtensionPaths`.
-7. Keep Pi's writable `settings.json` as an out-of-store symlink into the repository. Leave `auth.json`, `trust.json`, sessions, downloaded packages, and caches unmanaged.
+6. Add pinned `@juicesharp/rpiv-web-tools` with a loopback-only NixOS SearXNG service. Select SearXNG non-interactively through environment variables and expose the extension to foreground and child sessions.
+7. Use fdietze's SDK-based subagents and context-prune extensions from a pinned non-flake input. Keep `noExtensions: true` for children and add only audited headless/reentrant extensions through `additionalExtensionPaths`.
+8. Keep Pi's writable `settings.json` as an out-of-store symlink into the repository. Leave `auth.json`, `trust.json`, sessions, downloaded packages, and caches unmanaged.
 
 Pi extensions execute with the user's full permissions. This configuration does not by itself reproduce Codex's sandbox or approval model.
 
@@ -82,6 +83,20 @@ Pi's resource loader checks, in order, `AGENTS.md`, `AGENTS.MD`, `CLAUDE.md`, an
 - the existing Home Manager-managed `~/.agents/skills` is already the correct cross-harness skill location.
 
 Codex agent TOML and Pi subagent Markdown should not be linked together automatically. Their schemas and runtime semantics differ even when role prose can be shared manually.
+
+### Harness-specific global guidance
+
+The shared `AGENTS.md` currently contains two context-mode-specific references: the subagent net-savings gate names `ctx_execute_file` and `ctx_batch_execute`, and the tool policy prefers `ctx_*` tools for bulky/queryable data. Pi would see those instructions even though context-mode is deliberately absent.
+
+Do not maintain a filtered Pi copy of the compressed file. That would create a second generated artifact, make compression updates harder to review, and weaken the decision that both harnesses share one global instruction file. Instead:
+
+1. Keep `dotfiles/codex/AGENTS.source.md` as the readable source and `dotfiles/codex/AGENTS.md` as its compressed, harness-neutral output. Pi loads only `AGENTS.md`; `AGENTS.source.md` is not an agent instruction file at runtime.
+2. Remove the explicit context-mode tool names and preference from the shared source, generalizing the net-savings rule to available deterministic tools. Regenerate the compressed file with `just compress-codex-agents`.
+3. If the explicit preference still proves useful for Codex, put the short context-mode routing rule in the Codex host config's supported `developer_instructions` field. This is an additive Codex-only instruction surface and leaves the shared `AGENTS.md` unchanged for Pi.
+4. Do not use `model_instructions_file` for this overlay; Codex documents it as a replacement for built-in model instructions, which is much broader than this small harness-specific rule.
+5. Restart Codex after changing its config and verify with a new session or newly created subagent; existing sessions and subagents may retain the old instruction/config state.
+
+The selected initial policy is to remove the context-mode-specific wording from the shared files. Add the Codex-only `developer_instructions` overlay only if normal MCP tool descriptions and context-mode's own guidance do not produce reliable routing in practice.
 
 ## MCP support
 
@@ -156,6 +171,32 @@ Use the existing command and cache:
 ```
 
 Direct-tool candidates are `list_projects`, `index_status`, `get_architecture`, `search_code`, `search_graph`, `trace_path`, `get_code_snippet`, and possibly `index_repository`. Less common graph administration tools can remain proxy-only.
+
+### Web search
+
+Web-search options checked on 2026-08-02:
+
+| Option | Strengths | Trade-offs |
+| --- | --- | --- |
+| `@juicesharp/rpiv-web-tools` `2.3.1` | Selected. Small Pi-native `web_search` and `web_fetch` surface; ten interchangeable providers; first-class SearXNG support; output truncation and spillover; SSRF protection; headless tool registration; MIT licensed | Another child extension to audit and pin; `/web-tools` is interactive; provider and fetch behavior still depend on external sites |
+| Search-provider MCP through `pi-mcp-adapter` | Reuses the selected MCP layer; hosted Exa, Tavily, and Brave servers offer capable search and extraction | Adds proxy-tool indirection; hosted providers receive queries and fetched URLs; stdio servers can multiply per child |
+| `pi-web-access` | Broad search/fetch/provider support plus GitHub, PDF, and video handling | Much larger dependency and state/UI surface; needs a separate same-process child audit |
+| `pi-web-search` | Uses supported Gemini, OpenAI/Codex, or Anthropic model-native search without another search account | Provider/model dependent, with no portable fallback and provider-specific cost and behavior |
+| `pi-web-kit` | Bounded, cache-aware search/fetch plus Context7 documentation lookup | More overlap with DeepWiki and existing code/documentation tools |
+| fdietze `web-search` | Tiny, dependency-free, and likely reentrant | Fetches all pages through Jina, has a large inline output cap, lacks tests, and the inspected redirect path did not revalidate SSRF targets |
+| `pi-web-research` | Keeps raw pages out of the parent context by delegating research | Requires another provider and overlaps the selected subagent system |
+| `@ollama/pi-web-search` | Very small and attractive when Ollama is already part of the deployment | Adds an Ollama service dependency otherwise |
+
+The selected initial design is:
+
+1. Pin `npm:@juicesharp/rpiv-web-tools@2.3.1` in Pi's package list.
+2. Set `WEB_SEARCH_PROVIDER=searxng` and `SEARXNG_URL=http://127.0.0.1:8080` in the Home Manager session environment. This avoids the interactive `/web-tools` setup and its mutable config file. No `SEARXNG_API_KEY` is needed for the local instance.
+3. Enable NixOS `services.searx` on loopback port 8080 with `search.formats = [ "html" "json" ]`. JSON must be enabled for the extension's search API calls.
+4. Keep `openFirewall`, nginx/uWSGI integration, `public_instance`, the limiter, image proxying, and local Valkey disabled. They are unnecessary for a same-machine client and can be added later if the service is intentionally exposed.
+5. Supply a stable random `SEARXNG_SECRET` through `services.searx.environmentFile` and reference it as `server.secret_key = "$SEARXNG_SECRET"`. This is SearXNG's internal signing/hashing secret, not a credential that Pi needs or sends to search engines.
+6. Add `rpiv-web-tools` to the explicit child allowlist. Its inspected tool state is extension-instance-local and its tools do not require UI, but the exact pinned package must pass the same concurrent headless-session and shutdown tests as the other allowlisted extensions.
+
+This removes a search SaaS intermediary, but SearXNG remains a metasearch proxy: its configured upstream engines receive the query from this machine's public IP and may rate-limit, block, or challenge it. The extension's `web_fetch` guard still rejects arbitrary loopback/private targets; its dedicated SearXNG provider is the intended path to the configured local search endpoint.
 
 ### Context-mode
 
@@ -247,7 +288,7 @@ The selected initial design is:
 3. Give children the selected MCP servers through the same allowlisted adapter. Main-agent brokering through `send_message` remains a fallback when a server is unavailable or intentionally omitted.
 4. Do not give either foreground or child Pi sessions context-mode tools in the initial setup.
 
-The preliminary allowlist candidates are `pi-mcp-adapter` and fdietze's context-prune extension. `pi-mcp-adapter` appears to keep its managers and server ownership per extension instance, and context-prune keeps its mutable span state inside the extension factory and reconstructs it from the owning session. Both still need a pinned-version headless concurrency test before activation. Add prompt-log, web-search, or other extensions only after the same audit.
+The selected allowlist is `pi-mcp-adapter`, fdietze's context-prune extension, and `@juicesharp/rpiv-web-tools`. The adapter appears to keep its managers and server ownership per extension instance, context-prune keeps its mutable span state inside the extension factory and reconstructs it from the owning session, and web-tools keeps tool/provider state local while using a shared external SearXNG service. All three still need a pinned-version headless concurrency test before activation. Add prompt-log or other extensions only after the same audit.
 
 Explicitly exclude:
 
@@ -317,6 +358,8 @@ Suggested managed files:
 | `~/.pi/agent/extensions/subagents` | Store link from a pinned fdietze source; out-of-store during deliberate extension development |
 | `~/.pi/agent/extensions/context-prune` | Store link from the same pinned fdietze source; out-of-store during deliberate extension development |
 
+The Home Manager configuration should also set `WEB_SEARCH_PROVIDER=searxng` and `SEARXNG_URL=http://127.0.0.1:8080`. The NixOS host configuration should enable the loopback-only SearXNG service separately; Home Manager should not try to own the system service.
+
 The subagents extension needs a small local integration layer or patch that supplies the audited child extension paths through `additionalExtensionPaths`. Those paths should come from the same pinned package/source definitions used by Home Manager rather than from mutable package-cache locations.
 
 Do not manage:
@@ -333,7 +376,8 @@ The initial `settings.json` should preserve the current provider, model, reasoni
 
 ```json
 [
-  "npm:pi-mcp-adapter@2.17.0"
+  "npm:pi-mcp-adapter@2.17.0",
+  "npm:@juicesharp/rpiv-web-tools@2.3.1"
 ]
 ```
 
@@ -346,12 +390,25 @@ The fdietze extensions are local Home Manager resources rather than entries in P
 3. Use fdietze's subagents and context-prune implementations from a pinned non-flake input.
 4. Exclude context-mode from the initial Pi package list, MCP configuration, foreground session, and children. Retain its research as a deferred option.
 5. Keep normal child extension discovery disabled and supply an explicit `additionalExtensionPaths` allowlist of extensions audited as headless and reentrant.
+6. Use pinned `@juicesharp/rpiv-web-tools` with a loopback-only NixOS SearXNG instance, selected through `WEB_SEARCH_PROVIDER` and `SEARXNG_URL`.
+7. Allowlist `pi-mcp-adapter`, context-prune, and `rpiv-web-tools` for child sessions; exclude subagents itself, interactive question/prompt extensions, prompt-log, and context-mode.
+8. Let each child adapter own independent lazy MCP server processes initially; consider a shared bridge only after measurements justify it.
+9. Begin with the adapter's proxy-only MCP exposure. Promote a small frequently used Serena or codebase-memory subset only after observing call frequency and prompt cost; keep DeepWiki proxy-only initially.
+10. Treat clean child MCP shutdown and absence of orphan processes or cache races as activation requirements.
+11. Use the same context-prune implementation and policy in foreground and children until usage shows a need to diverge.
+12. Use fdietze's pinned source privately without vendoring or publishing modifications until its licensing is clarified.
+13. Keep Pi permission/sandbox work as a separate later phase and state that the initial Pi setup runs extensions and MCP servers with the user's permissions.
+14. Duplicate the small initial Pi MCP JSON rather than refactoring the working Codex TOML; revisit shared generation only if real drift appears.
+15. Treat Pi, `pi-mcp-adapter`, `rpiv-web-tools`, and the fdietze revision as one tested compatibility set and update pins in deliberate, validated batches.
+16. Keep the shared global `AGENTS.md` harness-neutral by removing its explicit context-mode references. Use Codex `developer_instructions` later only if Codex still needs an explicit context-mode preference; do not generate a filtered Pi copy.
 
-## Open and missing questions
+## Selected policies and remaining verification
 
-| Question | Suggested initial answer | What remains to verify or decide |
+The initial answers below are decisions. The last column records validation gates or evidence that would justify revisiting them, not unresolved design choices.
+
+| Area | Selected initial policy | Verification or reevaluation trigger |
 | --- | --- | --- |
-| Exact child allowlist | Start with only `pi-mcp-adapter` and context-prune. Keep question, subagents itself, prompt-log, web-search, and context-mode excluded. | Run both candidates concurrently in several SDK child sessions against the exact pins; add another extension only after a separate headless/reentrancy audit. |
+| Exact child allowlist | Use `pi-mcp-adapter`, context-prune, and `rpiv-web-tools`. Keep question, subagents itself, prompt-log, and context-mode excluded. | Run all three concurrently in several SDK child sessions against the exact pins; add another extension only after a separate headless/reentrancy audit. |
 | MCP process topology | Let each child adapter own independent lazy server processes initially. This is the simplest isolation model. | Measure process count, memory, startup latency, and cleanup with several simultaneous Serena/codebase-memory users; build a shared bridge only if those measurements justify it. |
 | MCP tool exposure | Begin proxy-only. Promote a small, frequently used Serena or codebase-memory subset to direct tools after observing real usage. Keep DeepWiki proxy-only initially. | Decide the direct subset using prompt-token cost and call-frequency evidence rather than enabling each server wholesale. |
 | Child MCP lifecycle | Treat clean shutdown as an acceptance requirement, not an optional enhancement. | Test spawn, concurrent calls, kill, restore, Pi `/reload`, and session shutdown; check for orphan server processes and shared metadata-cache races. |
@@ -359,8 +416,9 @@ The fdietze extensions are local Home Manager resources rather than entries in P
 | fdietze source licensing | Use the pinned non-flake source privately, without vendoring or publishing modifications. | Ask fdietze for an explicit license before distributing a fork, vendored source, or modified copy. |
 | Pi permissions/sandboxing | Keep it outside the first configuration increment, but state clearly that Pi extensions and MCP servers run with the user's permissions. | Choose and test a permission/sandbox extension before treating Pi as equivalent to Codex's approval and sandbox model. |
 | Shared Codex/Pi MCP generation | Duplicate the small initial Pi JSON configuration instead of refactoring the working Codex TOML. | Revisit a shared generated source only after the Pi setup stabilizes and configuration drift becomes a demonstrated problem. |
-| Pin compatibility and updates | Treat Pi, `pi-mcp-adapter`, and the fdietze revision as one tested compatibility set; update one deliberate batch at a time. | Record the first passing versions and require loader, subagent, MCP, reload, and Home Manager checks before advancing any pin. |
+| Pin compatibility and updates | Treat Pi, `pi-mcp-adapter`, `rpiv-web-tools`, and the fdietze revision as one tested compatibility set; update one deliberate batch at a time. | Record the first passing versions and require loader, subagent, MCP, web-search, reload, and Home Manager checks before advancing any pin. |
 | Deferred context-mode | Leave it entirely out of Pi for now. The Nix-provided Codex integration is unaffected. | No initial blocker. Revisit only if Pi usage demonstrates a context-ingestion or continuity problem that context-prune and MCP output guarding do not solve. |
+| Harness-specific instructions | Keep the shared generated `AGENTS.md` free of context-mode-specific tool names. Do not create a filtered Pi variant. | Add a Codex-only `developer_instructions` rule only if MCP/tool-provided guidance proves insufficient; restart Codex and test in a fresh session. |
 
 ## Suggested verification
 
@@ -369,13 +427,16 @@ After implementation and Home Manager activation:
 1. Confirm `pi --version` still resolves to the Nix-profile package.
 2. Run `pi list` and confirm the pinned packages.
 3. Start Pi in this repository and inspect the startup resource list.
-4. Confirm the global and repository `AGENTS.md` files are loaded once each.
+4. Confirm the global and repository `AGENTS.md` files are loaded once each, and Pi receives no unavailable `ctx_*` instructions.
 5. Use `/mcp` to check DeepWiki, Serena, and codebase-memory configuration.
 6. Call one representative tool from each server.
 7. Confirm that neither the foreground nor a child Pi session exposes context-mode tools or starts a context-mode MCP process.
-8. Run the selected subagent extension's doctor/status command and one read-only scout.
-9. Verify that a subagent follows project `AGENTS.md` and can access only its intended MCP/extension tools.
-10. Run `just format-check` and `just check`; run the appropriate Home Manager build or dry activation before switching.
+8. Confirm SearXNG listens only on `127.0.0.1:8080`, its JSON API returns results, and no firewall port, reverse proxy, Valkey, or limiter was enabled.
+9. Call foreground `web_search` and `web_fetch`, then repeat `web_search` from simultaneous child sessions and confirm they use SearXNG without an API key.
+10. Run the selected subagent extension's doctor/status command and one read-only scout.
+11. Verify that a subagent follows project `AGENTS.md` and can access only `pi-mcp-adapter`, context-prune, and `rpiv-web-tools` in addition to its normal tools.
+12. Exercise child spawn, concurrent MCP/search calls, kill, restore, Pi `/reload`, and shutdown; confirm no orphan MCP processes or cross-session extension state.
+13. Run `just format-check` and `just check`; run the appropriate Home Manager build or dry activation before switching.
 
 ## Sources
 
@@ -407,3 +468,9 @@ Upstream sources:
 - `@mjakl/pi-subagent`: <https://github.com/mjakl/pi-subagent>
 - `@tintinweb/pi-subagents`: <https://github.com/tintinweb/pi-subagents>
 - `@bacnh85/pi-serena`: <https://pi.dev/packages/%40bacnh85/pi-serena>
+- `@juicesharp/rpiv-web-tools` `2.3.1`: <https://pi.dev/packages/%40juicesharp/rpiv-web-tools>
+- `rpiv-web-tools` provider resolution: <https://github.com/juicesharp/rpiv-mono/blob/main/packages/rpiv-web-tools/docs/providers.md>
+- SearXNG NixOS module: <https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/services/networking/searx.nix>
+- SearXNG Search API: <https://docs.searxng.org/dev/search_api.html>
+- SearXNG server settings: <https://docs.searxng.org/admin/settings/settings_server.html>
+- Codex configuration reference (`developer_instructions` and `model_instructions_file`): <https://developers.openai.com/codex/config-reference/#configtoml>
