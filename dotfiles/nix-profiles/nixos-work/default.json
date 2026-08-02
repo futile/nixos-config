@@ -174,7 +174,7 @@
       "storePaths": [
         "/nix/store/m9fdydiglkz66fgxrila6sfibm9y7jw0-pi-0.83.0"
       ],
-      "url": "github:numtide/llm-agents.nix/ce99071da939d9d7997e27d35cf4d6c5e44bc32a?narHash=sha256-ZrkupCDmDaM2lZZoOZ4bR5ioHBxyBdIUTSeXbx%2B383c%3D"
+      "url": "github:numtide/llm-agents.nix/90ab5cd4a6219ccbab83b4ede91b3fa63de3c6ee?narHash=sha256-yPFTUSVcP5j2fr3i9z8BUuOX/vLX18x1bGVrbdibHUM%3D"
     },
     "skills": {
       "active": true,
