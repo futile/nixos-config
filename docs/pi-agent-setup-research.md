@@ -13,7 +13,7 @@ This document records the investigation for adding a repository-managed Pi codin
 The desired result is:
 
 - one global instruction source shared by Codex and Pi;
-- Serena, DeepWiki, codebase-memory graph tools, and context-mode available in Pi;
+- Serena, DeepWiki, and codebase-memory graph tools available in Pi, with context-mode researched but deferred from the initial setup;
 - a maintained subagent extension;
 - declarative Home Manager wiring without taking ownership of Pi's executable, credentials, sessions, or caches.
 
@@ -27,7 +27,7 @@ The recommended shape is:
 2. Point both `~/.codex/AGENTS.md` and `~/.pi/agent/AGENTS.md` at the existing generated `dotfiles/codex/AGENTS.md`.
 3. Continue using `~/.agents/skills` for skills shared by both harnesses.
 4. Use `pi-mcp-adapter` for DeepWiki, Serena, and codebase-memory-mcp.
-5. Install the `context-mode` Pi package for the foreground agent while retaining the Nix-provided `context-mode` executable, pinned to the same version. Give background agents context-mode through its standalone MCP server instead of loading its full Pi extension again.
+5. Exclude context-mode from the initial Pi package list and MCP configuration. The existing Nix-provided context-mode installation remains available to Codex; the Pi research below is retained for a possible later phase.
 6. Use fdietze's SDK-based subagents and context-prune extensions from a pinned non-flake input. Keep `noExtensions: true` for children and add only audited headless/reentrant extensions through `additionalExtensionPaths`.
 7. Keep Pi's writable `settings.json` as an out-of-store symlink into the repository. Leave `auth.json`, `trust.json`, sessions, downloaded packages, and caches unmanaged.
 
@@ -161,7 +161,9 @@ Direct-tool candidates are `list_projects`, `index_status`, `get_architecture`, 
 
 The repository currently packages context-mode `1.0.169`, which matched the current npm package at investigation time.
 
-Context-mode should be installed as a Pi package as well as remaining available as a Nix-provided executable:
+Context-mode is explicitly deferred from the initial Pi setup. Do not add either its Pi package or a context-mode server entry to Pi's generic MCP configuration. The existing Nix-provided executable remains in place for Codex.
+
+If context-mode is reconsidered later, the researched package form was:
 
 ```json
 {
@@ -169,11 +171,11 @@ Context-mode should be installed as a Pi package as well as remaining available 
 }
 ```
 
-The Pi package is materially better than MCP-only use. Its extension registers `tool_call`, `tool_result`, `session_start`, `session_before_compact`, shutdown, routing, and continuity behavior. Inspection of the packaged `1.0.169` implementation also showed that it starts its bundled MCP server lazily and registers the returned `ctx_*` tools directly with Pi.
+The Pi package would provide more lifecycle integration than MCP-only use. Its extension registers `tool_call`, `tool_result`, `session_start`, `session_before_compact`, shutdown, routing, and continuity behavior. Inspection of the packaged `1.0.169` implementation also showed that it starts its bundled MCP server lazily and registers the returned `ctx_*` tools directly with Pi.
 
-There is a documentation/implementation discrepancy worth verifying during implementation: upstream's Pi installation section still asks for a `context-mode` entry in `~/.pi/agent/mcp.json`, but the current extension contains its own Pi-specific MCP bridge and directly registers every returned `ctx_*` tool. Do not initially add context-mode to the generic MCP adapter: loading both paths could register duplicate tools or start an unnecessary second server. Verify the package-only path with `ctx stats` and `/ctx-doctor`; add an MCP entry only if the native bridge is demonstrably insufficient.
+There is a documentation/implementation discrepancy to revisit only if this later phase is activated: upstream's Pi installation section still asks for a `context-mode` entry in `~/.pi/agent/mcp.json`, but the current extension contains its own Pi-specific MCP bridge and directly registers every returned `ctx_*` tool. Loading both paths could register duplicate tools or start an unnecessary second server.
 
-Pinning the Pi package to the Nix package version avoids extension/server drift.
+If later enabled, pinning the Pi package to the Nix package version would avoid extension/server drift.
 
 ### Context pruning extension
 
@@ -187,7 +189,7 @@ fdietze's context-prune extension edits the actual conversation sent to the mode
 
 The extension preserves tool call/result units, persists folds across session reloads and branches, and instructs the model to keep governing instructions, unresolved errors, and open loops live. It does not automatically prune at a token threshold or call a separate summarization model; the active model chooses ranges and writes any digest.
 
-Context-mode and context-prune are complementary:
+Context-mode and context-prune would be complementary if context-mode is added in a later phase:
 
 | Concern | context-mode | context-prune |
 | --- | --- | --- |
@@ -198,7 +200,7 @@ Context-mode and context-prune are complementary:
 
 Both extensions register a Pi `context` hook, but the inspected implementations compose safely in either order: context-mode appends a synthetic routing/active-memory message, while context-prune passes messages that do not match a persisted branch message id through unchanged. The main practical frictions are tool-name ambiguity, combined schema/instruction overhead, and context-mode's per-turn active-memory injection (up to roughly 500 tokens), which is ephemeral and therefore cannot be folded.
 
-Add a short shared routing rule:
+Only in that later phase, add a short shared routing rule:
 
 ```text
 Use ctx_* for external/raw data and context-mode's indexed store.
@@ -236,15 +238,14 @@ It is not a safe drop-in replacement for `noExtensions: true`, for two reasons:
 
 A future refactor could make `extensionsOverride` useful by moving all subagents factory side effects behind activated lifecycle handlers (or making them lazy on first real use), then maintaining a small denylist of extensions audited as interactive-only or non-reentrant. Pi 0.83.0 applies final source metadata after the override, so the filter should use `resolvedPath`, not final `sourceInfo` fields.
 
-#### Selected child policy: explicit allowlist and MCP-only context-mode
+#### Selected child policy: explicit allowlist
 
 The selected initial design is:
 
 1. Keep `noExtensions: true` in fdietze's child `DefaultResourceLoader`.
 2. Pass an explicit, audited set of child-safe extensions through `additionalExtensionPaths`. Pi intentionally loads these explicit paths even when normal extension discovery is disabled.
-3. Load the full context-mode Pi extension only in the foreground agent. It retains Pi-specific routing enforcement, tool-event capture, session restore, pre-compaction snapshots, and accurate foreground statistics.
-4. Give children context-mode's `ctx_*` tools through the generic MCP adapter and standalone `context-mode` MCP server. This moves context-mode's execution and mutable tool state out of the shared Pi process while avoiding its non-reentrant Pi-extension globals.
-5. Give children the other selected MCP servers through the same allowlisted adapter. Main-agent brokering through `send_message` remains a fallback when a server is unavailable or intentionally omitted.
+3. Give children the selected MCP servers through the same allowlisted adapter. Main-agent brokering through `send_message` remains a fallback when a server is unavailable or intentionally omitted.
+4. Do not give either foreground or child Pi sessions context-mode tools in the initial setup.
 
 The preliminary allowlist candidates are `pi-mcp-adapter` and fdietze's context-prune extension. `pi-mcp-adapter` appears to keep its managers and server ownership per extension instance, and context-prune keeps its mutable span state inside the extension factory and reconstructs it from the owning session. Both still need a pinned-version headless concurrency test before activation. Add prompt-log, web-search, or other extensions only after the same audit.
 
@@ -254,7 +255,7 @@ Explicitly exclude:
 - the interactive question extension, which assumes foreground UI;
 - context-mode's full Pi extension, whose module-global database, session-id, and MCP-bridge state is not safe across same-process child sessions.
 
-Initially, each child adapter instance may own its MCP server processes. That is simpler and better isolated, but potentially expensive for Serena, codebase-memory, and context-mode. A shared child-safe MCP connection/bridge remains a later optimization after measuring process count, memory, startup latency, and shutdown behavior.
+Initially, each child adapter instance may own its MCP server processes. That is simpler and better isolated, but potentially expensive for Serena and codebase-memory. A shared child-safe MCP connection/bridge remains a later optimization after measuring process count, memory, startup latency, and shutdown behavior.
 
 `pi-subagents` remains the easier packaged alternative when direct `pi-mcp-adapter` integration matters more than fdietze's in-process swarm UX. Its built-in roles inherit project instructions by default, and custom agents can opt into project context, skills, and `mcp:<server>` tools.
 
@@ -326,14 +327,13 @@ Do not manage:
 - sessions and subagent artifacts;
 - npm/git package caches;
 - adapter metadata and OAuth caches;
-- context-mode's runtime database.
+- context-mode's runtime database, which remains owned by the existing Codex setup and is not used by the initial Pi configuration.
 
 The initial `settings.json` should preserve the current provider, model, reasoning, and theme while adding pinned packages. A likely package list is:
 
 ```json
 [
-  "npm:pi-mcp-adapter@2.17.0",
-  "npm:context-mode@1.0.169"
+  "npm:pi-mcp-adapter@2.17.0"
 ]
 ```
 
@@ -344,22 +344,23 @@ The fdietze extensions are local Home Manager resources rather than entries in P
 1. Keep the Pi executable installed through `nix profile`; the Home Manager module manages configuration and pinned extensions, not Pi itself.
 2. Share the generated global `AGENTS.md` and shared skills between Codex and Pi.
 3. Use fdietze's subagents and context-prune implementations from a pinned non-flake input.
-4. Use the full context-mode Pi extension in the foreground and standalone context-mode MCP access in children.
+4. Exclude context-mode from the initial Pi package list, MCP configuration, foreground session, and children. Retain its research as a deferred option.
 5. Keep normal child extension discovery disabled and supply an explicit `additionalExtensionPaths` allowlist of extensions audited as headless and reentrant.
 
 ## Open and missing questions
 
-1. **Exact initial allowlist:** confirm `pi-mcp-adapter` and context-prune against the pinned revisions with concurrent SDK child sessions. Decide whether prompt-log or web-search is useful and safe enough to add; keep question, subagents, and the full context-mode extension excluded.
-2. **MCP process topology:** start with independent adapter/server ownership per child or build a shared MCP connection immediately? Independent ownership is simpler, but several simultaneous Serena, codebase-memory, and context-mode processes may be too expensive.
-3. **Context-mode configuration scope:** arrange for children to see the context-mode MCP server without encouraging the foreground generic MCP proxy to start a redundant second context-mode server beside the native Pi extension bridge.
-4. **Context-mode attribution:** decide whether child indexing and savings statistics may be unattributed/shared with the foreground session, or whether the child bridge should pass explicit project and child-session identifiers. The content store itself is intentionally project-shared.
-5. **MCP tool exposure:** decide which Serena and codebase-memory tools deserve direct registration and which should remain behind `pi-mcp-adapter`'s token-efficient proxy. DeepWiki and rarely used tools are strong proxy candidates.
-6. **Lifecycle verification:** confirm that killing, restoring, reloading, and shutting down several children closes every adapter-owned MCP process and does not race on shared metadata or SQLite caches.
-7. **Context-prune defaults:** decide whether children receive the same pruning instructions and thresholds as the foreground agent or a simpler child-specific policy.
-8. **Source licensing:** ask fdietze for an explicit license before publishing a fork, vendored copy, or modified redistribution. A private flake input reference still avoids claiming a redistribution right but does not resolve the ambiguity.
-9. **Permissions:** decide whether Pi should later gain an explicit permission/sandbox extension. This is separate from MCP and subagent configuration.
-10. **Shared configuration generation:** decide whether global MCP server data should eventually be generated once for Pi JSON and Codex TOML. Avoid making that larger Codex refactor a prerequisite for the initial Pi setup.
-11. **Update compatibility:** define the tested Pi, `pi-mcp-adapter`, context-mode, and fdietze revisions as one compatibility set, plus the checks required before advancing any pin.
+| Question | Suggested initial answer | What remains to verify or decide |
+| --- | --- | --- |
+| Exact child allowlist | Start with only `pi-mcp-adapter` and context-prune. Keep question, subagents itself, prompt-log, web-search, and context-mode excluded. | Run both candidates concurrently in several SDK child sessions against the exact pins; add another extension only after a separate headless/reentrancy audit. |
+| MCP process topology | Let each child adapter own independent lazy server processes initially. This is the simplest isolation model. | Measure process count, memory, startup latency, and cleanup with several simultaneous Serena/codebase-memory users; build a shared bridge only if those measurements justify it. |
+| MCP tool exposure | Begin proxy-only. Promote a small, frequently used Serena or codebase-memory subset to direct tools after observing real usage. Keep DeepWiki proxy-only initially. | Decide the direct subset using prompt-token cost and call-frequency evidence rather than enabling each server wholesale. |
+| Child MCP lifecycle | Treat clean shutdown as an acceptance requirement, not an optional enhancement. | Test spawn, concurrent calls, kill, restore, Pi `/reload`, and session shutdown; check for orphan server processes and shared metadata-cache races. |
+| Context-prune policy | Use the same extension and instructions in foreground and children initially; avoid a second policy before there is usage evidence. | Observe whether short-lived children spend enough context to benefit, and introduce child-specific guidance only if they prune too eagerly or never prune when needed. |
+| fdietze source licensing | Use the pinned non-flake source privately, without vendoring or publishing modifications. | Ask fdietze for an explicit license before distributing a fork, vendored source, or modified copy. |
+| Pi permissions/sandboxing | Keep it outside the first configuration increment, but state clearly that Pi extensions and MCP servers run with the user's permissions. | Choose and test a permission/sandbox extension before treating Pi as equivalent to Codex's approval and sandbox model. |
+| Shared Codex/Pi MCP generation | Duplicate the small initial Pi JSON configuration instead of refactoring the working Codex TOML. | Revisit a shared generated source only after the Pi setup stabilizes and configuration drift becomes a demonstrated problem. |
+| Pin compatibility and updates | Treat Pi, `pi-mcp-adapter`, and the fdietze revision as one tested compatibility set; update one deliberate batch at a time. | Record the first passing versions and require loader, subagent, MCP, reload, and Home Manager checks before advancing any pin. |
+| Deferred context-mode | Leave it entirely out of Pi for now. The Nix-provided Codex integration is unaffected. | No initial blocker. Revisit only if Pi usage demonstrates a context-ingestion or continuity problem that context-prune and MCP output guarding do not solve. |
 
 ## Suggested verification
 
@@ -371,7 +372,7 @@ After implementation and Home Manager activation:
 4. Confirm the global and repository `AGENTS.md` files are loaded once each.
 5. Use `/mcp` to check DeepWiki, Serena, and codebase-memory configuration.
 6. Call one representative tool from each server.
-7. Run `ctx stats` and `/ctx-doctor`; verify context-mode hooks and direct `ctx_*` tools.
+7. Confirm that neither the foreground nor a child Pi session exposes context-mode tools or starts a context-mode MCP process.
 8. Run the selected subagent extension's doctor/status command and one read-only scout.
 9. Verify that a subagent follows project `AGENTS.md` and can access only its intended MCP/extension tools.
 10. Run `just format-check` and `just check`; run the appropriate Home Manager build or dry activation before switching.
