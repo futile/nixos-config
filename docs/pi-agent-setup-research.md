@@ -1,10 +1,10 @@
 # Pi agent setup research
 
-Status: research complete and initial policies selected; configuration not yet implemented
+Status: initial configuration implemented for `nixos-work`
 
 Last checked: 2026-08-02
 
-Tracking issue: `nixos-aos`
+Tracking issues: research `nixos-aos`; implementation `nixos-4kl`
 
 ## Scope
 
@@ -17,7 +17,19 @@ The desired result is:
 - a maintained subagent extension;
 - declarative Home Manager wiring without taking ownership of Pi's executable, credentials, sessions, or caches.
 
-No Pi package was installed and no Pi configuration was changed during this investigation.
+The implementation still leaves the Pi executable in `nix profile` and keeps credentials, trust decisions, sessions, and package caches runtime-owned.
+
+## Implemented configuration
+
+The initial setup was implemented on 2026-08-02:
+
+- `home-modules/pi.nix` manages the shared global instructions, writable host settings and MCP links, the pinned fdietze extensions, and the SearXNG provider environment.
+- `dotfiles/pi/hosts/nixos-work/settings.json` preserves the existing provider, model, reasoning, and theme while pinning `pi-mcp-adapter` `2.17.0` and `@juicesharp/rpiv-web-tools` `2.3.1`.
+- `dotfiles/pi/hosts/nixos-work/mcp.json` configures lazy proxy-only DeepWiki, Serena, and codebase-memory-mcp servers. Context-mode remains excluded.
+- fdietze's private repository is a non-flake input pinned to `177de6af6a16da10670d488264dd8c27051b4ae3`. It uses authenticated `git+https` rather than the anonymous `github:` archive fetcher; `flake.lock` contains no credential.
+- `patches/fdietze-pi-subagents-child-extensions.patch` keeps normal child extension discovery disabled and explicitly supplies `pi-mcp-adapter`, context-prune, and `rpiv-web-tools` through `additionalExtensionPaths`.
+- `modules/searxng-local.nix` runs SearXNG on `127.0.0.1:8888`, enables HTML and JSON search responses, and generates a persistent root-owned secret at `/var/lib/searx/searx.env` on first activation. Port `8080` was already owned by the local `process-compose` supervisor.
+- the shared global `AGENTS.source.md` and generated `AGENTS.md` no longer name context-mode, so Codex and Pi can use the same file without a filtered Pi variant.
 
 ## Executive summary
 
@@ -190,8 +202,8 @@ Web-search options checked on 2026-08-02:
 The selected initial design is:
 
 1. Pin `npm:@juicesharp/rpiv-web-tools@2.3.1` in Pi's package list.
-2. Set `WEB_SEARCH_PROVIDER=searxng` and `SEARXNG_URL=http://127.0.0.1:8080` in the Home Manager session environment. This avoids the interactive `/web-tools` setup and its mutable config file. No `SEARXNG_API_KEY` is needed for the local instance.
-3. Enable NixOS `services.searx` on loopback port 8080 with `search.formats = [ "html" "json" ]`. JSON must be enabled for the extension's search API calls.
+2. Set `WEB_SEARCH_PROVIDER=searxng` and `SEARXNG_URL=http://127.0.0.1:8888` in the Home Manager session environment. This avoids the interactive `/web-tools` setup and its mutable config file. No `SEARXNG_API_KEY` is needed for the local instance.
+3. Enable NixOS `services.searx` on loopback port 8888 with `search.formats = [ "html" "json" ]`. JSON must be enabled for the extension's search API calls. Port `8080` is already used locally by `process-compose`.
 4. Keep `openFirewall`, nginx/uWSGI integration, `public_instance`, the limiter, image proxying, and local Valkey disabled. They are unnecessary for a same-machine client and can be added later if the service is intentionally exposed.
 5. Supply a stable random `SEARXNG_SECRET` through `services.searx.environmentFile` and reference it as `server.secret_key = "$SEARXNG_SECRET"`. This is SearXNG's internal signing/hashing secret, not a credential that Pi needs or sends to search engines.
 6. Add `rpiv-web-tools` to the explicit child allowlist. Its inspected tool state is extension-instance-local and its tools do not require UI, but the exact pinned package must pass the same concurrent headless-session and shutdown tests as the other allowlisted extensions.
@@ -308,7 +320,7 @@ The subagents and context-prune implementations are source directories inside fd
 
 | Method | Trade-off |
 | --- | --- |
-| Pinned non-flake input (selected) | Add `github:fdietze/dotfiles/<commit>` with `flake = false`, then link only the two extension directories. Reproducible and avoids evaluating/importing fdietze's flake dependency graph. Review source diffs before updating the lock. |
+| Pinned non-flake input (selected) | Add authenticated `git+https://github.com/fdietze/dotfiles?rev=<commit>` with `flake = false`, then link only the two extension directories. Reproducible and avoids evaluating/importing fdietze's flake dependency graph; fresh machines need repository access. Review source diffs before updating the lock. |
 | `fetchFromGitHub` | Fixed-output source without another flake input; revision/hash updates are more manual. |
 | Local fork or vendored directories | Best when implementing child-loader changes; requires upstream merge work and permission/license clarification. |
 | Out-of-store links to `~/gits/fdietze-dotfiles` | Best for initial testing and `/reload` iteration; machine-specific and unreproducible. |
@@ -317,7 +329,7 @@ Example input:
 
 ```nix
 inputs.fdietze-dotfiles = {
-  url = "github:fdietze/dotfiles/177de6af6a16da10670d488264dd8c27051b4ae3";
+  url = "git+https://github.com/fdietze/dotfiles?rev=177de6af6a16da10670d488264dd8c27051b4ae3";
   flake = false;
 };
 ```
@@ -358,7 +370,7 @@ Suggested managed files:
 | `~/.pi/agent/extensions/subagents` | Store link from a pinned fdietze source; out-of-store during deliberate extension development |
 | `~/.pi/agent/extensions/context-prune` | Store link from the same pinned fdietze source; out-of-store during deliberate extension development |
 
-The Home Manager configuration should also set `WEB_SEARCH_PROVIDER=searxng` and `SEARXNG_URL=http://127.0.0.1:8080`. The NixOS host configuration should enable the loopback-only SearXNG service separately; Home Manager should not try to own the system service.
+The Home Manager configuration should also set `WEB_SEARCH_PROVIDER=searxng` and `SEARXNG_URL=http://127.0.0.1:8888`. The NixOS host configuration should enable the loopback-only SearXNG service separately; Home Manager should not try to own the system service.
 
 The subagents extension needs a small local integration layer or patch that supplies the audited child extension paths through `additionalExtensionPaths`. Those paths should come from the same pinned package/source definitions used by Home Manager rather than from mutable package-cache locations.
 
@@ -431,7 +443,7 @@ After implementation and Home Manager activation:
 5. Use `/mcp` to check DeepWiki, Serena, and codebase-memory configuration.
 6. Call one representative tool from each server.
 7. Confirm that neither the foreground nor a child Pi session exposes context-mode tools or starts a context-mode MCP process.
-8. Confirm SearXNG listens only on `127.0.0.1:8080`, its JSON API returns results, and no firewall port, reverse proxy, Valkey, or limiter was enabled.
+8. Confirm SearXNG listens only on `127.0.0.1:8888`, its JSON API returns results, and no firewall port, reverse proxy, Valkey, or limiter was enabled.
 9. Call foreground `web_search` and `web_fetch`, then repeat `web_search` from simultaneous child sessions and confirm they use SearXNG without an API key.
 10. Run the selected subagent extension's doctor/status command and one read-only scout.
 11. Verify that a subagent follows project `AGENTS.md` and can access only `pi-mcp-adapter`, context-prune, and `rpiv-web-tools` in addition to its normal tools.

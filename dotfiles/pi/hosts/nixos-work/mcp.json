@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "DeepWiki": {
+      "url": "https://mcp.deepwiki.com/mcp",
+      "lifecycle": "lazy"
+    },
+    "serena": {
+      "command": "/home/felix/nixos/bin/serena-mcp-with-desktop-env",
+      "args": [
+        "start-mcp-server",
+        "--project-from-cwd",
+        "--context=codex"
+      ],
+      "lifecycle": "lazy"
+    },
+    "codebase-memory-mcp": {
+      "command": "codebase-memory-mcp",
+      "env": {
+        "CBM_CACHE_DIR": "/home/felix/.cache/codebase-memory-mcp"
+      },
+      "lifecycle": "lazy"
+    }
+  }
+}

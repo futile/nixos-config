@@ -39,6 +39,7 @@ in
       "${home-modules}/agents.nix"
       "${home-modules}/codex.nix"
       "${home-modules}/codex-token-optimization.nix"
+      "${home-modules}/pi.nix"
       "${home-modules}/serena.nix"
       "${home-modules}/gascity.nix"
       "${home-modules}/nix-profile-snapshot.nix"
@@ -75,6 +76,11 @@ in
     ];
 
   my.codex.configToml = "${thisFlakePath}/dotfiles/codex/hosts/nixos-work/config.toml";
+  my.pi = {
+    enable = true;
+    settingsJson = "${thisFlakePath}/dotfiles/pi/hosts/nixos-work/settings.json";
+    mcpJson = "${thisFlakePath}/dotfiles/pi/hosts/nixos-work/mcp.json";
+  };
   my.serena = {
     configYml = "${thisFlakePath}/dotfiles/serena/hosts/nixos-work/serena_config.yml";
     globalMemoriesDir = "${thisFlakePath}/dotfiles/serena/hosts/nixos-work/memories/global";

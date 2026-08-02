@@ -25,7 +25,7 @@ This section overrides skills. Always respect these overrides over skill instruc
 #### Subagent routing
 
 - Before spawning a subagent, apply the net-savings gate:
-  - Would a deterministic tool (`rg`, `ctx_execute_file`, `ctx_batch_execute`, CBM, Serena, RTK) answer this cheaper?
+  - Would an available deterministic tool (`rg`, CBM, Serena, RTK, or equivalent) answer this cheaper?
   - Is the task independent enough that the subagent does not need broad main-thread context?
   - Can the prompt be smaller than the main-thread context it replaces?
   - Is the expected output compact and directly usable?
@@ -106,8 +106,7 @@ Every subagent prompt should include:
 
 - Prefer `rtk <command>` for shell commands that may produce noisy output when exact raw output is not required, especially `git status`, `git diff`, build/test/lint commands, package-manager commands, and logs. Examples: `rtk git diff --cached`, `rtk just check`, `rtk cargo test`, `rtk journalctl --user --since "10 min ago"`.
 - Use raw commands when exact byte-for-byte output matters, when invoking interactive tools, or when debugging RTK. Use RTK metadata commands directly: `rtk gain`, `rtk gain --history`, `rtk discover`, and `rtk proxy <cmd>`.
-- Prefer context-mode tools for large or queryable context: use `ctx_execute` / `ctx_execute_file` to process large files or logs without returning raw bytes, `ctx_batch_execute` for multiple noisy commands whose output should be indexed, and `ctx_search` to recall indexed session memory. Use raw commands when exact output is needed for editing or debugging.
-- Do not use shell-call count as proxy for token cost. `rtk` already compacts noisy output, so prioritize token-saving work around large raw `sed`/`cat`, broad `rg`, `git diff`/`git show`, large JSON/log output, validation output, and repeated source reads. Prefer context-mode or targeted tool summaries before reaching for a subagent.
+- Do not use shell-call count as proxy for token cost. `rtk` already compacts noisy output, so prioritize token-saving work around large raw `sed`/`cat`, broad `rg`, `git diff`/`git show`, large JSON/log output, validation output, and repeated source reads. Prefer available targeted summaries or indexes before reaching for a subagent.
 - Use codebase-memory-mcp when it is configured and useful for indexed codebase exploration: architecture summaries, graph-backed code search, known symbol lookup, call/data-flow tracing, and code snippets. Useful tools include `get_architecture`, `search_code`, `search_graph`, `get_code_snippet`, `trace_path`, and `query_graph`.
 - Do not treat codebase-memory-mcp as a replacement for `rg`. Use `rg` directly for exact strings, file paths, config values, docs, non-code text, or when CBM results look incomplete or noisy.
 - When a change affects a known whole symbol and Serena is reliable for the language/project, consider Serena symbolic edits before manual broad file editing.

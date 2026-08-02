@@ -36,6 +36,23 @@
         "type": "github"
       }
     },
+    "fdietze-dotfiles": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785546149,
+        "narHash": "sha256-UHFGfjErKPIMjddbKCnFiXGEuBj5PiIaX8jBkwe0jig=",
+        "ref": "refs/heads/master",
+        "rev": "177de6af6a16da10670d488264dd8c27051b4ae3",
+        "revCount": 1782,
+        "type": "git",
+        "url": "https://github.com/fdietze/dotfiles"
+      },
+      "original": {
+        "rev": "177de6af6a16da10670d488264dd8c27051b4ae3",
+        "type": "git",
+        "url": "https://github.com/fdietze/dotfiles"
+      }
+    },
     "fish-foreign-env": {
       "flake": false,
       "locked": {
@@ -422,6 +439,7 @@
       "inputs": {
         "caveman": "caveman",
         "codebase-memory-mcp": "codebase-memory-mcp",
+        "fdietze-dotfiles": "fdietze-dotfiles",
         "fish-foreign-env": "fish-foreign-env",
         "fish-puffer-fish": "fish-puffer-fish",
         "fish-tide": "fish-tide",

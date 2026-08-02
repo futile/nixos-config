@@ -46,6 +46,9 @@ in
       # 2026-12-15: couldn't get this to work :(
       "${modules}/geoclue2.nix"
 
+      # loopback-only web search backend for Pi
+      "${modules}/searxng-local.nix"
+
       # user-configuration with home-manager
       "${modules}/home-manager.nix"
 

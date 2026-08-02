@@ -83,6 +83,11 @@
       flake = false;
     };
 
+    fdietze-dotfiles = {
+      url = "git+https://github.com/fdietze/dotfiles?rev=177de6af6a16da10670d488264dd8c27051b4ae3";
+      flake = false;
+    };
+
     codebase-memory-mcp = {
       url = "github:DeusData/codebase-memory-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
