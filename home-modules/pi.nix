@@ -15,6 +15,8 @@ let
     chmod -R u+w "$out"
 
     patch -d "$out" -p1 < ${../patches/fdietze-pi-subagents-child-extensions.patch}
+    patch -d "$out" -p1 < ${../patches/fdietze-pi-subagents-thinking-level.patch}
+    patch -d "$out" -p1 < ${../patches/fdietze-pi-subagents-pause-state.patch}
     substituteInPlace "$out/index.ts" \
       --replace-fail '@CONTEXT_PRUNE_PATH@' "${upstreamExtensions}/context-prune"
   '';

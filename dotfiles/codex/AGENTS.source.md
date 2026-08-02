@@ -151,6 +151,17 @@ Every subagent prompt should include:
 - Treat DeepWiki as an orientation and discovery source, not as authority for the revision pinned by this repository. Verify version-sensitive behavior, exact APIs, implementation details, and claims that affect code or configuration against the pinned source; the pinned source wins on conflict.
 - When using DeepWiki, repository names ARE ALWAYS case-sensitive. Use the exact GitHub owner/repository casing from the URL when available. For example, BitCraft public server docs are indexed as `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
 
+## Context Hygiene
+
+When reversible context-editing tools are available:
+
+- Treat the end of each exploration, debugging, implementation, and verification phase as a context-maintenance checkpoint.
+- Before moving to a new phase or task, and before final verification, orient over the current context and batch-collapse completed or superseded material.
+- Collapse bulky reads, logs, test output, rejected approaches, and completed implementation details once their conclusions are captured.
+- After several large tool results, check context pressure instead of waiting for automatic compaction.
+- Keep governing instructions, the active user request, unresolved errors, open decisions, and information needed verbatim in the next phase live.
+- Context maintenance is part of completing a phase, not end-of-session cleanup.
+
 ## Coding and Implementation Guidelines
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
