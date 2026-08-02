@@ -28,7 +28,7 @@ The recommended shape is:
 3. Continue using `~/.agents/skills` for skills shared by both harnesses.
 4. Use `pi-mcp-adapter` for DeepWiki, Serena, and codebase-memory-mcp.
 5. Install the `context-mode` Pi package as well as retaining the Nix-provided `context-mode` executable, pinned to the same version.
-6. Prefer `pi-subagents` for the most complete Codex-like delegation experience, unless a deliberately smaller extension is desired.
+6. Prefer fdietze's SDK-based subagents extension, pinned as source, if its persistent multi-agent TUI and messaging model are desired. Start with MCP access brokered by the main agent; child extension inheritance needs additional work.
 7. Keep Pi's writable `settings.json` as an out-of-store symlink into the repository. Leave `auth.json`, `trust.json`, sessions, downloaded packages, and caches unmanaged.
 
 Pi extensions execute with the user's full permissions. This configuration does not by itself reproduce Codex's sandbox or approval model.
@@ -171,9 +171,43 @@ Context-mode should be installed as a Pi package as well as remaining available 
 
 The Pi package is materially better than MCP-only use. Its extension registers `tool_call`, `tool_result`, `session_start`, `session_before_compact`, shutdown, routing, and continuity behavior. Inspection of the packaged `1.0.169` implementation also showed that it starts its bundled MCP server lazily and registers the returned `ctx_*` tools directly with Pi.
 
-There is a documentation/implementation discrepancy worth verifying during implementation: upstream's Pi installation section still asks for a `context-mode` entry in `~/.pi/agent/mcp.json`, but the current extension contains its own Pi-specific MCP bridge. With `pi-mcp-adapter`, a conservative initial setup can keep a lazy, proxy-only context-mode server entry while relying on the native context-mode extension for the direct tools and hooks. If this results in duplicate diagnostics or unnecessary processes, remove the generic adapter entry after verifying `ctx_*` tools and `ctx doctor` still pass.
+There is a documentation/implementation discrepancy worth verifying during implementation: upstream's Pi installation section still asks for a `context-mode` entry in `~/.pi/agent/mcp.json`, but the current extension contains its own Pi-specific MCP bridge and directly registers every returned `ctx_*` tool. Do not initially add context-mode to the generic MCP adapter: loading both paths could register duplicate tools or start an unnecessary second server. Verify the package-only path with `ctx stats` and `/ctx-doctor`; add an MCP entry only if the native bridge is demonstrably insufficient.
 
 Pinning the Pi package to the Nix package version avoids extension/server drift.
+
+### Context pruning extension
+
+fdietze's context-prune extension edits the actual conversation sent to the model. It stores reversible fold definitions as custom Pi session entries and applies them through Pi's `context` event. The model controls pruning explicitly through five tools:
+
+- `context_map` shows live messages and folds in conversation order with ids and estimated token sizes;
+- `context_collapse` replaces selected ranges with a caller-written digest or a bare recoverable stub;
+- `context_search` searches live messages, folded messages, and fold summaries;
+- `context_peek` reads folded content without restoring it to the live context;
+- `context_expand` restores a whole fold or a selected sub-range.
+
+The extension preserves tool call/result units, persists folds across session reloads and branches, and instructs the model to keep governing instructions, unresolved errors, and open loops live. It does not automatically prune at a token threshold or call a separate summarization model; the active model chooses ranges and writes any digest.
+
+Context-mode and context-prune are complementary:
+
+| Concern | context-mode | context-prune |
+| --- | --- | --- |
+| Primary intervention | Prevent bulky command, file, and web data from entering the prompt | Fold conversation content that is already in the Pi session |
+| Storage | External SQLite/FTS5 content and session-event stores | Branch-aware custom Pi session entries |
+| Recovery | `ctx_search` retrieves indexed external/session data | `context_search`, `context_peek`, and `context_expand` retrieve folded transcript data |
+| Control | Routing hooks plus model tool choice | Explicit model-selected ranges and summaries |
+
+Both extensions register a Pi `context` hook, but the inspected implementations compose safely in either order: context-mode appends a synthetic routing/active-memory message, while context-prune passes messages that do not match a persisted branch message id through unchanged. The main practical frictions are tool-name ambiguity, combined schema/instruction overhead, and context-mode's per-turn active-memory injection (up to roughly 500 tokens), which is ephemeral and therefore cannot be folded.
+
+Add a short shared routing rule:
+
+```text
+Use ctx_* for external/raw data and context-mode's indexed store.
+Use context_* for the current Pi conversation and its reversible folds.
+Prefer ctx_* before bulky data enters the transcript; collapse completed
+transcript ranges afterward.
+```
+
+Also clarify that `ctx_execute_file` analyzes large files but does not persist edits; Pi's native edit/write tools remain appropriate for changes and short exact reads. If active-memory duplication becomes measurable after adopting context-prune, a possible upstream context-mode improvement is a Pi-specific setting for its current fixed injection cap. Do not patch this pre-emptively.
 
 ## Subagent options
 
@@ -181,14 +215,59 @@ Pi also intentionally leaves subagents to extensions.
 
 | Option | Strengths | Trade-offs |
 | --- | --- | --- |
-| `pi-subagents` `0.40.0` | Recommended feature-rich choice: fresh or forked context, foreground/background execution, parallel groups, chains, live steering, resume, output truncation, artifacts, structured output, acceptance gates, worktree isolation, child-parent coordination, bundled roles/prompts, and explicit `pi-mcp-adapter` integration | Approximately 2.9 MB unpacked; large configuration and behavior surface; worktree use needs clean-tree and dependency/cache planning |
+| fdietze subagents at pinned revision | Preferred local reference: in-process SDK sessions; persistent child sessions and restart recovery; nested agent graph; multicast messaging; live roster/transcript TUI; steering; status and ETA reporting; model override/inheritance; halt/resume and global turn budget | Unpublished source tree rather than a package; hard-coded limits; closely coupled to Pi SDK APIs; children deliberately disable extensions; no visible repository license for redistribution |
+| `pi-subagents` `0.40.0` | Feature-rich packaged choice: fresh or forked context, foreground/background execution, parallel groups, chains, live steering, resume, output truncation, artifacts, structured output, acceptance gates, worktree isolation, child-parent coordination, bundled roles/prompts, and explicit `pi-mcp-adapter` integration | Approximately 2.9 MB unpacked; large configuration and behavior surface; worktree use needs clean-tree and dependency/cache planning |
 | `@mjakl/pi-subagent` `2.1.0` | Small and predictable; isolated child processes; fresh/fork context; parallel calls; named persistent sessions; depth/cycle guards; rich streaming UI | No comparable chain, worktree, acceptance, and artifact machinery |
 | `@tintinweb/pi-subagents` `0.14.3` | Claude Code-like tool names and TUI; foreground/background agents; live conversation viewer; steering, resume, queuing, and optional nested agents | More UI and lifecycle machinery than the small option; upstream describes it as an early release; different conventions from Codex's current subagent API |
 | Official Pi subagent example | First-party and easy to audit; isolated child processes; single, parallel, and chain modes; sample roles and workflows | An example rather than a supported package contract; vendoring transfers update and compatibility maintenance to this repository |
 
-`pi-subagents` is the closest match to the desired Codex-like setup. Its built-in roles inherit project instructions by default. Custom agents can opt into `inheritProjectContext` and `inheritSkills`; they can select direct MCP tools with `mcp:<server>` frontmatter when `pi-mcp-adapter` is installed. Explicit tool lists are strict allowlists, so extension tools must be deliberately included or ambient extension loading retained.
+fdietze's implementation creates isolated background `AgentSession` objects inside the main Pi process rather than child `pi` processes. The inspected revision caps the swarm at eight background agents, spawn depth three, and 200 aggregate background turns. Children inherit global/project `AGENTS.md`, skills, the default coding tools, and the caller's model unless overridden. They persist below the main session directory and can report to or request help from `main` with `send_message`.
+
+The current child loader uses `noExtensions: true`. This deliberately prevents recursive subagents and interactive extensions, but also removes `pi-mcp-adapter`, context-mode, Serena, DeepWiki, and codebase-memory tools from children.
+
+#### Can `extensionsOverride` blacklist only subagents?
+
+Pi 0.83.0 exposes `DefaultResourceLoader({ extensionsOverride })`, and an override can retain the result's `runtime` and `errors` while filtering `base.extensions` by `extension.resolvedPath`. Omitting an extension from that array prevents its collected handlers, tools, commands, flags, and shortcuts from being installed in the child `ExtensionRunner`.
+
+It is not a safe drop-in replacement for `noExtensions: true`, for two reasons:
+
+1. `extensionsOverride` runs after Pi imports each extension module and executes its factory. It prevents runner activation, not factory-time side effects. fdietze's subagents factory immediately initializes its process-global engine, replaces the global main-message sink with the supplied `pi` API, and begins `ModelRuntime` setup. A child load that filters the resulting extension can therefore still overwrite main-session state.
+2. Other extensions are not automatically safe in several same-process SDK sessions. fdietze's interactive question extension expects UI facilities, while context-mode `1.0.169` keeps module-global database, session-id, and MCP-bridge state intended for one Pi session per process. Loading it into every background session could cross-wire state even if subagents itself were filtered.
+
+A future refactor could make `extensionsOverride` useful by moving all subagents factory side effects behind activated lifecycle handlers (or making them lazy on first real use), then maintaining a small denylist of extensions audited as interactive-only or non-reentrant. Pi 0.83.0 applies final source metadata after the override, so the filter should use `resolvedPath`, not final `sourceInfo` fields.
+
+For the initial setup, use one of these child-capability strategies:
+
+1. **Main-agent broker (recommended):** children ask `main` through `send_message` for Serena, DeepWiki, CBM, or context-mode queries. No loader patch and no duplicate MCP processes; MCP-dependent work takes an extra coordination turn.
+2. **Audited allowlist:** retain `noExtensions: true` and pass selected child-safe extensions through `additionalExtensionPaths`. Pi intentionally still loads explicit additional paths in this mode. Test every entry headlessly and avoid loading context-mode's full extension into multiple same-process sessions.
+3. **Refactored blacklist:** make factory initialization side-effect-free, use `extensionsOverride` to exclude subagents plus other audited non-reentrant/UI extensions, and let the rest load normally. This is more convenient over time but transfers compatibility responsibility to the local fork.
+4. **Shared child-safe MCP bridge:** expose selected MCP tools to child sessions without loading each complete extension. This provides the best eventual UX but is a larger extension change.
+
+`pi-subagents` remains the easier packaged alternative when direct `pi-mcp-adapter` integration matters more than fdietze's in-process swarm UX. Its built-in roles inherit project instructions by default, and custom agents can opt into project context, skills, and `mcp:<server>` tools.
 
 Worktree mode is useful for parallel writers but should not be enabled as a universal default. The repository guidance requires checking build/cache reuse before creating isolated workspaces, and `pi-subagents` itself requires a clean tree for managed worktree execution.
+
+### Integrating fdietze's source
+
+The subagents and context-prune implementations are source directories inside fdietze's dotfiles, not published Pi packages or independent flake outputs. Concise integration choices:
+
+| Method | Trade-off |
+| --- | --- |
+| Pinned non-flake input (recommended initially) | Add `github:fdietze/dotfiles/<commit>` with `flake = false`, then link only the two extension directories. Reproducible and avoids evaluating/importing fdietze's flake dependency graph. Review source diffs before updating the lock. |
+| `fetchFromGitHub` | Fixed-output source without another flake input; revision/hash updates are more manual. |
+| Local fork or vendored directories | Best when implementing child-loader changes; requires upstream merge work and permission/license clarification. |
+| Out-of-store links to `~/gits/fdietze-dotfiles` | Best for initial testing and `/reload` iteration; machine-specific and unreproducible. |
+
+Example input:
+
+```nix
+inputs.fdietze-dotfiles = {
+  url = "github:fdietze/dotfiles/177de6af6a16da10670d488264dd8c27051b4ae3";
+  flake = false;
+};
+```
+
+Home Manager can link `modules/home-manager/profiles/ai-agents/pi-extensions/{subagents,context-prune}` from that source into `~/.pi/agent/extensions/`. The inspected repository has no `LICENSE` or `COPYING` file; ask the author before publishing a modified or vendored copy.
 
 ## Findings from `fdietze-dotfiles`
 
@@ -204,7 +283,8 @@ Useful patterns:
 
 Patterns not recommended for the initial implementation:
 
-- copying the bespoke subagent extension, which currently spans 17 source/test files plus multiple local specifications for persistence, turn budgets, ETA calculation, roster UI, messaging, resume, deadlock handling, and graph tracking;
+- copying the bespoke extensions without a source pin, update strategy, and license clarification;
+- enabling every extension inside fdietze's same-process subagents without auditing factory side effects, UI dependencies, and reentrancy;
 - copying the full sandbox/wrapper architecture without separately deciding that Pi should be wrapped;
 - adopting `@bacnh85/pi-serena` solely because the reference setup uses it;
 - disabling compaction or trusting every project without an explicit local decision.
@@ -220,7 +300,8 @@ Suggested managed files:
 | `~/.pi/agent/AGENTS.md` | Out-of-store symlink to `dotfiles/codex/AGENTS.md` |
 | `~/.pi/agent/settings.json` | Writable out-of-store symlink to `dotfiles/pi/hosts/nixos-work/settings.json` |
 | `~/.pi/agent/mcp.json` | Out-of-store symlink to `dotfiles/pi/hosts/nixos-work/mcp.json`, unless generated from Nix data |
-| `~/.pi/agent/agents` | Optional, only after choosing the subagent extension and custom roles |
+| `~/.pi/agent/extensions/subagents` | Store link from a pinned fdietze source; out-of-store during deliberate extension development |
+| `~/.pi/agent/extensions/context-prune` | Store link from the same pinned fdietze source; out-of-store during deliberate extension development |
 
 Do not manage:
 
@@ -237,19 +318,18 @@ The initial `settings.json` should preserve the current provider, model, reasoni
 ```json
 [
   "npm:pi-mcp-adapter@2.17.0",
-  "npm:context-mode@1.0.169",
-  "npm:pi-subagents@0.40.0"
+  "npm:context-mode@1.0.169"
 ]
 ```
 
-If another subagent extension is chosen, replace only the third entry.
+The fdietze extensions are local Home Manager resources rather than entries in Pi's package list. If `pi-subagents` is chosen instead, add its pinned npm package and omit the fdietze subagents link.
 
 ## Decisions still required
 
-1. Which subagent extension to install. The default recommendation is `pi-subagents`.
+1. Whether to start with fdietze's extensions through a pinned non-flake input or use out-of-store links for a trial period first.
 2. Which Serena and codebase-memory tools should be direct rather than proxy-only.
-3. Whether to retain the generic lazy context-mode MCP entry in addition to context-mode's native Pi bridge after verification.
-4. Whether custom Pi agent definitions are needed initially or the selected extension's bundled agents are sufficient.
+3. Whether main-agent MCP brokering is sufficient for subagents or a child-safe allowlist/shared bridge should be implemented.
+4. Whether to request an explicit license from fdietze before forking or vendoring the extension source.
 5. Whether Pi should later gain an explicit permission/sandbox extension. This is separate from MCP and subagent configuration.
 6. Whether global MCP server data should eventually be factored into a shared generated source for both Pi JSON and Codex TOML. The initial implementation should avoid a larger Codex configuration refactor.
 
@@ -286,10 +366,14 @@ Upstream sources:
 - Pi: <https://github.com/earendil-works/pi>
 - Pi package and resource documentation: <https://pi.dev/docs/latest>
 - Pi package catalog: <https://pi.dev/packages>
+- Pi `DefaultResourceLoader` at `v0.83.0`: <https://github.com/earendil-works/pi/blob/v0.83.0/packages/coding-agent/src/core/resource-loader.ts>
 - `pi-mcp-adapter`: <https://github.com/nicobailon/pi-mcp-adapter>
 - `pi-mcp-extension`: <https://github.com/irahardianto/pi-mcp-extension>
 - `@spences10/pi-mcp`: <https://github.com/spences10/my-pi>
 - context-mode: <https://github.com/mksglu/context-mode>
+- context-mode Pi adapter at `v1.0.169`: <https://github.com/mksglu/context-mode/blob/v1.0.169/src/adapters/pi/extension.ts>
+- fdietze subagents at the inspected revision: <https://github.com/fdietze/dotfiles/tree/177de6af6a16da10670d488264dd8c27051b4ae3/modules/home-manager/profiles/ai-agents/pi-extensions/subagents>
+- fdietze context-prune design: <https://github.com/fdietze/dotfiles/blob/177de6af6a16da10670d488264dd8c27051b4ae3/modules/home-manager/profiles/ai-agents/pi-extensions/context-prune/DESIGN.md>
 - `pi-subagents`: <https://github.com/nicobailon/pi-subagents>
 - `@mjakl/pi-subagent`: <https://github.com/mjakl/pi-subagent>
 - `@tintinweb/pi-subagents`: <https://github.com/tintinweb/pi-subagents>
