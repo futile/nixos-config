@@ -1,0 +1,12 @@
+# Migrated from ~/.config/hexchat/servlist.conf. The other HexChat networks
+# were its built-in defaults rather than locally saved network entries.
+[servers.Abjects]
+nickname = "foobar123"
+alt_nicks = ["foobar123_", "foobar123__"]
+username = "foobar123"
+realname = "realname"
+server = "irc.abjects.net"
+port = 6697
+use_tls = true
+autoconnect = false
+channels = ["#moviegods", "#mg-chat"]

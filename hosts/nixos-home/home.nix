@@ -29,6 +29,7 @@ in
       "${home-modules}/desktop-common.nix"
       "${home-modules}/desktop-gdrive.nix"
       "${home-modules}/signal-desktop.nix"
+      "${home-modules}/halloy.nix"
       "${home-modules}/vivaldi.nix"
       "${home-modules}/firefox.nix"
       "${home-modules}/zoom.nix"
@@ -62,7 +63,6 @@ in
           telegram-desktop
           discord
           slack
-          hexchat
           # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228 # don't use it currently
 
           # rust tools
