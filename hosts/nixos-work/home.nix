@@ -206,9 +206,6 @@ in
           # hardware stuff
           # v4l-utils # webcam utils
           radeontop
-
-          # 2026-04-29 this causes it to rebuild during `switch`, don't wanna 🙃
-          # my-custom-packages.marker
         ])
       ++
         # packages from master
@@ -220,7 +217,9 @@ in
         ];
 
     # use locally-built `marker` if available
-    sessionPath = [ "$HOME/gits/Marker/src-tauri/target/release" ];
+    sessionPath = [
+      # "$HOME/gits/Marker/src-tauri/target/release"
+    ];
 
     sessionVariables = {
       EDITOR = "nvim";

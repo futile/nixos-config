@@ -1,3 +1,6 @@
+# Intentionally not exposed through the flake or custom-package overlay.
+# This definition uses pnpm_9, which nixpkgs rejects as insecure. Re-enable it
+# only after migrating to and fully verifying a supported pnpm version.
 {
   lib,
   stdenv,
