@@ -88,17 +88,6 @@
       ],
       "url": "path:/nix/store/hhyjq4dr4w4dwssm8vzq4cfjzxixhanp-source?lastModified=1763618868&narHash=sha256-v5afmLjn/uyD9EQuPBn7nZuaZVV9r%2BJerayK/4wvdWA%3D&rev=a8d610af3f1a5fb71e23e08434d8d61a466fc942"
     },
-    "hexchat": {
-      "active": true,
-      "attrPath": "legacyPackages.x86_64-linux.hexchat",
-      "originalUrl": "flake:unstable",
-      "outputs": null,
-      "priority": 5,
-      "storePaths": [
-        "/nix/store/5lnkq0q0wiaqp8jzilckmgy1zk59x6jn-hexchat-2.16.2"
-      ],
-      "url": "path:/nix/store/i2gsp87gqp16whm9mw0ybk9n84zir01x-source?lastModified=1776329215&narHash=sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw%3D&rev=b86751bc4085f48661017fa226dee99fab6c651b"
-    },
     "hunk": {
       "active": true,
       "attrPath": "packages.x86_64-linux.hunk",
