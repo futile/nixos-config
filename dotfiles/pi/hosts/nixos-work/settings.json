@@ -9,5 +9,8 @@
     "npm:@juicesharp/rpiv-web-tools@2.3.1",
     "npm:@shvax/pi-statusline"
   ],
-  "steeringMode": "all"
+  "steeringMode": "all",
+  "terminal": {
+    "showTerminalProgress": true
+  }
 }
