@@ -12,5 +12,6 @@
   "steeringMode": "all",
   "terminal": {
     "showTerminalProgress": true
-  }
+  },
+  "hideThinkingBlock": false
 }
