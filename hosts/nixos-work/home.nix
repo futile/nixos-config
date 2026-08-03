@@ -48,6 +48,7 @@ in
       "${home-modules}/desktop-common.nix"
       "${home-modules}/desktop-gdrive.nix"
       "${home-modules}/signal-desktop.nix"
+      "${home-modules}/halloy.nix"
       # "${home-modules}/vivaldi.nix"
 
       # "${home-modules}/hyprland.nix"
