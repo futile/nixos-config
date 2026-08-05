@@ -1,10 +1,10 @@
 # Pi agent setup research
 
-Status: initial configuration implemented for `nixos-work`
+Status: configuration implemented for `nixos-work`; fdietze subagents integration upgraded to current upstream
 
-Last checked: 2026-08-02
+Last checked: 2026-08-05
 
-Tracking issues: research `nixos-aos`; implementation `nixos-4kl`
+Tracking issues: research `nixos-aos`; initial implementation `nixos-4kl`; upstream upgrade `nixos-mwp`
 
 ## Scope
 
@@ -26,8 +26,8 @@ The initial setup was implemented on 2026-08-02:
 - `home-modules/pi.nix` manages the shared global instructions, writable host settings and MCP links, the pinned fdietze extensions, and the SearXNG provider environment.
 - `dotfiles/pi/hosts/nixos-work/settings.json` preserves the existing provider, model, reasoning, and theme while pinning `pi-mcp-adapter` `2.17.0` and `@juicesharp/rpiv-web-tools` `2.3.1`.
 - `dotfiles/pi/hosts/nixos-work/mcp.json` configures lazy proxy-only DeepWiki, Serena, and codebase-memory-mcp servers. Context-mode remains excluded.
-- fdietze's private repository is a non-flake input pinned to `177de6af6a16da10670d488264dd8c27051b4ae3`. It uses authenticated `git+https` rather than the anonymous `github:` archive fetcher; `flake.lock` contains no credential.
-- `patches/fdietze-pi-subagents-child-extensions.patch` keeps normal child extension discovery disabled and explicitly supplies `pi-mcp-adapter`, context-prune, and `rpiv-web-tools` through `additionalExtensionPaths`.
+- fdietze's private repository is a non-flake input pinned to `262fb764dedc2678b1522a21cbbd8818622be56c`. It uses authenticated `git+https` rather than the anonymous `github:` archive fetcher; `flake.lock` contains no credential.
+- Current upstream subagents provide the child lifecycle, effective thinking-level inheritance, and accurate pause/resume behavior that previously required broad local patches. Home Manager writes the fail-closed child-extension policy for `pi-mcp-adapter`, context-prune, and `rpiv-web-tools`; narrow local patches retain AGENTS-aware model routing, child extension error logging, and scheduler-state reset during shutdown.
 - `modules/searxng-local.nix` runs SearXNG on `127.0.0.1:8888`, enables HTML and JSON search responses, and generates a persistent root-owned secret at `/var/lib/searx/searx.env` on first activation. Port `8080` was already owned by the local `process-compose` supervisor.
 - the shared global `AGENTS.source.md` and generated `AGENTS.md` no longer name context-mode, so Codex and Pi can use the same file without a filtered Pi variant.
 
@@ -41,7 +41,7 @@ The recommended shape is:
 4. Use `pi-mcp-adapter` for DeepWiki, Serena, and codebase-memory-mcp.
 5. Exclude context-mode from the initial Pi package list and MCP configuration. The existing Nix-provided context-mode installation remains available to Codex; the Pi research below is retained for a possible later phase.
 6. Add pinned `@juicesharp/rpiv-web-tools` with a loopback-only NixOS SearXNG service. Select SearXNG non-interactively through environment variables and expose the extension to foreground and child sessions.
-7. Use fdietze's SDK-based subagents and context-prune extensions from a pinned non-flake input. Keep `noExtensions: true` for children and add only audited headless/reentrant extensions through `additionalExtensionPaths`.
+7. Use fdietze's SDK-based subagents and context-prune extensions from a pinned non-flake input. Keep normal child extension discovery disabled and grant only audited headless/reentrant extensions through `~/.config/pi/subagents/child-extensions.json`.
 8. Keep Pi's writable `settings.json` as an out-of-store symlink into the repository. Leave `auth.json`, `trust.json`, sessions, downloaded packages, and caches unmanaged.
 
 Pi extensions execute with the user's full permissions. This configuration does not by itself reproduce Codex's sandbox or approval model.
@@ -270,15 +270,15 @@ Pi also intentionally leaves subagents to extensions.
 
 | Option | Strengths | Trade-offs |
 | --- | --- | --- |
-| fdietze subagents at pinned revision | Preferred local reference: in-process SDK sessions; persistent child sessions and restart recovery; nested agent graph; multicast messaging; live roster/transcript TUI; steering; status and ETA reporting; model override/inheritance; halt/resume and global turn budget | Unpublished source tree rather than a package; hard-coded limits; closely coupled to Pi SDK APIs; children deliberately disable extensions; no visible repository license for redistribution |
+| fdietze subagents at pinned revision | Preferred local reference: in-process SDK sessions; persistent child sessions and restart recovery; nested agent graph; multicast messaging; live roster/transcript TUI; steering; status and ETA reporting; model/thinking-level override and inheritance; pause/resume and global turn budget | Unpublished source tree rather than a package; hard-coded limits; closely coupled to Pi SDK APIs; child extensions require an explicit capability policy; no visible repository license for redistribution |
 | `pi-subagents` `0.40.0` | Feature-rich packaged choice: fresh or forked context, foreground/background execution, parallel groups, chains, live steering, resume, output truncation, artifacts, structured output, acceptance gates, worktree isolation, child-parent coordination, bundled roles/prompts, and explicit `pi-mcp-adapter` integration | Approximately 2.9 MB unpacked; large configuration and behavior surface; worktree use needs clean-tree and dependency/cache planning |
 | `@mjakl/pi-subagent` `2.1.0` | Small and predictable; isolated child processes; fresh/fork context; parallel calls; named persistent sessions; depth/cycle guards; rich streaming UI | No comparable chain, worktree, acceptance, and artifact machinery |
 | `@tintinweb/pi-subagents` `0.14.3` | Claude Code-like tool names and TUI; foreground/background agents; live conversation viewer; steering, resume, queuing, and optional nested agents | More UI and lifecycle machinery than the small option; upstream describes it as an early release; different conventions from Codex's current subagent API |
 | Official Pi subagent example | First-party and easy to audit; isolated child processes; single, parallel, and chain modes; sample roles and workflows | An example rather than a supported package contract; vendoring transfers update and compatibility maintenance to this repository |
 
-fdietze's implementation creates isolated background `AgentSession` objects inside the main Pi process rather than child `pi` processes. The inspected revision caps the swarm at eight background agents, spawn depth three, and 200 aggregate background turns. Children inherit global/project `AGENTS.md`, skills, the default coding tools, and the caller's model unless overridden. They persist below the main session directory and can report to or request help from `main` with `send_message`.
+fdietze's implementation creates isolated background `AgentSession` objects inside the main Pi process rather than child `pi` processes. The inspected revision caps the swarm at eight background agents, spawn depth three, and 200 aggregate background turns. Children inherit global/project `AGENTS.md`, skills, the default coding tools, and the caller's effective model and thinking level unless overridden. They persist below the main session directory and can report to or request help from `main` with `send_message`.
 
-The current child loader uses `noExtensions: true`. This deliberately prevents recursive subagents and interactive extensions, but also removes `pi-mcp-adapter`, context-mode, Serena, DeepWiki, and codebase-memory tools from children.
+The current child loader uses `noExtensions: true` to prevent normal extension discovery, including recursive subagents and interactive extensions. It then loads only the entries in the fail-closed child-extension policy. The Home Manager policy restores `pi-mcp-adapter`, context-prune, and `rpiv-web-tools`; MCP-backed Serena, DeepWiki, and codebase-memory tools are therefore available through the adapter, while context-mode remains excluded.
 
 #### Can `extensionsOverride` blacklist only subagents?
 
@@ -329,7 +329,7 @@ Example input:
 
 ```nix
 inputs.fdietze-dotfiles = {
-  url = "git+https://github.com/fdietze/dotfiles?rev=177de6af6a16da10670d488264dd8c27051b4ae3";
+  url = "git+https://github.com/fdietze/dotfiles?rev=262fb764dedc2678b1522a21cbbd8818622be56c";
   flake = false;
 };
 ```
@@ -372,7 +372,7 @@ Suggested managed files:
 
 The Home Manager configuration should also set `WEB_SEARCH_PROVIDER=searxng` and `SEARXNG_URL=http://127.0.0.1:8888`. The NixOS host configuration should enable the loopback-only SearXNG service separately; Home Manager should not try to own the system service.
 
-The subagents extension needs a small local integration layer or patch that supplies the audited child extension paths through `additionalExtensionPaths`. Those paths should come from the same pinned package/source definitions used by Home Manager rather than from mutable package-cache locations.
+The subagents extension reads an explicit fail-closed capability policy from `~/.config/pi/subagents/child-extensions.json`; Home Manager generates the audited extension list. The extension paths and package specifications should remain pinned and reviewable rather than being discovered implicitly.
 
 Do not manage:
 
@@ -401,7 +401,7 @@ The fdietze extensions are local Home Manager resources rather than entries in P
 2. Share the generated global `AGENTS.md` and shared skills between Codex and Pi.
 3. Use fdietze's subagents and context-prune implementations from a pinned non-flake input.
 4. Exclude context-mode from the initial Pi package list, MCP configuration, foreground session, and children. Retain its research as a deferred option.
-5. Keep normal child extension discovery disabled and supply an explicit `additionalExtensionPaths` allowlist of extensions audited as headless and reentrant.
+5. Keep normal child extension discovery disabled and generate the explicit child capability policy with only extensions audited as headless and reentrant.
 6. Use pinned `@juicesharp/rpiv-web-tools` with a loopback-only NixOS SearXNG instance, selected through `WEB_SEARCH_PROVIDER` and `SEARXNG_URL`.
 7. Allowlist `pi-mcp-adapter`, context-prune, and `rpiv-web-tools` for child sessions; exclude subagents itself, interactive question/prompt extensions, prompt-log, and context-mode.
 8. Let each child adapter own independent lazy MCP server processes initially; consider a shared bridge only after measurements justify it.
@@ -423,7 +423,7 @@ The initial answers below are decisions. The last column records validation gate
 | Exact child allowlist | Use `pi-mcp-adapter`, context-prune, and `rpiv-web-tools`. Keep question, subagents itself, prompt-log, and context-mode excluded. | Run all three concurrently in several SDK child sessions against the exact pins; add another extension only after a separate headless/reentrancy audit. |
 | MCP process topology | Let each child adapter own independent lazy server processes initially. This is the simplest isolation model. | Measure process count, memory, startup latency, and cleanup with several simultaneous Serena/codebase-memory users; build a shared bridge only if those measurements justify it. |
 | MCP tool exposure | Begin proxy-only. Promote a small, frequently used Serena or codebase-memory subset to direct tools after observing real usage. Keep DeepWiki proxy-only initially. | Decide the direct subset using prompt-token cost and call-frequency evidence rather than enabling each server wholesale. |
-| Child MCP lifecycle | Treat clean shutdown as an acceptance requirement, not an optional enhancement. | Test spawn, concurrent calls, kill, restore, Pi `/reload`, and session shutdown; check for orphan server processes and shared metadata-cache races. |
+| Child MCP lifecycle | Treat clean shutdown as an acceptance requirement, not an optional enhancement. | Test spawn, concurrent calls, kill, restore, same-version Pi `/reload`, and session shutdown; use a full Pi restart when an upgrade changes the engine key. Check for orphan server processes and shared metadata-cache races. |
 | Context-prune policy | Use the same extension and instructions in foreground and children initially; avoid a second policy before there is usage evidence. | Observe whether short-lived children spend enough context to benefit, and introduce child-specific guidance only if they prune too eagerly or never prune when needed. |
 | fdietze source licensing | Use the pinned non-flake source privately, without vendoring or publishing modifications. | Ask fdietze for an explicit license before distributing a fork, vendored source, or modified copy. |
 | Pi permissions/sandboxing | Keep it outside the first configuration increment, but state clearly that Pi extensions and MCP servers run with the user's permissions. | Choose and test a permission/sandbox extension before treating Pi as equivalent to Codex's approval and sandbox model. |
@@ -447,7 +447,7 @@ After implementation and Home Manager activation:
 9. Call foreground `web_search` and `web_fetch`, then repeat `web_search` from simultaneous child sessions and confirm they use SearXNG without an API key.
 10. Run the selected subagent extension's doctor/status command and one read-only scout.
 11. Verify that a subagent follows project `AGENTS.md` and can access only `pi-mcp-adapter`, context-prune, and `rpiv-web-tools` in addition to its normal tools.
-12. Exercise child spawn, concurrent MCP/search calls, kill, restore, Pi `/reload`, and shutdown; confirm no orphan MCP processes or cross-session extension state.
+12. Exercise child spawn, concurrent MCP/search calls, kill, restore, same-version Pi `/reload`, and shutdown; confirm no orphan MCP processes or cross-session extension state. For an engine-key upgrade, gracefully quit all Pi processes and start fresh instead of using `/reload`.
 13. Run `just format-check` and `just check`; run the appropriate Home Manager build or dry activation before switching.
 
 ## Sources
@@ -474,8 +474,8 @@ Upstream sources:
 - `@spences10/pi-mcp`: <https://github.com/spences10/my-pi>
 - context-mode: <https://github.com/mksglu/context-mode>
 - context-mode Pi adapter at `v1.0.169`: <https://github.com/mksglu/context-mode/blob/v1.0.169/src/adapters/pi/extension.ts>
-- fdietze subagents at the inspected revision: <https://github.com/fdietze/dotfiles/tree/177de6af6a16da10670d488264dd8c27051b4ae3/modules/home-manager/profiles/ai-agents/pi-extensions/subagents>
-- fdietze context-prune design: <https://github.com/fdietze/dotfiles/blob/177de6af6a16da10670d488264dd8c27051b4ae3/modules/home-manager/profiles/ai-agents/pi-extensions/context-prune/DESIGN.md>
+- fdietze subagents at the inspected revision: <https://github.com/fdietze/dotfiles/tree/262fb764dedc2678b1522a21cbbd8818622be56c/modules/home-manager/profiles/ai-agents/pi-extensions/subagents>
+- fdietze context-prune design: <https://github.com/fdietze/dotfiles/blob/262fb764dedc2678b1522a21cbbd8818622be56c/modules/home-manager/profiles/ai-agents/pi-extensions/context-prune/DESIGN.md>
 - `pi-subagents`: <https://github.com/nicobailon/pi-subagents>
 - `@mjakl/pi-subagent`: <https://github.com/mjakl/pi-subagent>
 - `@tintinweb/pi-subagents`: <https://github.com/tintinweb/pi-subagents>

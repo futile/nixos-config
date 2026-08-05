@@ -1,0 +1,23 @@
+diff --git a/engine.test.ts b/engine.test.ts
+index af8f2a6..355d915 100644
+--- a/engine.test.ts
++++ b/engine.test.ts
+@@ -370,0 +371,6 @@ test("shutdownAll closes background runtimes without recording explicit kills",
++	const state = e as unknown as { frozen: boolean; frozenReason?: string; turnsUsed: number };
++	e.recordTurnStart("a");
++	e.halt("manual");
++	assert.equal(state.frozen, true);
++	assert.equal(state.frozenReason, "manual");
++	assert.equal(state.turnsUsed, 1);
+@@ -377,0 +384,3 @@ test("shutdownAll closes background runtimes without recording explicit kills",
++	assert.equal(state.frozen, false);
++	assert.equal(state.frozenReason, undefined);
++	assert.equal(state.turnsUsed, 0);
+diff --git a/engine.ts b/engine.ts
+index f935c11..438ad8b 100644
+--- a/engine.ts
++++ b/engine.ts
+@@ -300,0 +301,3 @@ export class Engine {
++		this.frozen = false;
++		this.frozenReason = undefined;
++		this.turnsUsed = 0;

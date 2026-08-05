@@ -14,11 +14,9 @@ let
     cp -R "${upstreamExtensions}/subagents/." "$out/"
     chmod -R u+w "$out"
 
-    patch -d "$out" -p1 < ${../patches/fdietze-pi-subagents-child-extensions.patch}
-    patch -d "$out" -p1 < ${../patches/fdietze-pi-subagents-thinking-level.patch}
-    patch -d "$out" -p1 < ${../patches/fdietze-pi-subagents-pause-state.patch}
-    substituteInPlace "$out/index.ts" \
-      --replace-fail '@CONTEXT_PRUNE_PATH@' "${upstreamExtensions}/context-prune"
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-bind-errors.patch}
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-model-routing.patch}
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-engine-reset.patch}
   '';
 in
 {
@@ -54,6 +52,14 @@ in
 
       ".pi/agent/extensions/subagents".source = patchedSubagents;
       ".pi/agent/extensions/context-prune".source = "${upstreamExtensions}/context-prune";
+    };
+
+    xdg.configFile."pi/subagents/child-extensions.json".text = builtins.toJSON {
+      extensions = [
+        "npm:pi-mcp-adapter@2.17.0"
+        "npm:@juicesharp/rpiv-web-tools@2.3.1"
+        "${config.home.homeDirectory}/.pi/agent/extensions/context-prune"
+      ];
     };
 
     home.sessionVariables = {

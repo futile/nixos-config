@@ -84,7 +84,7 @@
     };
 
     fdietze-dotfiles = {
-      url = "git+https://github.com/fdietze/dotfiles?rev=177de6af6a16da10670d488264dd8c27051b4ae3";
+      url = "git+https://github.com/fdietze/dotfiles?rev=262fb764dedc2678b1522a21cbbd8818622be56c";
       flake = false;
     };
 

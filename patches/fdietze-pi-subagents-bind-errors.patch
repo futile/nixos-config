@@ -1,0 +1,12 @@
+diff --git a/index.ts b/index.ts
+index d2bf54d..50a5caf 100644
+--- a/index.ts
++++ b/index.ts
+@@ -637 +637,6 @@ export default function subagents(pi: ExtensionAPI) {
+-		await session.bindExtensions({ mode: "print" });
++		await session.bindExtensions({
++			mode: "print",
++			onError: (error) => {
++				console.error(`Subagent extension error (${error.extensionPath}): ${error.error}`);
++			},
++		});

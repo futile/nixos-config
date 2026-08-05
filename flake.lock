@@ -39,16 +39,16 @@
     "fdietze-dotfiles": {
       "flake": false,
       "locked": {
-        "lastModified": 1785546149,
-        "narHash": "sha256-UHFGfjErKPIMjddbKCnFiXGEuBj5PiIaX8jBkwe0jig=",
+        "lastModified": 1785788204,
+        "narHash": "sha256-S3Z5LraFZg7llukw3WVqvRjFmPtDAcEp/IhyRPrQx9I=",
         "ref": "refs/heads/master",
-        "rev": "177de6af6a16da10670d488264dd8c27051b4ae3",
-        "revCount": 1782,
+        "rev": "262fb764dedc2678b1522a21cbbd8818622be56c",
+        "revCount": 1792,
         "type": "git",
         "url": "https://github.com/fdietze/dotfiles"
       },
       "original": {
-        "rev": "177de6af6a16da10670d488264dd8c27051b4ae3",
+        "rev": "262fb764dedc2678b1522a21cbbd8818622be56c",
         "type": "git",
         "url": "https://github.com/fdietze/dotfiles"
       }

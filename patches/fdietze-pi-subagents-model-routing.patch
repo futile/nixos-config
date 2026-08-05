@@ -1,0 +1,19 @@
+diff --git a/index.ts b/index.ts
+index d2bf54d..6e95381 100644
+--- a/index.ts
++++ b/index.ts
+@@ -404 +404,2 @@ export default function subagents(pi: ExtensionAPI) {
+-				"corrections) to unblock its work." +
++				"corrections) to unblock its work. Follow the active AGENTS.md model-routing policy when choosing model and " +
++				"thinking level; inheritance is only the fallback when no policy selects another route." +
+@@ -415,2 +416,3 @@ export default function subagents(pi: ExtensionAPI) {
+-							"Omit to inherit your current model (the default — almost always correct). Set 'provider/id' " +
+-							"ONLY when the user explicitly named a specific model; a wrong value returns the available list.",
++							"Omit to inherit when no active routing policy selects another model. Otherwise pass the " +
++							"'provider/id' selected by AGENTS.md or explicitly requested by the user; a wrong value " +
++							"returns the available list.",
+@@ -421 +423,3 @@ export default function subagents(pi: ExtensionAPI) {
+-						description: "Omit to inherit your current effective thinking level.",
++						description:
++							"Omit to inherit the spawning agent's effective level. Otherwise set the level selected " +
++							"by AGENTS.md or the user; Pi clamps it to the target model's capabilities.",
