@@ -125,14 +125,15 @@ Every subagent prompt should include:
 
 ## Context Hygiene
 
-When reversible context-editing tools exist:
+When reversible context-editing tools are available:
 
-- End each exploration, debugging, implementation, and verification phase with context maintenance.
-- Before switching phase or task and before final verification, orient over context and batch-collapse completed or superseded material.
-- Collapse bulky reads, logs, test output, rejected paths, and completed details after capturing conclusions.
-- After several large tool results, check context pressure rather than waiting for auto-compaction.
-- Keep governing instructions, active user request, unresolved errors, open decisions, and verbatim-next-phase needs live.
-- Context maintenance completes each phase; do not defer it to session end.
+- Treat phase boundaries, point before final verification, and completed batches within a long exploration, debugging, implementation, or verification phase as context-maintenance checkpoints. During a long phase, reassess after several large tool results; do not wait for phase end or automatic compaction.
+- A checkpoint requires judgment, not necessarily a `context_map` call or a fold. Material being safe to fold is not by itself enough reason to fold it, and a no-op assessment satisfies the checkpoint.
+- Fold when there is meaningful completed or superseded bulk and either enough subsequent model/tool work is likely to reuse smaller context, or context-window or quality pressure justifies immediate maintenance.
+- Prefer to piggy-back maintenance on an already-required tool loop. If a final response is imminent and pressure is low, finish instead of creating a maintenance-only round trip.
+- When maintenance is worthwhile, orient with `context_map` and batch-collapse bulky reads, logs, compiler or test output, rejected approaches, and completed details after capturing their conclusions in a resume-quality summary. Prefer one useful batch over folding small items individually.
+- Keep governing instructions, active user request, unresolved errors, active evidence, open decisions, and information needed verbatim for upcoming work live.
+- A recent successful maintenance pass satisfies later phase-end checkpoints unless substantial new foldable bulk has accumulated. Interpret “collapse immediately once a topic closes” as “assess promptly and batch-collapse when worthwhile,” not as a requirement to fold every completed item.
 
 ## Coding and Implementation Guidelines
 

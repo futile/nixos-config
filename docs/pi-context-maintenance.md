@@ -77,54 +77,43 @@ therefore fire several times before the user receives the final answer.
 continuation can follow it. `agent_settled` is the lifecycle event indicating
 that Pi has no more automatic work for the current interaction.
 
-## Existing instruction interpretation
+## Global instruction policy
 
-The shared global `AGENTS.md` currently says:
+Before this research, the shared global instructions strongly required
+phase-end maintenance but only said to "check context pressure" after several
+large results. An agent could therefore comply while postponing most
+maintenance until the end of a long phase. They also did not distinguish
+material that was safe to fold from material worth folding immediately.
 
-> - End each exploration, debugging, implementation, and verification phase
->   with context maintenance.
-> - Before switching phase or task and before final verification, orient over
->   context and batch-collapse completed or superseded material.
-> - Collapse bulky reads, logs, test output, rejected paths, and completed
->   details after capturing conclusions.
-> - After several large tool results, check context pressure rather than
->   waiting for auto-compaction.
-> - Keep governing instructions, active user request, unresolved errors, open
->   decisions, and verbatim-next-phase needs live.
-> - Context maintenance completes each phase; do not defer it to session end.
+The readable `AGENTS.source.md` and generated `AGENTS.md` now adopt this policy:
 
-The readable `AGENTS.source.md` has equivalent wording. The user-global Pi file
-resolves to the generated repository file.
+> - Treat phase boundaries, the point before final verification, and completed
+>   batches within a long phase as context-maintenance checkpoints. Reassess
+>   after several large tool results rather than waiting for phase end or
+>   automatic compaction.
+> - A checkpoint requires judgment, not necessarily a `context_map` call or a
+>   fold. Safe-to-fold material alone is not enough reason to fold, and a no-op
+>   assessment satisfies the checkpoint.
+> - Fold meaningful completed or superseded bulk when enough subsequent work is
+>   likely to reuse the smaller context, or when context-window or quality
+>   pressure justifies immediate maintenance.
+> - Prefer to piggy-back maintenance on an already-required tool loop. If a
+>   final response is imminent and pressure is low, finish instead of creating
+>   a maintenance-only round trip.
+> - When maintenance is worthwhile, use `context_map` and batch-collapse bulky
+>   completed material with resume-quality conclusions. Prefer one useful batch
+>   over folding small items individually.
+> - Keep governing instructions, the active request, unresolved errors, active
+>   evidence, open decisions, and verbatim upcoming needs live.
+> - Treat a recent successful pass as satisfying later phase-end checkpoints
+>   unless substantial new foldable bulk accumulated.
 
-The phase-boundary requirement is strong. The intra-phase requirement is less
-strong because "check context pressure" does not explicitly require a
-maintenance pass and can be read as "fold only when nearly full." An agent can
-therefore comply plausibly while postponing most maintenance until the end of
-a long phase.
-
-A stronger policy should name intra-phase batches as checkpoints while making
-clear that a checkpoint may be a no-op:
-
-```markdown
-- Treat both phase boundaries and completed batches within a long phase as
-  context-maintenance checkpoints.
-- Do not wait for the end of a long phase. After several large results, or when
-  a batch is no longer needed verbatim, assess it for batch folding even when
-  the context is not yet near its limit.
-- Fold only when there is meaningful completed or superseded bulk and either
-  enough work remains to benefit or context pressure makes immediate folding
-  worthwhile. A no-op assessment satisfies the checkpoint.
-- If maintenance was performed recently and no substantial new foldable
-  material has accumulated, later phase-end checkpoints are already satisfied.
-```
-
-The currently pinned context-prune prompt separately says to "collapse
-immediately once a topic closes." That active wording is stronger than the
-safety/materiality/timing policy above and can cause economically pointless
-small folds. Before implementing the reminder, align the injected tool guidance
-with this document, for example by changing "collapse immediately" to "assess
-promptly and batch-collapse when worthwhile." A reminder alone should not be
-expected to override contradictory standing guidance reliably.
+The user-global Pi file resolves to the generated repository file. The adopted
+policy also explicitly interprets context-prune's generic "collapse immediately
+once a topic closes" wording as "assess promptly and batch-collapse when
+worthwhile," not as a requirement to fold every completed item. This is the
+immediate compatibility rule; if context-prune's injected guidance becomes
+configurable, align that prompt directly as well.
 
 ## Model capability and reminder value
 
@@ -624,8 +613,10 @@ has not been measured for this setup.
 
 ## Recommended implementation sequence
 
-1. Reconcile context-prune's active "collapse immediately" prompt with the
-   safety/materiality/timing policy in this document.
+1. Keep context-prune's active "collapse immediately" guidance aligned with the
+   adopted safety/materiality/timing policy. The global instructions now supply
+   the compatibility interpretation; update the injected prompt directly if it
+   becomes configurable.
 2. Implement a standalone, visible-but-non-user reminder extension with
    structured debug logging.
 3. Use Option A's growth/high-water policy with the piggy-back-first behavior
