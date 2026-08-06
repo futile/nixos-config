@@ -242,6 +242,8 @@ fdietze's context-prune extension edits the actual conversation sent to the mode
 
 The extension preserves tool call/result units, persists folds across session reloads and branches, and instructs the model to keep governing instructions, unresolved errors, and open loops live. It does not automatically prune at a token threshold or call a separate summarization model; the active model chooses ranges and writes any digest.
 
+See [`pi-context-maintenance.md`](pi-context-maintenance.md) for cache-aware trigger design, reminder semantics, and maintenance economics. Its proposed safety/materiality/timing policy must be reconciled with the pinned extension's current instruction to collapse immediately once a topic closes before implementing an automatic reminder.
+
 Context-mode and context-prune would be complementary if context-mode is added in a later phase:
 
 | Concern | context-mode | context-prune |
