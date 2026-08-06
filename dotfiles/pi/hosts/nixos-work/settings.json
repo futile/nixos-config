@@ -13,5 +13,7 @@
   "terminal": {
     "showTerminalProgress": true
   },
-  "hideThinkingBlock": false
+  "hideThinkingBlock": false,
+  "followUpMode": "all",
+  "showCacheMissNotices": true
 }
