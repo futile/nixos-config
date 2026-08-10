@@ -1,4 +1,7 @@
 {
+  "settings": {
+    "mcpFooterStatus": "compact"
+  },
   "mcpServers": {
     "DeepWiki": {
       "url": "https://mcp.deepwiki.com/mcp",

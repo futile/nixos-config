@@ -115,10 +115,15 @@ Reasons:
   than a local fork;
 - a local fork still makes future adaptation and selective simplification easy.
 
-The first fork change should add a normal, generic extension-status segment
-based on `footerData.getExtensionStatuses()`. It must not import or query the
-Fast controller directly. Preserve status ordering, ANSI-aware width
-calculation, and graceful narrow-terminal behavior.
+The fork provides a normal, generic extension-status segment based on
+`footerData.getExtensionStatuses()`. It preserves each map key so selected
+statuses can be placed without coupling the renderer to their publishers. The
+configurable `layout.rightAlignedExtensionStatuses` list defaults to only
+`mcp`; those values use spare right-edge space and drop before any left-side
+content. Other statuses, including future Fast state, remain inline. The
+statusline must not import or query the Fast controller directly. Preserve
+status ordering, ANSI-aware width calculation, and graceful narrow-terminal
+behavior.
 
 Retain the one-second refresh needed for live quota-reset countdowns. Active
 turn/session timers and other nonessential features may be removed later, but
@@ -133,9 +138,10 @@ As of the date above:
   `openai-codex/gpt-5.6-sol` at `high` thinking level.
 - `dotfiles/pi/hosts/nixos-work/settings.json` contains the commit-pinned
   `futile/pi-statusline` Git package at
-  `7452628cfb5c577ba628528396e0e832af0493c7`. This revision includes generic
-  extension statuses, aggregate agent activity/progress, and the project-local
-  working-tree override described below.
+  `d935e53609efd510c8e4615c25dc8c6128674ae3`. This revision includes generic
+  keyed extension statuses, MCP-only right alignment, aggregate agent
+  activity/progress, and the project-local working-tree override described
+  below.
 - `home-modules/pi.nix` copies fdietze's subagent source from the pinned
   `fdietze-dotfiles` flake input and applies four repository patches:
   - `patches/fdietze-pi-subagents-bind-errors.patch`

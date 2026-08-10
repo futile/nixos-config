@@ -7,7 +7,7 @@
   "packages": [
     "npm:pi-mcp-adapter@2.17.0",
     "npm:@juicesharp/rpiv-web-tools@2.3.1",
-    "git:github.com/futile/pi-statusline@7452628cfb5c577ba628528396e0e832af0493c7"
+    "git:github.com/futile/pi-statusline@d935e53609efd510c8e4615c25dc8c6128674ae3"
   ],
   "steeringMode": "all",
   "terminal": {
