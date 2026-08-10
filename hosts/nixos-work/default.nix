@@ -238,8 +238,6 @@ in
     # hot corners in other corners than top-left (to mimic macos better)
     gnomeExtensions.custom-hot-corners-extended
 
-    nordic
-
     # monitoring
     lm_sensors
     cachix # just use cachix system-wide

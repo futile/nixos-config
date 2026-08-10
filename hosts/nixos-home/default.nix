@@ -229,7 +229,6 @@ in
     # gnomeExtensions.pop-launcher-super-key # gone :(
     gnomeExtensions.vitals
     # gnomeExtensions.topicons-plus # package broken
-    nordic
 
     # monitoring
     lm_sensors
