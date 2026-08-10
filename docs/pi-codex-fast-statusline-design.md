@@ -138,10 +138,10 @@ As of the date above:
   `openai-codex/gpt-5.6-sol` at `high` thinking level.
 - `dotfiles/pi/hosts/nixos-work/settings.json` contains the commit-pinned
   `futile/pi-statusline` Git package at
-  `d935e53609efd510c8e4615c25dc8c6128674ae3`. This revision includes generic
-  keyed extension statuses, MCP-only right alignment, aggregate agent
-  activity/progress, and the project-local working-tree override described
-  below.
+  `416c2ec2bc29da56bc2cc2aa271607d11d888661`. This revision includes generic
+  keyed extension statuses, MCP-only right alignment with a compact `🔌 MCP N/N`
+  presentation under the default emoji icon style, aggregate agent activity/progress,
+  and the project-local working-tree override described below.
 - `home-modules/pi.nix` copies fdietze's subagent source from the pinned
   `fdietze-dotfiles` flake input and applies four repository patches:
   - `patches/fdietze-pi-subagents-bind-errors.patch`
