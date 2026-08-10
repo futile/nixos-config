@@ -1,0 +1,630 @@
+diff --git a/activity.test.ts b/activity.test.ts
+new file mode 100644
+index 0000000..849c2f8
+--- /dev/null
++++ b/activity.test.ts
+@@ -0,0 +1,158 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import {
++	ActivityPublisher,
++	hasActiveBackgroundAgent,
++	installActivityNotifier,
++	isBackgroundAgentActive,
++	notifyActivity,
++	subagentsActivityUpdate,
++} from "./activity.ts";
++
++type RecordState = Parameters<typeof isBackgroundAgentActive>[0];
++const rec = (state: Partial<RecordState> & Pick<RecordState, "name">): RecordState => ({
++	pending: false,
++	streaming: false,
++	compacting: false,
++	...state,
++});
++const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
++
++test("background activity follows unsettled work even when an agent has been halted", () => {
++	assert.equal(isBackgroundAgentActive(rec({ name: "pending", pending: true })), true);
++	assert.equal(isBackgroundAgentActive(rec({ name: "streaming", streaming: true })), true);
++	assert.equal(isBackgroundAgentActive(rec({ name: "compacting", compacting: true })), true);
++	assert.equal(isBackgroundAgentActive(rec({ name: "main", streaming: true })), false);
++	assert.equal(isBackgroundAgentActive({ ...rec({ name: "halted" }), streaming: true, halted: true } as RecordState), true);
++});
++
++test("aggregate activity is a boolean union independent of group pause state", () => {
++	const records = [
++		rec({ name: "one", streaming: true }),
++		rec({ name: "two", compacting: true }),
++		rec({ name: "idle" }),
++	];
++	assert.equal(hasActiveBackgroundAgent(records), true);
++	assert.equal(hasActiveBackgroundAgent(records.map((r) => ({ ...r, streaming: false, compacting: false }))), false);
++});
++
++test("source snapshots keep raw activity independent from terminal-progress policy", () => {
++	assert.deepEqual(subagentsActivityUpdate(true, false), {
++		version: 1,
++		source: "fdietze-subagents",
++		active: true,
++		terminalProgress: false,
++	});
++	assert.equal(subagentsActivityUpdate(true, true).terminalProgress, true);
++	assert.equal(subagentsActivityUpdate(false, true).terminalProgress, false);
++});
++
++test("publisher reconciles live terminal-progress setting changes during continuous work", async () => {
++	let active = true;
++	let terminalProgressEnabled = true;
++	const updates: ReturnType<typeof subagentsActivityUpdate>[] = [];
++	const publisher = new ActivityPublisher({
++		readActive: () => active,
++		readTerminalProgressEnabled: async () => terminalProgressEnabled,
++		emit: (update) => updates.push(update),
++		pollMs: 60_000,
++	});
++
++	publisher.notify(true);
++	await publisher.refreshTerminalProgress();
++	await flush();
++	assert.deepEqual(updates.at(-1), subagentsActivityUpdate(true, true));
++
++	terminalProgressEnabled = false;
++	await publisher.refreshTerminalProgress();
++	await flush();
++	assert.deepEqual(updates.at(-1), subagentsActivityUpdate(true, false));
++
++	terminalProgressEnabled = true;
++	await publisher.refreshTerminalProgress();
++	await flush();
++	assert.deepEqual(updates.at(-1), subagentsActivityUpdate(true, true));
++	assert.ok(updates.every((update) => update.active), "settings changes must not stop raw activity");
++
++	active = false;
++	publisher.notify();
++	await flush();
++	assert.deepEqual(updates.at(-1), subagentsActivityUpdate(false, true));
++	publisher.dispose();
++});
++
++test("publisher polling starts and stops with activity and read failures revoke OSC", async () => {
++	const originalSetInterval = globalThis.setInterval;
++	const originalClearInterval = globalThis.clearInterval;
++	let pollTick: (() => void) | undefined;
++	let starts = 0;
++	let stops = 0;
++	globalThis.setInterval = ((callback: () => void) => {
++		starts++;
++		pollTick = callback;
++		return 1;
++	}) as typeof setInterval;
++	globalThis.clearInterval = (() => { stops++; }) as typeof clearInterval;
++	let publisher: ActivityPublisher | undefined;
++	try {
++		let active = false;
++		let terminalProgressEnabled = true;
++		let rejectRead = false;
++		const updates: ReturnType<typeof subagentsActivityUpdate>[] = [];
++		publisher = new ActivityPublisher({
++			readActive: () => active,
++			readTerminalProgressEnabled: async () => {
++				if (rejectRead) throw new Error("settings unavailable");
++				return terminalProgressEnabled;
++			},
++			emit: (update) => updates.push(update),
++		});
++
++		active = true;
++		publisher.notify();
++		await publisher.refreshTerminalProgress();
++		await flush();
++		assert.equal(starts, 1);
++		assert.deepEqual(updates.at(-1), subagentsActivityUpdate(true, true));
++
++		terminalProgressEnabled = false;
++		pollTick?.();
++		await flush();
++		assert.deepEqual(updates.at(-1), subagentsActivityUpdate(true, false));
++
++		terminalProgressEnabled = true;
++		pollTick?.();
++		await flush();
++		assert.deepEqual(updates.at(-1), subagentsActivityUpdate(true, true));
++		rejectRead = true;
++		pollTick?.();
++		await flush();
++		assert.deepEqual(updates.at(-1), subagentsActivityUpdate(true, false));
++
++		active = false;
++		publisher.notify();
++		await flush();
++		assert.equal(stops, 1);
++		assert.deepEqual(updates.at(-1), subagentsActivityUpdate(false, false));
++	} finally {
++		publisher?.dispose();
++		globalThis.setInterval = originalSetInterval;
++		globalThis.clearInterval = originalClearInterval;
++	}
++});
++
++test("retained child callbacks follow the newest reload notifier", () => {
++	const calls: string[] = [];
++	const clearOld = installActivityNotifier(() => calls.push("old"));
++	const retainedChildCallback = notifyActivity;
++	retainedChildCallback();
++
++	const clearNew = installActivityNotifier(() => calls.push("new"));
++	retainedChildCallback();
++	clearOld();
++	retainedChildCallback();
++	clearNew();
++	retainedChildCallback();
++
++	assert.deepEqual(calls, ["old", "new", "new"]);
++});
+diff --git a/activity.ts b/activity.ts
+new file mode 100644
+index 0000000..3fa996e
+--- /dev/null
++++ b/activity.ts
+@@ -0,0 +1,168 @@
++import type { AgentRecord } from "./engine.ts";
++
++/** Versioned foreground extension-bus protocol shared with terminal/activity consumers. */
++export const AGENT_ACTIVITY_UPDATE_EVENT = "pi.agent-activity.v1:update";
++export const AGENT_ACTIVITY_REQUEST_EVENT = "pi.agent-activity.v1:request";
++export const SUBAGENTS_ACTIVITY_SOURCE = "fdietze-subagents";
++
++export interface AgentActivitySourceUpdate {
++	version: 1;
++	source: string;
++	/** Raw work state, independent of presentation settings. */
++	active: boolean;
++	/** Whether this source currently requests terminal OSC progress. */
++	terminalProgress: boolean;
++}
++
++/** A background record contributes while any asynchronous work remains unsettled. */
++export function isBackgroundAgentActive(
++	rec: Pick<AgentRecord, "name" | "pending" | "streaming" | "compacting">,
++): boolean {
++	return rec.name !== "main" && Boolean(rec.pending || rec.streaming || rec.compacting);
++}
++
++/** Union activity: concurrent records intentionally count as one wall-clock interval. */
++export function hasActiveBackgroundAgent(
++	records: Iterable<Pick<AgentRecord, "name" | "pending" | "streaming" | "compacting">>,
++): boolean {
++	for (const rec of records) {
++		if (isBackgroundAgentActive(rec)) return true;
++	}
++	return false;
++}
++
++export function subagentsActivityUpdate(active: boolean, terminalProgressEnabled: boolean): AgentActivitySourceUpdate {
++	return {
++		version: 1,
++		source: SUBAGENTS_ACTIVITY_SOURCE,
++		active,
++		terminalProgress: active && terminalProgressEnabled,
++	};
++}
++
++export interface ActivityPublisherOptions {
++	readActive(): boolean;
++	readTerminalProgressEnabled(): Promise<boolean>;
++	emit(update: AgentActivitySourceUpdate): void;
++	pollMs?: number;
++}
++
++/**
++ * Coalesced, reload-disposable publisher for the foreground event bus.
++ *
++ * Raw work is published immediately. OSC permission is refreshed asynchronously and polled while
++ * work remains active, so a live /settings toggle is reconciled without waiting for another agent
++ * edge. A newly active interval fails closed until the current setting has been read.
++ */
++export class ActivityPublisher {
++	private readonly options: ActivityPublisherOptions;
++	private active: boolean;
++	private terminalProgressEnabled = false;
++	private lastPublished: string | undefined;
++	private queued = false;
++	private forceQueued = false;
++	private refreshPromise: Promise<void> | undefined;
++	private poll: ReturnType<typeof setInterval> | undefined;
++	private disposed = false;
++
++	constructor(options: ActivityPublisherOptions) {
++		this.options = options;
++		this.active = options.readActive();
++	}
++
++	notify(force = false): void {
++		if (this.disposed) return;
++		const next = this.options.readActive();
++		const changed = next !== this.active;
++		if (next && !this.active) this.terminalProgressEnabled = false;
++		this.active = next;
++		this.syncPoll();
++		if (force || changed) {
++			this.schedule(force);
++			void this.refreshTerminalProgress();
++		}
++	}
++
++	refreshTerminalProgress(): Promise<void> {
++		if (this.disposed) return Promise.resolve();
++		if (this.refreshPromise) return this.refreshPromise;
++		this.refreshPromise = (async () => {
++			let next = false;
++			try {
++				next = await this.options.readTerminalProgressEnabled();
++			} catch {
++				/* fail closed */
++			}
++			if (!this.disposed && next !== this.terminalProgressEnabled) {
++				this.terminalProgressEnabled = next;
++				this.schedule();
++			}
++		})().finally(() => {
++			this.refreshPromise = undefined;
++		});
++		return this.refreshPromise;
++	}
++
++	dispose(): void {
++		if (this.disposed) return;
++		this.disposed = true;
++		if (this.poll) clearInterval(this.poll);
++		this.poll = undefined;
++	}
++
++	private syncPoll(): void {
++		if (this.active && !this.poll) {
++			this.poll = setInterval(() => void this.refreshTerminalProgress(), this.options.pollMs ?? 1_000);
++			this.poll.unref?.();
++		} else if (!this.active && this.poll) {
++			clearInterval(this.poll);
++			this.poll = undefined;
++		}
++	}
++
++	private schedule(force = false): void {
++		this.forceQueued ||= force;
++		if (this.queued) return;
++		this.queued = true;
++		queueMicrotask(() => {
++			this.queued = false;
++			if (this.disposed) return;
++			const shouldForce = this.forceQueued;
++			this.forceQueued = false;
++			const update = subagentsActivityUpdate(this.active, this.terminalProgressEnabled);
++			const key = `${update.active}:${update.terminalProgress}`;
++			if (!shouldForce && key === this.lastPublished) return;
++			try {
++				this.options.emit(update);
++				this.lastPublished = key;
++			} catch {
++				// A Pi runtime can be invalidated while a queued microtask drains during /reload.
++				// The new runtime requests a fresh snapshot, so this stale publication is discardable.
++			}
++		});
++	}
++}
++
++const ACTIVITY_NOTIFIER_KEY = "__fdietzeSubagentsActivityNotifier_v1";
++type ActivityNotifier = { owner: symbol; notify: () => void };
++
++/** Install the latest foreground notifier; cleanup cannot remove a newer reload's notifier. */
++export function installActivityNotifier(notify: () => void): () => void {
++	const owner = Symbol("subagents-activity-notifier");
++	const global = globalThis as Record<string, unknown>;
++	global[ACTIVITY_NOTIFIER_KEY] = { owner, notify } satisfies ActivityNotifier;
++	return () => {
++		const current = global[ACTIVITY_NOTIFIER_KEY] as ActivityNotifier | undefined;
++		if (current?.owner === owner) delete global[ACTIVITY_NOTIFIER_KEY];
++	};
++}
++
++/** Retained child callbacks resolve the current foreground runtime instead of capturing old Pi. */
++export function notifyActivity(): void {
++	const notifier = (globalThis as Record<string, unknown>)[ACTIVITY_NOTIFIER_KEY] as ActivityNotifier | undefined;
++	try {
++		notifier?.notify();
++	} catch {
++		/* foreground observability is best-effort and must never fail a child lifecycle event */
++	}
++}
+diff --git a/engine.ts b/engine.ts
+index 438ad8b..6ba8341 100644
+--- a/engine.ts
++++ b/engine.ts
+@@ -55,6 +55,8 @@ export interface AgentRecord {
+ 	turns: number;
+ 	lastActivity: number;
+ 	streaming: boolean;
++	/** Context compaction is active even though the model stream may be idle. */
++	compacting?: boolean;
+ 	/** System prompt the agent runs with (the spawn prompt, not the infra preamble). Persisted to roster.json so a restart can rebuild the session. */
+ 	systemPrompt?: string;
+ 	/** Absolute path of this agent's session JSONL on disk (undefined for 'main' + in-memory). */
+diff --git a/index.ts b/index.ts
+index 48352e2..b24840a 100644
+--- a/index.ts
++++ b/index.ts
+@@ -23,6 +23,14 @@ import { StringEnum } from "@earendil-works/pi-ai";
+ import { Text, truncateToWidth } from "@earendil-works/pi-tui";
+ import { Type } from "typebox";
+ import { orderAgents } from "./agent-order.ts";
++import {
++	AGENT_ACTIVITY_REQUEST_EVENT,
++	AGENT_ACTIVITY_UPDATE_EVENT,
++	ActivityPublisher,
++	hasActiveBackgroundAgent,
++	installActivityNotifier,
++	notifyActivity,
++} from "./activity.ts";
+ import { parseChildExtensionPolicy } from "./child-extension-policy.ts";
+ import { Engine, statusLabel, type AgentHandle } from "./engine.ts";
+ import {
+@@ -288,6 +296,23 @@ export default function subagents(pi: ExtensionAPI) {
+ 	// While the /agents panel is open, hide the persistent roster (otherwise doubled).
+ 	let panelOpen = false;
+ 
++	// Publish one aggregate background source over Pi's shared foreground extension bus.
++	// Raw activity is independent from OSC policy so consumers such as the active-time meter
++	// continue to work when showTerminalProgress is disabled. The publisher microtask-coalesces
++	// attach + immediate delivery, polls the presentation setting only while work is active, and
++	// becomes inert when its extension runtime is replaced during /reload.
++	const activityPublisher = new ActivityPublisher({
++		readActive: () => hasActiveBackgroundAgent(engine.list()),
++		readTerminalProgressEnabled: async () => {
++			if (!settingsMgr) settingsMgr = SettingsManager.create(cwd, realAgentDir);
++			await settingsMgr.reload();
++			return settingsMgr.getShowTerminalProgress();
++		},
++		emit: (update) => pi.events.emit(AGENT_ACTIVITY_UPDATE_EVENT, update),
++	});
++	const updateActivitySource = (force = false) => activityPublisher.notify(force);
++	pi.events.on(AGENT_ACTIVITY_REQUEST_EVENT, () => updateActivitySource(true));
++
+ 	// Capture the model from every foreground handler ctx (more reliable than model_select alone).
+ 	const captureForegroundModel = (m: ModelLike | undefined) => {
+ 		if (!m) return;
+@@ -360,10 +385,24 @@ export default function subagents(pi: ExtensionAPI) {
+ 		}
+ 	};
+ 
++	// Retained child sessions call this stable global indirection. Each /reload installs its fresh
++	// publisher/UI callback, and an old runtime's cleanup cannot remove the newer callback.
++	const clearActivityNotifier = installActivityNotifier(() => {
++		updateActivitySource();
++		updateStatus();
++	});
++
+ 	// Update the status on every engine event; escalate budget-halts to 'main' exactly once
+ 	// (the halt event fires once — the frozen guard in recordTurnStart prevents re-entry).
+-	// A manual /pause-agents does NOT escalate (the human initiated it).
+-	engine.subscribe((e) => {
++	// A manual /pause-agents does NOT escalate (the human initiated it). The engine is itself a
++	// global singleton, so replace the prior runtime's subscriber instead of accumulating stale
++	// callbacks that capture an invalidated Pi API.
++	const subscriberKey = "__subagentsForegroundSubscriber_v1";
++	type ForegroundSubscriber = { owner: symbol; unsubscribe: () => void };
++	const subscriberGlobal = globalThis as Record<string, unknown>;
++	(subscriberGlobal[subscriberKey] as ForegroundSubscriber | undefined)?.unsubscribe();
++	const subscriberOwner = Symbol("subagents-foreground-subscriber");
++	const unsubscribeEngine = engine.subscribe((e) => {
+ 		if (e.type === "halt" && e.reason === "budget") {
+ 			try {
+ 				deliverToMain(BUDGET_ESCALATION(engine.budget.total));
+@@ -371,8 +410,15 @@ export default function subagents(pi: ExtensionAPI) {
+ 				/* no live foreground session — escalation surfaces in /feed + panel instead */
+ 			}
+ 		}
++		updateActivitySource();
+ 		updateStatus();
+ 	});
++	subscriberGlobal[subscriberKey] = { owner: subscriberOwner, unsubscribe: unsubscribeEngine } satisfies ForegroundSubscriber;
++	const clearEngineSubscriber = () => {
++		unsubscribeEngine();
++		const current = subscriberGlobal[subscriberKey] as ForegroundSubscriber | undefined;
++		if (current?.owner === subscriberOwner) delete subscriberGlobal[subscriberKey];
++	};
+ 
+ 	const resolveModel = (ref: string | undefined): ResolvedModel | undefined => {
+ 		if (ref && ref.includes("/")) {
+@@ -673,7 +719,7 @@ export default function subagents(pi: ExtensionAPI) {
+ 		engine,
+ 		resolveModel,
+ 		createSession,
+-		onActivity: updateStatus,
++		onActivity: notifyActivity,
+ 		listAvailableModels: () => (modelRegistry?.getAvailable() ?? []).map((m) => `${m.provider}/${m.id}`),
+ 	});
+ 
+@@ -842,17 +888,26 @@ export default function subagents(pi: ExtensionAPI) {
+ 			});
+ 		}
+ 		await restoreSwarm();
++		updateActivitySource(true);
++		await activityPublisher.refreshTerminalProgress();
+ 		updateStatus();
+ 	});
+ 
+ 	pi.on("session_shutdown", async (event) => {
+-		// A same-version /reload must retain the singleton's live children. Real foreground
+-		// replacement/quit closes their runtimes but deliberately leaves roster.json intact.
+-		if (event.reason === "reload") return;
++		// A same-version /reload retains the singleton's live children, but must detach every
++		// callback owned by the invalidated foreground runtime. Retained children resolve the new
++		// notifier through globalThis after the replacement extension loads.
++		if (event.reason === "reload") {
++			activityPublisher.dispose();
++			clearActivityNotifier();
++			clearEngineSubscriber();
++			return;
++		}
+ 		const previousSubDir = subDir;
+ 		subDir = undefined;
+ 		await engine.shutdownAll();
+ 		if (previousSubDir) restoredSet().delete(previousSubDir);
++		updateActivitySource(true);
+ 		updateStatus();
+ 	});
+ 
+diff --git a/spawner.test.ts b/spawner.test.ts
+index 8bccf6a..be56cc7 100644
+--- a/spawner.test.ts
++++ b/spawner.test.ts
+@@ -1,5 +1,6 @@
+ import { test } from "node:test";
+ import assert from "node:assert/strict";
++import { isBackgroundAgentActive } from "./activity.ts";
+ import { Engine } from "./engine.ts";
+ import { createSpawner, type SessionLike, type ThinkingLevel } from "./spawner.ts";
+ 
+@@ -81,6 +82,7 @@ test("smoke: spawn -> deliver -> reply -> budget abort -> halt", async () => {
+ 	assert.deepEqual(sessions.get("echo")?.delivered, ["[message from main]: ping"]);
+ 	// Inter-agent delivery uses steer (next-boundary), not followUp.
+ 	assert.equal(sessions.get("echo")?.lastDeliverAs, "steer");
++	assert.equal(engine.get("echo")?.streaming, true, "delivery marks work before the SDK's agent_start event");
+ 
+ 	// echo -> main (the reply path)
+ 	await engine.route("echo", "main", "pong");
+@@ -200,6 +202,56 @@ test("restored agents expose the reopened session's effective thinking level", (
+ 	assert.equal(engine.get("restored")?.thinkingLevel, "low");
+ });
+ 
++test("background compaction contributes activity independently from streaming", async () => {
++	const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3, turnBudget: 5 });
++	withMain(engine, []);
++	const session = new FakeSession();
++	let activityNotifications = 0;
++	const spawner = createSpawner({
++		engine,
++		resolveModel: () => ({ provider: "t", id: "m", model: {} }),
++		createSession: async () => ({ session }),
++		onActivity: () => activityNotifications++,
++	});
++	await spawner.spawnAgent({ name: "compact", systemPrompt: "r" }, "main");
++
++	session.emit("compaction_start");
++	assert.equal(engine.get("compact")?.compacting, true);
++	assert.equal(engine.get("compact")?.streaming, false);
++	session.emit("compaction_end");
++	assert.equal(engine.get("compact")?.compacting, false);
++	assert.ok(activityNotifications >= 4, "reserve, attach, and both compaction transitions notify");
++});
++
++test("delivery rejected during manual compaction keeps compaction active until compaction_end", async () => {
++	const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3, turnBudget: 5 });
++	withMain(engine, []);
++	class CompactingSession extends FakeSession {
++		async sendUserMessage(): Promise<void> {
++			throw new Error("Cannot prompt while compacting");
++		}
++	}
++	const session = new CompactingSession();
++	const spawner = createSpawner({
++		engine,
++		resolveModel: () => ({ provider: "t", id: "m", model: {} }),
++		createSession: async () => ({ session }),
++	});
++	await spawner.spawnAgent({ name: "compact", systemPrompt: "r" }, "main");
++
++	session.emit("compaction_start");
++	await engine.route("main", "compact", "arrives during compaction");
++	await new Promise((resolve) => setImmediate(resolve));
++	const during = engine.get("compact")!;
++	assert.equal(during.streaming, false, "failed delivery clears only its speculative streaming state");
++	assert.equal(during.compacting, true);
++	assert.equal(isBackgroundAgentActive(during), true);
++
++	session.emit("compaction_end");
++	assert.equal(engine.get("compact")?.compacting, false);
++	assert.equal(isBackgroundAgentActive(engine.get("compact")!), false);
++});
++
+ test("view.getStreamingMessage tracks the in-progress assistant message, cleared on agent_end", async () => {
+ 	// Regression: the panel seeds "Thinking..." on switch from this; without it a slow-thinking
+ 	// agent shows no label until its next delta event arrives (seconds later).
+diff --git a/spawner.ts b/spawner.ts
+index 224a0ee..e69788c 100644
+--- a/spawner.ts
++++ b/spawner.ts
+@@ -155,6 +155,14 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 				// Surface the turn's terminal outcome at idle (error after retries / truncated).
+ 				engine.setStopReason(name, lastStopReason(session.messages));
+ 			}
++			if (ev.type === "compaction_start") {
++				const rec = engine.get(name);
++				if (rec) rec.compacting = true;
++			}
++			if (ev.type === "compaction_end") {
++				const rec = engine.get(name);
++				if (rec) rec.compacting = false;
++			}
+ 			onActivity?.();
+ 		});
+ 	};
+@@ -173,9 +181,16 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			// to fully stop. The child-only in-memory steeringMode "all" makes several queued
+ 			// messages arrive at that boundary. Idle targets start a turn immediately.
+ 			deliver: async (text) => {
+-				void Promise.resolve(session.sendUserMessage(text, { deliverAs: "steer" })).catch((e) =>
+-					engine.reportError(name, e instanceof Error ? e.message : String(e)),
+-				);
++				// Mark work before the SDK emits agent_start. This keeps a pending spawn continuously
++				// active when its initial message is delivered in the same event-loop turn.
++				engine.setStreaming(name, true);
++				onActivity?.();
++				void Promise.resolve(session.sendUserMessage(text, { deliverAs: "steer" })).catch((e) => {
++					// Delivery failure ends only the attempted turn. Manual compaction is an independent
++					// lifecycle and remains active until its own compaction_end event.
++					engine.reportError(name, e instanceof Error ? e.message : String(e));
++					onActivity?.();
++				});
+ 			},
+ 			abort: async () => {
+ 				await session.abort();
+@@ -215,6 +230,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			streaming: false,
+ 			halted: spec.halted,
+ 		});
++		onActivity?.();
+ 	};
+ 
+ 	const spawnAgent = async (spec: SpawnSpec, spawnerName: string): Promise<{ ok: boolean; msg: string }> => {
+@@ -226,12 +242,14 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 		// 1) Reserve the name synchronously (atomic: duplicate/cap/depth) — closes races.
+ 		const reserved = engine.reserve(spec.name, spawnerName);
+ 		if (!reserved.ok) return { ok: false, msg: `error: ${reserved.reason}` };
++		onActivity?.();
+ 		// Identity, not just the name, distinguishes this reservation from a later re-spawn.
+ 		const reservation = engine.get(spec.name);
+ 
+ 		const resolved = resolveModel(inheritRef);
+ 		if (!resolved) {
+ 			engine.release(spec.name);
++			onActivity?.();
+ 			const avail = listAvailableModels?.() ?? [];
+ 			const hint = avail.length ? `; available: ${avail.join(", ")}` : "";
+ 			return { ok: false, msg: `error: unknown model '${inheritRef ?? "(none)"}'${hint}` };
+@@ -250,6 +268,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			}));
+ 		} catch (e) {
+ 			if (engine.get(spec.name) === reservation) engine.release(spec.name);
++			onActivity?.();
+ 			return { ok: false, msg: `error: failed to start '${spec.name}': ${e instanceof Error ? e.message : String(e)}` };
+ 		}
+ 
+@@ -277,6 +296,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			systemPrompt: spec.systemPrompt,
+ 			sessionFile,
+ 		});
++		onActivity?.();
+ 
+ 		// 4) Deliver the optional first message atomically (no race; the agent is registered).
+ 		let sent = "";
