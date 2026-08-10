@@ -131,13 +131,17 @@ As of the date above:
 
 - Pi is 0.84.1 and the selected model is
   `openai-codex/gpt-5.6-sol` at `high` thinking level.
-- `dotfiles/pi/hosts/nixos-work/settings.json` contains an **unpinned**
-  `npm:@shvax/pi-statusline` package entry.
+- `dotfiles/pi/hosts/nixos-work/settings.json` contains the commit-pinned
+  `futile/pi-statusline` Git package at
+  `7452628cfb5c577ba628528396e0e832af0493c7`. This revision includes generic
+  extension statuses, aggregate agent activity/progress, and the project-local
+  working-tree override described below.
 - `home-modules/pi.nix` copies fdietze's subagent source from the pinned
-  `fdietze-dotfiles` flake input and applies three repository patches:
+  `fdietze-dotfiles` flake input and applies four repository patches:
   - `patches/fdietze-pi-subagents-bind-errors.patch`
   - `patches/fdietze-pi-subagents-model-routing.patch`
   - `patches/fdietze-pi-subagents-engine-reset.patch`
+  - `patches/fdietze-pi-subagents-activity.patch`
 - The fdietze source is pinned at
   `262fb764dedc2678b1522a21cbbd8818622be56c`.
 - Home Manager links the patched extension to
@@ -359,18 +363,29 @@ avoids nested Git state, and leaves this repository with only a reviewable
 commit pin. Do not edit Pi's managed package checkout: reconciliation resets
 and cleans Git package clones.
 
-For local iteration, install dependencies in the separate clone and launch an
-isolated Pi instance with normal extension discovery disabled:
+For normal local iteration, install dependencies and launch Pi from the fork:
 
 ```bash
-npm install --prefix ~/gits/pi-statusline
-pi --no-extensions -e ~/gits/pi-statusline/extensions/statusline.ts
+cd ~/gits/pi-statusline
+npm ci
+pi
 ```
 
-Add explicit `-e` paths for a small status-producing test extension or the
-local Fast extension when testing `getExtensionStatuses()` integration.
-Disabling normal discovery is important because loading both the upstream and
-forked statuslines would make two extensions compete for footer ownership.
+The fork's committed `.pi/settings.json` uses Pi's project-package delta
+semantics to disable the globally installed `futile/pi-statusline` extension
+and load `..` from the working tree. The project must be trusted. Pi launched
+outside this checkout continues to use the declarative commit pin, and other
+global extensions remain available.
+
+For a statusline-only smoke test, disable normal extension discovery explicitly:
+
+```bash
+pi --no-extensions -e ~/gits/pi-statusline
+```
+
+Loading the local package with `-e` while normal discovery remains enabled is
+not an override: it would load both copies and make two extensions compete for
+footer ownership.
 
 ### Fork development environment
 
@@ -499,17 +514,17 @@ flake.lock                   # committed development-tool pin
 3. In a separate compatibility commit, align the fork's Pi development
    dependencies with Pi 0.84.1 and intentionally resolve the Node type version.
 4. Add generic extension-status rendering and focused tests in the fork.
-5. Test the fork locally with `--no-extensions -e ...` and a dummy status
-   publisher.
-6. Implement the local Fast extension with pure compatibility/state/request
+5. Test the fork locally with the project override and with an isolated dummy
+   status publisher.
+6. Push the fork commit, replace the npm package entry with its full Git commit
+   pin, and reconcile Pi packages.
+7. Implement the local Fast extension with pure compatibility/state/request
    tests.
-7. Add the Fast extension to foreground Home Manager wiring and the fail-closed
+8. Add the Fast extension to foreground Home Manager wiring and the fail-closed
    child extension policy.
-8. Patch fdietze subagents for session IDs, spawn inheritance/override,
+9. Patch fdietze subagents for session IDs, spawn inheritance/override,
    owner-controlled changes, and roster/list output.
-9. Run integration tests with main, child, and nested-child sessions.
-10. Push the fork commit, replace the npm package entry with its full Git commit
-    pin, and reconcile Pi packages.
+10. Run integration tests with main, child, and nested-child sessions.
 11. Only after parity is confirmed, consider trimming unwanted statusline
     features in separate commits.
 
