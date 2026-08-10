@@ -105,6 +105,25 @@ test("desired state can remain on while model changes make Fast ineffective", as
   await pi.emit("session_shutdown", { type: "session_shutdown", reason: "quit" }, unsupported.ctx);
 });
 
+test("bare /fast and explicit /fast toggle invert only the current session", async () => {
+  const pi = load();
+  const session = fakeContext("session-toggle");
+  await pi.emit("session_start", { type: "session_start", reason: "startup" }, session.ctx);
+
+  for (const action of ["", "toggle", "", "toggle"]) {
+    const before = getFastController("session-toggle")?.getState().desired;
+    await pi.command?.handler(action, session.ctx);
+    const after = getFastController("session-toggle")?.getState();
+    assert.equal(after?.desired, !before, `${JSON.stringify(action)} should toggle desired state`);
+    assert.equal(after?.effective, !before);
+    assert.match(session.notifications.at(-1)?.[0] ?? "", /changes apply to the next provider request/i);
+  }
+
+  await pi.command?.handler("status", session.ctx);
+  assert.equal(getFastController("session-toggle")?.getState().desired, false, "status must not toggle");
+  await pi.emit("session_shutdown", { type: "session_shutdown", reason: "quit" }, session.ctx);
+});
+
 test("/fast controls only its session and reports unsupported desired state", async () => {
   const pi = load();
   const session = fakeContext("session-command", { provider: "openai", id: "gpt-5.6-sol" });
@@ -120,7 +139,7 @@ test("/fast controls only its session and reports unsupported desired state", as
   assert.equal(getFastController("session-command")?.getState().desired, false);
   assert.equal(session.notifications.at(-1)?.[1], "info", "turning Fast off is not a warning");
   await pi.command?.handler("invalid", session.ctx);
-  assert.match(session.notifications.at(-1)?.[0] ?? "", /usage: \/fast on\|off\|status/i);
+  assert.match(session.notifications.at(-1)?.[0] ?? "", /usage: \/fast \[toggle\|on\|off\|status\]/i);
 
   await pi.emit("session_shutdown", { type: "session_shutdown", reason: "quit" }, session.ctx);
 });

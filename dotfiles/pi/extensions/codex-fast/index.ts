@@ -91,20 +91,24 @@ export default function codexFast(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("fast", {
-    description: "Control Codex Fast mode for this session: /fast on|off|status",
+    description: "Toggle or control Codex Fast mode for this session: /fast [toggle|on|off|status]",
     handler: async (args, ctx) => {
       const action = args.trim().toLowerCase();
-      if (action === "on" || action === "off") {
-        const result = controller.setDesired(action === "on");
+      let enabled: boolean | undefined;
+      if (action === "" || action === "toggle") enabled = !state().desired;
+      else if (action === "on" || action === "off") enabled = action === "on";
+
+      if (enabled !== undefined) {
+        const result = controller.setDesired(enabled);
         const level = result.desired && !result.effective ? "warning" : "info";
         ctx.ui.notify(`${describeState(result)}. Changes apply to the next provider request.`, level);
         return;
       }
-      if (action === "status" || action === "") {
+      if (action === "status") {
         ctx.ui.notify(describeState(state()), "info");
         return;
       }
-      ctx.ui.notify("Usage: /fast on|off|status", "error");
+      ctx.ui.notify("Usage: /fast [toggle|on|off|status]", "error");
     },
   });
 }

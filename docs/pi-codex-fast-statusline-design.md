@@ -22,8 +22,9 @@ that mode and future extension statuses.
 
 The intended user experience is:
 
-- `/fast on`, `/fast off`, and `/fast status` control the current foreground
-  session;
+- bare `/fast` toggles the current foreground session, `/fast toggle` is the
+  explicit equivalent, and `/fast on|off|status` provides direct control and
+  inspection;
 - every foreground or child Pi session has its own Fast setting;
 - a newly spawned child inherits its owner's Fast setting unless the spawn call
   explicitly overrides it;
@@ -54,7 +55,8 @@ The extension will:
    process-wide value at startup. A change therefore applies to the next
    provider request, including the next request made by an already running
    child. It cannot alter an HTTP request that is already streaming.
-4. Register `/fast on|off|status` for the foreground session.
+4. Register `/fast [toggle|on|off|status]` for the foreground session. Bare
+   `/fast` and explicit `/fast toggle` both invert desired state.
 5. Publish its foreground indicator with `ctx.ui.setStatus(...)` so any custom
    footer can render it through `footerData.getExtensionStatuses()`.
 6. Avoid all settings, state-file, environment-variable, and roster
@@ -548,7 +550,8 @@ flake.lock                   # committed development-tool pin
 
 ### Fast extension
 
-- `/fast on`, `off`, and `status` work in a supported foreground session.
+- bare `/fast` and explicit `/fast toggle` invert desired state, while
+  `/fast on`, `off`, and `status` retain direct control and inspection;
 - Unsupported providers/models receive no service-tier mutation.
 - Enabled state follows compatible model changes correctly.
 - A child inherits both on and off states when `fast` is omitted.
@@ -620,7 +623,8 @@ Validation on `nixos-work` completed on 2026-08-10:
   tools, context-prune, and Fast extension. It does not contain the statusline.
 - The managed statusline checkout resolves to exact commit
   `90bc5a39bf1ea4597126a3d0eb3d478510f4b0bf` and has no npm audit findings.
-- A fresh managed Pi TUI verified `/fast on|off|status`. With Fast on, the
+- Fresh managed Pi processes verified bare `/fast`, explicit `/fast toggle`,
+  and `/fast on|off|status`. With Fast on, the
   warning-colored inline status rendered as
   `🧠 high > 󱐋 fast > 🪟 0.0%/272K`, with one space after the context icon,
   while `🔌 MCP 0/3` remained at the right edge.
