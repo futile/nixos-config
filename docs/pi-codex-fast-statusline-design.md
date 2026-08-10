@@ -1,10 +1,18 @@
 # Pi per-session Codex Fast mode and adaptable statusline
 
-Status: design agreed; implementation not yet started
+Status: design agreed; implementation tracked but not yet started
 
 Last checked: 2026-08-10
 
-Tracking issue: `nixos-q32`
+Tracking issues:
+
+- design record: `nixos-q32` (closed)
+- implementation epic: `nixos-3x6`
+- fork and development shell: `nixos-3x6.1`
+- fork dependency alignment: `nixos-3x6.2`
+- generic status rendering: `nixos-3x6.3`
+- per-session Fast and subagent controls: `nixos-3x6.4`
+- repository integration and validation: `nixos-3x6.5`
 
 ## Goal
 
@@ -91,9 +99,10 @@ existing symbol vocabulary.
 
 ### Statusline
 
-Do not write a minimal statusline from scratch at first. Create a pinned local
-fork of `pi-statusline` 0.9.1, preserve its default behavior, and make the
-smallest coherent change needed to render generic extension statuses.
+Do not write a minimal statusline from scratch at first. Create a GitHub fork
+of `pi-statusline` 0.9.1, consume it as a commit-pinned Pi Git package, preserve
+its default behavior, and make the smallest coherent change needed to render
+generic extension statuses. Do not add the fork as a Git submodule.
 
 Reasons:
 
@@ -328,11 +337,10 @@ countdown have been manually compared with the currently installed package.
 
 ## Repository and fork strategy
 
-### Recommended: fork plus pinned Pi Git package
+### Decision: fork plus pinned Pi Git package
 
-A Git submodule is workable, but it is not necessary. Pi already supports Git
-packages, installs their npm dependencies, and pins tags or commits. The
-simplest long-term arrangement is:
+Pi supports Git packages, installs their npm dependencies, and pins tags or
+commits. The selected long-term arrangement is:
 
 1. Fork `martin-tahli/pi-statusline` on GitHub.
 2. Develop it in a separate clone such as `~/gits/pi-statusline`.
@@ -364,13 +372,82 @@ local Fast extension when testing `getExtensionStatuses()` integration.
 Disabling normal discovery is important because loading both the upstream and
 forked statuslines would make two extensions compete for footer ownership.
 
-### Alternative: Git submodule
+### Fork development environment
 
-A submodule under a path such as `vendor/pi-statusline` gives one visible
-working tree and records an exact fork commit as a gitlink. It is reasonable if
-co-located editing is more important than clone and build simplicity.
+Commit a small Nix development environment at the root of the fork rather than
+use the repository's `parasite-nix` template unchanged. That template is a
+useful structural starting point, but its nested, git-ignored flake is intended
+for adding private Nix tooling to a repository that should not own it. This
+fork should make its development toolchain visible and reproducible for future
+human and AI sessions.
 
-Costs to account for:
+Commit these files in the fork:
+
+```text
+flake.nix
+flake.lock
+.envrc
+```
+
+Add `.direnv/` and `result` to the fork's `.gitignore`. Use `nodejs_24` to match
+the Node 24 runtime of the installed Pi and retain the high-priority
+`bashInteractive` workaround from the template. Deliberately do **not** add
+`pkgs.git`: development assumes Git is installed on the host. Do not install a
+global TypeScript through Nix; `npm ci` must supply the versions pinned by the
+fork's `package-lock.json`.
+
+The initial flake shape is:
+
+```nix
+{
+  description = "Development environment for pi-statusline";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs =
+    {
+      nixpkgs,
+      flake-utils,
+      ...
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          nativeBuildInputs = [
+            pkgs.nodejs_24
+            (pkgs.lib.hiPrio pkgs.bashInteractive)
+          ];
+        };
+      }
+    );
+}
+```
+
+Use a committed `.envrc` containing `use flake`. Commit `flake.lock` so both
+nixpkgs and the resulting Node/npm toolchain are pinned. This pins development
+tools, not the npm dependency graph; `package-lock.json` remains the source of
+truth for JavaScript and TypeScript dependencies.
+
+After recording the unchanged upstream baseline, update the fork's three
+`@earendil-works` Pi development dependencies to 0.84.1 in a separate commit.
+Align `@types/node` with Node 24 or explicitly document why its existing version
+is retained. Keep environment, dependency-alignment, and functional rendering
+changes in separate commits so failures remain attributable.
+
+### Rejected: Git submodule
+
+A submodule under a path such as `vendor/pi-statusline` would give one visible
+working tree and record an exact fork commit as a gitlink, but it was rejected
+for this integration.
+
+Its costs would include:
 
 - every checkout and CI/deployment environment must initialize the submodule;
 - contributors must push the fork commit before pushing the superproject
@@ -384,10 +461,8 @@ Costs to account for:
 
 A non-flake flake input is another possible pin and matches the existing
 fdietze source integration, but Pi's direct Git-package support is preferable
-here because it also performs the package's npm dependency installation.
-
-Do not add a submodule and a Git-package pin for the same fork; choose one
-source of truth.
+here because it also performs the package's npm dependency installation. The
+commit-pinned Pi Git package is the single source of truth.
 
 ## Proposed repository layout
 
@@ -406,27 +481,37 @@ dotfiles/pi/hosts/nixos-work/settings.json
                            # replace statusline package source/pin
 ```
 
-The fork remains in its own repository. If direct Git packaging is used, no
-fork source directory belongs in this repository.
+The fork remains in its own repository. No fork source directory or submodule
+belongs in this repository. The fork itself additionally contains:
+
+```text
+flake.nix                    # Node 24 development shell; no Git package
+flake.lock                   # committed development-tool pin
+.envrc                       # use flake
+```
 
 ## Implementation order
 
 1. Fork and baseline `pi-statusline` at npm 0.9.1's Git commit. Run its existing
    tests and typecheck unchanged.
-2. Add generic extension-status rendering and focused tests in the fork.
-3. Test the fork locally with `--no-extensions -e ...` and a dummy status
+2. Add and commit the root Nix/direnv development environment, then reproduce
+   the baseline through `nix develop`.
+3. In a separate compatibility commit, align the fork's Pi development
+   dependencies with Pi 0.84.1 and intentionally resolve the Node type version.
+4. Add generic extension-status rendering and focused tests in the fork.
+5. Test the fork locally with `--no-extensions -e ...` and a dummy status
    publisher.
-4. Implement the local Fast extension with pure compatibility/state/request
+6. Implement the local Fast extension with pure compatibility/state/request
    tests.
-5. Add the Fast extension to foreground Home Manager wiring and the fail-closed
+7. Add the Fast extension to foreground Home Manager wiring and the fail-closed
    child extension policy.
-6. Patch fdietze subagents for session IDs, spawn inheritance/override,
+8. Patch fdietze subagents for session IDs, spawn inheritance/override,
    owner-controlled changes, and roster/list output.
-7. Run integration tests with main, child, and nested-child sessions.
-8. Push the fork commit, replace the npm package entry with its full Git commit
-   pin, and reconcile Pi packages.
-9. Only after parity is confirmed, consider trimming unwanted statusline
-   features in separate commits.
+9. Run integration tests with main, child, and nested-child sessions.
+10. Push the fork commit, replace the npm package entry with its full Git commit
+    pin, and reconcile Pi packages.
+11. Only after parity is confirmed, consider trimming unwanted statusline
+    features in separate commits.
 
 ## Validation checklist
 
@@ -458,6 +543,11 @@ fork source directory belongs in this repository.
 ### Statusline fork
 
 - the unchanged 0.9.1 baseline tests and typecheck pass before modification;
+- `nix develop` supplies Node 24 and the interactive shell, but intentionally
+  relies on host Git;
+- `flake.lock` and `package-lock.json` separately pin development tools and npm
+  dependencies;
+- the Pi development dependencies match 0.84.1 before functional changes;
 - no, one, and several extension statuses render correctly;
 - ANSI-colored statuses do not break width calculations;
 - narrow-width degradation remains readable;
@@ -492,6 +582,9 @@ build path before switching.
   comparing real narrow and wide terminal layouts.
 - Publishing a forked npm package is unnecessary unless Git-package loading
   becomes inconvenient.
+- The fork is consumed as a pinned Pi Git package, not a submodule or flake
+  input.
+- The fork's Nix development shell assumes Git is available on the host.
 - Per-agent control beyond the direct owner is not part of the agreed design.
 
 ## Sources
