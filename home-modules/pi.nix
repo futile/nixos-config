@@ -18,6 +18,7 @@ let
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-model-routing.patch}
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-engine-reset.patch}
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-activity.patch}
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-fast.patch}
   '';
 in
 {
@@ -53,6 +54,8 @@ in
 
       ".pi/agent/extensions/subagents".source = patchedSubagents;
       ".pi/agent/extensions/context-prune".source = "${upstreamExtensions}/context-prune";
+      ".pi/agent/extensions/codex-fast".source =
+        config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/codex-fast";
     };
 
     xdg.configFile."pi/subagents/child-extensions.json".text = builtins.toJSON {
@@ -60,6 +63,7 @@ in
         "npm:pi-mcp-adapter@2.17.0"
         "npm:@juicesharp/rpiv-web-tools@2.3.1"
         "${config.home.homeDirectory}/.pi/agent/extensions/context-prune"
+        "${config.home.homeDirectory}/.pi/agent/extensions/codex-fast"
       ];
     };
 

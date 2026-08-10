@@ -1,6 +1,6 @@
 # Pi per-session Codex Fast mode and adaptable statusline
 
-Status: per-session Fast implementation complete; declarative integration and host validation pending
+Status: implemented, deployed, and validated on `nixos-work`
 
 Last checked: 2026-08-10
 
@@ -136,39 +136,38 @@ As of the date above:
   `openai-codex/gpt-5.6-sol` at `high` thinking level.
 - `dotfiles/pi/hosts/nixos-work/settings.json` contains the commit-pinned
   `futile/pi-statusline` Git package at
-  `416c2ec2bc29da56bc2cc2aa271607d11d888661`. This revision includes generic
+  `90bc5a39bf1ea4597126a3d0eb3d478510f4b0bf`. This revision includes generic
   keyed extension statuses, MCP-only right alignment with a compact `🔌 MCP N/N`
   presentation under the default emoji icon style, aggregate agent activity/progress,
-  and the project-local working-tree override described below. The fork's next
-  reviewed candidate is `90bc5a39bf1ea4597126a3d0eb3d478510f4b0bf` (not yet
-  pinned here): it renders keyed `fast` as inline warning-colored `󱐋 fast` and
-  normalizes the context display to one space (`🪟 60.2%/272K`).
+  the project-local working-tree override described below, inline warning-colored
+  `󱐋 fast`, and one-space context rendering (`🪟 60.2%/272K`).
 - `home-modules/pi.nix` copies fdietze's subagent source from the pinned
-  `fdietze-dotfiles` flake input and currently applies four repository patches:
+  `fdietze-dotfiles` flake input and applies five repository patches:
   - `patches/fdietze-pi-subagents-bind-errors.patch`
   - `patches/fdietze-pi-subagents-model-routing.patch`
   - `patches/fdietze-pi-subagents-engine-reset.patch`
   - `patches/fdietze-pi-subagents-activity.patch`
-- The completed but not yet activated Fast implementation is in
-  `dotfiles/pi/extensions/codex-fast/` and
-  `patches/fdietze-pi-subagents-fast.patch`. The integration task adds the
-  fifth patch, foreground link, and child allowlist entry atomically.
+  - `patches/fdietze-pi-subagents-fast.patch`
+- The Fast extension is implemented in `dotfiles/pi/extensions/codex-fast/`.
+  Home Manager links it to `~/.pi/agent/extensions/codex-fast` for the
+  foreground and explicitly grants that same path to child sessions.
 - The fdietze source is pinned at
   `262fb764dedc2678b1522a21cbbd8818622be56c`.
 - Home Manager links the patched extension to
   `~/.pi/agent/extensions/subagents`.
 - Child extension discovery is fail-closed. The generated
-  `~/.config/pi/subagents/child-extensions.json` currently allowlists only:
+  `~/.config/pi/subagents/child-extensions.json` allowlists only:
   - `pi-mcp-adapter@2.17.0`
   - `@juicesharp/rpiv-web-tools@2.3.1`
   - the repository-managed context-prune extension
+  - the repository-managed Codex Fast extension
 - `~/.pi/agent/settings.json` is an out-of-store symlink to the host settings
   file in this repository. Do not use `pi install` as the final configuration
   mechanism; edit the declarative settings source instead.
 
-The Fast extension must be installed for the foreground and added explicitly
-to the child allowlist. The statusline is foreground-only and must not be added
-to the child allowlist.
+The Fast extension is installed for the foreground and added explicitly to the
+child allowlist. The statusline remains foreground-only and is not present in
+that allowlist.
 
 ## Verified source findings
 
@@ -504,7 +503,7 @@ changes are:
 ```text
 dotfiles/pi/extensions/codex-fast/
   index.ts
-  fast-registry.ts          # if a separate pure module helps testing
+  fast-control.ts           # pure registry/model helpers used by tests
   *.test.ts
 patches/
   fdietze-pi-subagents-fast.patch
@@ -605,6 +604,33 @@ nice -n 19 just check
 
 For Home Manager wiring changes, also run the relevant `just hm-build` or host
 build path before switching.
+
+### Completed deployment validation
+
+Validation on `nixos-work` completed on 2026-08-10:
+
+- `just format-check`, `nice -n 19 just check`, and the full
+  `nice -n 19 just build` passed. The built and activated system was
+  `/nix/store/zc1041jjr9n9vcwh535k885fkdmmz7sa-nixos-system-nixos-work-26.11.20260807.f13ff45`.
+- The built subagent extension passed all 142 tests. The local Fast extension
+  passed all 9 tests; the pinned statusline had previously passed all 256 tests,
+  typecheck, and its flake check.
+- The activated foreground Fast link resolves to the repository working tree,
+  and the generated child policy contains exactly the pinned MCP adapter, web
+  tools, context-prune, and Fast extension. It does not contain the statusline.
+- The managed statusline checkout resolves to exact commit
+  `90bc5a39bf1ea4597126a3d0eb3d478510f4b0bf` and has no npm audit findings.
+- A fresh managed Pi TUI verified `/fast on|off|status`. With Fast on, the
+  warning-colored inline status rendered as
+  `🧠 high > 󱐋 fast > 🪟 0.0%/272K`, with one space after the context icon,
+  while `🔌 MCP 0/3` remained at the right edge.
+- A fresh Pi RPC process exercised the deployed extensions with an eligible
+  Codex model. Main self-control was effective; an omitted child override
+  inherited on; explicit `fast: false` stayed off; a nested grandchild inherited
+  its direct owner's on state; the direct owner changed the grandchild off;
+  main changed its direct child off; and both child-to-main and main-to-grandchild
+  non-owner controls were rejected. Roster and `list_agents` output tracked the
+  effective marker transitions, and all fixture agents were terminated.
 
 ## Known boundaries and deferred choices
 
