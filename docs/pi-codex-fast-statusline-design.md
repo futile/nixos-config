@@ -1,6 +1,6 @@
 # Pi per-session Codex Fast mode and adaptable statusline
 
-Status: design agreed; implementation tracked but not yet started
+Status: per-session Fast implementation complete; declarative integration and host validation pending
 
 Last checked: 2026-08-10
 
@@ -67,9 +67,9 @@ Use two related state concepts:
 - **effective**: desired is on and the current model is a compatible
   `openai-codex` GPT-5.4, GPT-5.5, or GPT-5.6 model.
 
-The compact `FAST` roster badge should represent effective state. Diagnostic
-output such as `/fast status` and `list_agents` should distinguish an enabled
-but unsupported state from an effective one.
+The `󱐋 fast` marker should represent effective state. Diagnostic output such
+as `/fast status` and `list_agents` should distinguish an enabled but
+unsupported state from an effective one.
 
 ### Subagent behavior
 
@@ -85,17 +85,15 @@ subagent manager.
   add Fast state to the persisted roster.
 - Set the child's inherited or explicit state after child extensions have been
   bound but before its first prompt is submitted.
-- Show a protected ASCII `FAST` badge in the child roster line that already
-  shows states such as `idle` and `thinking`. Keep it from disappearing merely
-  because lower-priority columns are dropped at narrow widths.
+- Append `󱐋 fast` to the model cell after `<model>@<thinking-level>` when Fast
+  is effective. It follows the model column's existing responsive drop
+  behavior rather than appearing beside lifecycle state.
+- Show agent names without a fixed cap or middle ellipsis whenever the physical
+  terminal can fit the row; final terminal-safe clipping remains unavoidable
+  if protected content alone exceeds terminal width.
 - Include desired/effective Fast state in `list_agents` and useful spawn/tool
   results so headless owners have the same observability as the foreground
   TUI.
-
-ASCII is preferred for the roster badge because the existing formatter makes
-width assumptions that are safer for a short ASCII label than for an emoji
-whose terminal cell width may vary. The foreground statusline may use its
-existing symbol vocabulary.
 
 ### Statusline
 
@@ -141,13 +139,20 @@ As of the date above:
   `416c2ec2bc29da56bc2cc2aa271607d11d888661`. This revision includes generic
   keyed extension statuses, MCP-only right alignment with a compact `🔌 MCP N/N`
   presentation under the default emoji icon style, aggregate agent activity/progress,
-  and the project-local working-tree override described below.
+  and the project-local working-tree override described below. The fork's next
+  reviewed candidate is `90bc5a39bf1ea4597126a3d0eb3d478510f4b0bf` (not yet
+  pinned here): it renders keyed `fast` as inline warning-colored `󱐋 fast` and
+  normalizes the context display to one space (`🪟 60.2%/272K`).
 - `home-modules/pi.nix` copies fdietze's subagent source from the pinned
-  `fdietze-dotfiles` flake input and applies four repository patches:
+  `fdietze-dotfiles` flake input and currently applies four repository patches:
   - `patches/fdietze-pi-subagents-bind-errors.patch`
   - `patches/fdietze-pi-subagents-model-routing.patch`
   - `patches/fdietze-pi-subagents-engine-reset.patch`
   - `patches/fdietze-pi-subagents-activity.patch`
+- The completed but not yet activated Fast implementation is in
+  `dotfiles/pi/extensions/codex-fast/` and
+  `patches/fdietze-pi-subagents-fast.patch`. The integration task adds the
+  fifth patch, foreground link, and child allowlist entry atomically.
 - The fdietze source is pinned at
   `262fb764dedc2678b1522a21cbbd8818622be56c`.
 - Home Manager links the patched extension to
@@ -282,11 +287,11 @@ to the patched subagent extension:
 
 ```ts
 interface FastController {
-  getDesired(): boolean;
-  setDesired(enabled: boolean): void;
+  getState(): { desired: boolean; effective: boolean; model?: { provider: string; id: string } };
+  setDesired(enabled: boolean): FastState;
 }
 
-type FastRegistry = Map<string, FastController>;
+type FastRegistry = Map<string, { owner: symbol; controller: FastController }>;
 ```
 
 Use a versioned `Symbol.for(...)` key or equivalent stable process-global key.
@@ -316,11 +321,15 @@ logging and should remain diagnosable.
 
 ### UI and output
 
-- Foreground status: publish a short value such as `FAST` through
-  `ctx.ui.setStatus("codex-fast", ...)`; clear it when ineffective.
-- Child roster: add a protected `FAST` cell adjacent to lifecycle state.
-- `list_agents`: report desired and effective state, especially when desired is
-  on but the model is unsupported.
+- Foreground status: publish plain `fast` through
+  `ctx.ui.setStatus("fast", "fast")`; clear it when ineffective. Styling belongs
+  to the statusline, not the publisher.
+- Child roster: append `󱐋 fast` after `<model>@<thinking-level>` only when
+  effective; leave lifecycle state independent.
+- Agent names have no fixed shortening cap or middle ellipsis.
+- `list_agents`: show the marker after the model when effective and always
+  report desired/effective state when a live controller is available,
+  especially when desired is on but the model is unsupported.
 - Spawn and setter tools: return the resulting state and any incompatibility
   explanation.
 - Headless children must never call interactive UI methods.
@@ -331,10 +340,12 @@ The fork should continue to own the one foreground footer. Its first functional
 change should:
 
 1. Read `footerData.getExtensionStatuses()` on every render.
-2. Convert the map values into a stable generic segment; do not special-case
-   the `codex-fast` key.
-3. Make the segment default-visible while allowing normal responsive dropping
-   or truncation when space is genuinely unavailable.
+2. Preserve generic keyed statuses in a stable segment. Keep their publisher
+   styling by default; the approved keyed `fast` presentation is the narrow UI
+   exception and adds `󱐋` plus the theme warning color at render time.
+3. Keep Fast inline after effort, keep only configured keys such as `mcp`
+   right-aligned, and allow normal responsive dropping when space is genuinely
+   unavailable.
 4. Preserve ANSI styling and use terminal display width rather than JavaScript
    string length.
 5. Ensure `setStatus` changes trigger the expected re-render.
@@ -554,8 +565,12 @@ flake.lock                   # committed development-tool pin
 
 ### Subagent presentation
 
-- roster lines show `FAST` for effective sessions in idle and active states;
-- narrow layouts retain the required badge without corrupting alignment;
+- roster lines show `<model>@<thinking-level> 󱐋 fast` for effective sessions;
+- long agent names have no fixed ellipsis cap, and narrow layouts remain
+  terminal-safe through whole-column dropping plus final clipping;
+- production roster layout injects Pi TUI's exact `visibleWidth` and
+  `sliceByColumn`, including exact-boundary Nerd glyph and non-Latin alignment
+  regressions;
 - `list_agents` distinguishes desired and effective state;
 - spawn/set results report the resolved state;
 - existing model/thinking inheritance, pause/resume, and shutdown tests still
@@ -599,8 +614,8 @@ build path before switching.
   process restart/session restoration must not restore it.
 - The first statusline fork should preserve upstream features. Exact later
   removals are intentionally deferred.
-- The exact extension-status segment position and symbol should be chosen while
-  comparing real narrow and wide terminal layouts.
+- The keyed Fast presentation is fixed inline after effort as warning-colored
+  `󱐋 fast`; MCP remains the independently configured right-aligned status.
 - Publishing a forked npm package is unnecessary unless Git-package loading
   becomes inconvenient.
 - The fork is consumed as a pinned Pi Git package, not a submodule or flake

@@ -1,0 +1,1098 @@
+diff --git a/engine.ts b/engine.ts
+index 6ba8341..f8f10eb 100644
+--- a/engine.ts
++++ b/engine.ts
+@@ -61,6 +61,8 @@ export interface AgentRecord {
+ 	systemPrompt?: string;
+ 	/** Absolute path of this agent's session JSONL on disk (undefined for 'main' + in-memory). */
+ 	sessionFile?: string;
++	/** Live Pi session UUID used to address the in-memory Fast controller; never persisted. */
++	sessionId?: string;
+ 	/** Fine-grained phase within a turn (reasoning vs answer text vs tool run). */
+ 	activity?: AgentActivity;
+ 	/** Agent-set semantic status, appended to the system status (in-memory; resets on restart). */
+diff --git a/fast-control.test.ts b/fast-control.test.ts
+new file mode 100644
+index 0000000..b002641
+--- /dev/null
++++ b/fast-control.test.ts
+@@ -0,0 +1,133 @@
++import assert from "node:assert/strict";
++import { afterEach, test } from "node:test";
++import {
++  FAST_ROSTER_MARKER,
++  describeFastState,
++  readFastState,
++  setFastDesired,
++  setOwnedAgentFast,
++  type FastState,
++} from "./fast-control.ts";
++
++const KEY = Symbol.for("futile.pi.codex-fast.registry.v1");
++
++function install(states: Record<string, FastState>) {
++  const controllers = new Map(
++    Object.entries(states).map(([sessionId, initial]) => {
++      let state = initial;
++      return [
++        sessionId,
++        {
++          owner: Symbol(sessionId),
++          controller: {
++            getState: () => state,
++            setDesired: (enabled: boolean) => {
++              state = { ...state, desired: enabled, effective: enabled && state.model?.provider === "openai-codex" };
++              return state;
++            },
++          },
++        },
++      ] as const;
++    }),
++  );
++  (globalThis as Record<symbol, unknown>)[KEY] = { version: 1, controllers };
++}
++
++afterEach(() => {
++  delete (globalThis as Record<symbol, unknown>)[KEY];
++});
++
++test("reads and updates only controllers in the versioned Fast registry", () => {
++  install({
++    main: {
++      desired: false,
++      effective: false,
++      model: { provider: "openai-codex", id: "gpt-5.6-sol" },
++    },
++  });
++  assert.equal(readFastState("main")?.desired, false);
++  const changed = setFastDesired("main", true);
++  assert.equal(changed.ok, true);
++  if (changed.ok) assert.deepEqual(changed.state, {
++    desired: true,
++    effective: true,
++    model: { provider: "openai-codex", id: "gpt-5.6-sol" },
++  });
++  assert.equal(setFastDesired("missing", true).ok, false);
++});
++
++test("malformed registries and controllers fail closed", () => {
++  const globals = globalThis as Record<symbol, unknown>;
++
++  for (const malformed of [
++    { version: 2, controllers: new Map() },
++    { version: 1, controllers: {} },
++  ]) {
++    globals[KEY] = malformed;
++    assert.equal(readFastState("main"), undefined);
++    assert.equal(setFastDesired("main", true).ok, false);
++  }
++
++  globals[KEY] = {
++    version: 1,
++    controllers: new Map([
++      ["throwing", {
++        owner: Symbol("throwing"),
++        controller: {
++          getState: () => { throw new Error("get exploded"); },
++          setDesired: () => { throw new Error("set exploded"); },
++        },
++      }],
++      ["invalid", {
++        owner: Symbol("invalid"),
++        controller: {
++          getState: () => ({ desired: false, effective: true }),
++          setDesired: () => ({ desired: true, effective: true, model: { provider: 42, id: "gpt-5.6-sol" } }),
++        },
++      }],
++      ["missing-controller", { owner: Symbol("missing") }],
++    ]),
++  };
++  assert.equal(readFastState("throwing"), undefined);
++  const throwing = setFastDesired("throwing", true);
++  assert.equal(throwing.ok, false);
++  if (!throwing.ok) assert.match(throwing.reason, /failed.*set exploded/i);
++  assert.equal(readFastState("invalid"), undefined);
++  const invalid = setFastDesired("invalid", true);
++  assert.equal(invalid.ok, false);
++  if (!invalid.ok) assert.match(invalid.reason, /invalid state/i);
++  assert.equal(readFastState("missing-controller"), undefined);
++  assert.equal(setFastDesired("missing-controller", true).ok, false);
++});
++
++test("direct owners can control self and children but not parents, siblings, or unrelated agents", () => {
++  install({
++    lead: { desired: false, effective: false },
++    worker: { desired: false, effective: false },
++    sibling: { desired: false, effective: false },
++  });
++  const agents = [
++    { name: "main", spawnedBy: "main", sessionId: "main" },
++    { name: "lead", spawnedBy: "main", sessionId: "lead" },
++    { name: "worker", spawnedBy: "lead", sessionId: "worker" },
++    { name: "sibling", spawnedBy: "main", sessionId: "sibling" },
++  ];
++  assert.equal(setOwnedAgentFast(agents, "lead", undefined, true).ok, true, "self");
++  assert.equal(setOwnedAgentFast(agents, "lead", "worker", true).ok, true, "direct child");
++  for (const target of ["main", "sibling"]) {
++    const result = setOwnedAgentFast(agents, "lead", target, true);
++    assert.equal(result.ok, false, target);
++    if (!result.ok) assert.match(result.reason, /directly owned child/i);
++  }
++  assert.equal(setOwnedAgentFast(agents, "lead", "unknown", true).ok, false);
++});
++
++test("desired-but-ineligible state is diagnosed without an effective roster marker", () => {
++  const unsupported: FastState = {
++    desired: true,
++    effective: false,
++    model: { provider: "anthropic", id: "claude-opus-4-6" },
++  };
++  assert.match(describeFastState(unsupported), /desired on.*effective off.*unsupported/i);
++  assert.equal(FAST_ROSTER_MARKER, "󱐋 fast");
++});
+diff --git a/fast-control.ts b/fast-control.ts
+new file mode 100644
+index 0000000..f428d73
+--- /dev/null
++++ b/fast-control.ts
+@@ -0,0 +1,103 @@
++export interface FastModel {
++	provider: string;
++	id: string;
++}
++
++export interface FastState {
++	desired: boolean;
++	effective: boolean;
++	model?: FastModel;
++}
++
++interface FastController {
++	getState(): FastState;
++	setDesired(enabled: boolean): FastState;
++}
++
++interface FastRegistryEntry {
++	owner: symbol;
++	controller: FastController;
++}
++
++interface FastRegistry {
++	version: 1;
++	controllers: Map<string, FastRegistryEntry>;
++}
++
++export interface FastAgentRef {
++	name: string;
++	spawnedBy: string;
++	sessionId?: string;
++}
++
++export type FastControlResult =
++	| { ok: true; agent: string; state: FastState }
++	| { ok: false; reason: string };
++
++export const FAST_ROSTER_MARKER = "󱐋 fast";
++const FAST_REGISTRY_KEY = Symbol.for("futile.pi.codex-fast.registry.v1");
++
++function registry(): FastRegistry | undefined {
++	const value = (globalThis as Record<symbol, unknown>)[FAST_REGISTRY_KEY] as FastRegistry | undefined;
++	return value?.version === 1 && value.controllers instanceof Map ? value : undefined;
++}
++
++function isFastState(value: unknown): value is FastState {
++	if (!value || typeof value !== "object") return false;
++	const state = value as Partial<FastState>;
++	if (typeof state.desired !== "boolean" || typeof state.effective !== "boolean") return false;
++	if (state.effective && !state.desired) return false;
++	return state.model === undefined || (
++		typeof state.model === "object" &&
++		state.model !== null &&
++		typeof state.model.provider === "string" &&
++		typeof state.model.id === "string"
++	);
++}
++
++export function readFastState(sessionId: string | undefined): FastState | undefined {
++	if (!sessionId) return undefined;
++	try {
++		const state = registry()?.controllers.get(sessionId)?.controller.getState();
++		return isFastState(state) ? state : undefined;
++	} catch {
++		return undefined;
++	}
++}
++
++export function setFastDesired(sessionId: string | undefined, enabled: boolean): FastControlResult {
++	if (!sessionId) return { ok: false, reason: "agent has no live Pi session" };
++	const controller = registry()?.controllers.get(sessionId)?.controller;
++	if (!controller) return { ok: false, reason: "Fast controller is unavailable for this session" };
++	try {
++		const state = controller.setDesired(enabled);
++		if (!isFastState(state)) return { ok: false, reason: "Fast controller returned an invalid state" };
++		return { ok: true, agent: "", state };
++	} catch (error) {
++		return { ok: false, reason: `Fast controller failed: ${error instanceof Error ? error.message : String(error)}` };
++	}
++}
++
++export function setOwnedAgentFast(
++	agents: readonly FastAgentRef[],
++	selfName: string,
++	targetName: string | undefined,
++	enabled: boolean,
++): FastControlResult {
++	const name = targetName ?? selfName;
++	const target = agents.find((agent) => agent.name === name);
++	if (!target) return { ok: false, reason: `unknown agent '${name}'` };
++	if (name !== selfName && target.spawnedBy !== selfName) {
++		return { ok: false, reason: `agent '${name}' is not a directly owned child of '${selfName}'` };
++	}
++	const result = setFastDesired(target.sessionId, enabled);
++	return result.ok ? { ...result, agent: name } : result;
++}
++
++export function describeFastState(state: FastState): string {
++	const desired = state.desired ? "on" : "off";
++	const effective = state.effective ? "on" : "off";
++	const model = state.model ? `${state.model.provider}/${state.model.id}` : "no active model";
++	const reason = state.desired && !state.effective ? `; unsupported model: ${model}` : `; model: ${model}`;
++	return `Fast desired ${desired}; effective ${effective}${reason}`;
++}
+diff --git a/feed.test.ts b/feed.test.ts
+index df02e09..4e32a95 100644
+--- a/feed.test.ts
++++ b/feed.test.ts
+@@ -1,4 +1,4 @@
+-import { test } from "node:test";
++import { afterEach, test } from "node:test";
+ import assert from "node:assert/strict";
+ import {
+ 	formatSnapshot,
+@@ -10,6 +10,24 @@ import {
+ } from "./feed.ts";
+ import type { AgentRecord, AgentEvent } from "./engine.ts";
+ 
++const FAST_KEY = Symbol.for("futile.pi.codex-fast.registry.v1");
++
++function installFast(sessionId: string, desired: boolean, effective: boolean): void {
++	const state = {
++		desired,
++		effective,
++		model: { provider: "openai-codex", id: "gpt-5.6-sol" },
++	};
++	(globalThis as Record<symbol, unknown>)[FAST_KEY] = {
++		version: 1,
++		controllers: new Map([[sessionId, { owner: Symbol(sessionId), controller: { getState: () => state, setDesired: () => state } }]]),
++	};
++}
++
++afterEach(() => {
++	delete (globalThis as Record<symbol, unknown>)[FAST_KEY];
++});
++
+ const rec = (over: Partial<AgentRecord>): AgentRecord => ({
+ 	name: "a",
+ 	model: "anthropic/x",
+@@ -53,6 +71,36 @@ test("formatSnapshot shows model and effective thinking level together", () => {
+ 	assert.match(out, /openai-codex\/gpt-5\.6-sol@xhigh/);
+ });
+ 
++test("formatSnapshot puts effective Fast after model@thinking and reports desired/effective state", () => {
++	installFast("session-scout", true, true);
++	const out = formatSnapshot([
++		rec({
++			name: "scout",
++			model: "openai-codex/gpt-5.6-sol",
++			thinkingLevel: "xhigh",
++			sessionId: "session-scout",
++		}),
++	], 0, 100, "main");
++	assert.match(out, /gpt-5\.6-sol@xhigh 󱐋 fast/);
++	assert.match(out, /Fast desired on; effective on/);
++});
++
++test("formatSnapshot diagnoses desired-but-ineligible Fast without an active marker", () => {
++	installFast("session-scout", true, false);
++	const out = formatSnapshot([
++		rec({ name: "scout", model: "anthropic/claude-opus-4-6", sessionId: "session-scout" }),
++	], 0, 100, "main");
++	assert.doesNotMatch(out, /󱐋 fast/);
++	assert.match(out, /Fast desired on; effective off; unsupported model/i);
++});
++
++test("formatSnapshot surfaces a missing controller for a linked live session", () => {
++	const out = formatSnapshot([
++		rec({ name: "scout", model: "openai-codex/gpt-5.6-sol", sessionId: "missing-session" }),
++	], 0, 100, "main");
++	assert.match(out, /Fast unavailable/);
++});
++
+ test("formatSnapshot appends the agent-set custom status after the system status", () => {
+ 	const agents = [rec({ name: "coder", customStatus: "parsing files" })];
+ 	const out = formatSnapshot(agents, 0, 100, "main");
+diff --git a/feed.ts b/feed.ts
+index dfeb5bb..988207c 100644
+--- a/feed.ts
++++ b/feed.ts
+@@ -4,6 +4,7 @@
+  */
+ import { statusLabel, type AgentRecord, type AgentEvent, type RouteResult } from "./engine.ts";
+ import { formatCustomStatus } from "./eta.ts";
++import { describeFastState, FAST_ROSTER_MARKER, readFastState } from "./fast-control.ts";
+ import { formatModelThinking } from "./thinking-level.ts";
+ 
+ /** Compact relative age: 3s / 4m / 2h. */
+@@ -49,10 +50,17 @@ export function formatSnapshot(
+ 		const rel = relTo(a, viewer, viewerParent);
+ 		const queued = a.pending && a.buffer && a.buffer.length > 0 ? `, ${a.buffer.length} queued` : "";
+ 		const model = formatModelThinking(a.model, a.thinkingLevel);
++		const fastState = readFastState(a.sessionId);
++		const modelFast = `${model}${fastState?.effective ? ` ${FAST_ROSTER_MARKER}` : ""}`;
++		const fastDetails = fastState
++			? ` · ${describeFastState(fastState)}`
++			: a.sessionId
++				? " · Fast unavailable"
++				: "";
+ 		return (
+ 			`  ${a.name.padEnd(14)} ${rel.padEnd(6)} ${status.padEnd(28)} ` +
+ 			`turns:${String(a.turns).padEnd(3)} ctx:${ctx.padEnd(4)} last ${formatAge(now - a.lastActivity).padEnd(4)} ` +
+-			`${model}  (by ${a.spawnedBy}${queued})`
++			`${modelFast}${fastDetails}  (by ${a.spawnedBy}${queued})`
+ 		);
+ 	});
+ 	const scheduler = paused
+diff --git a/index.ts b/index.ts
+index b24840a..200fede 100644
+--- a/index.ts
++++ b/index.ts
+@@ -20,7 +20,7 @@ import {
+ 	type ToolDefinition,
+ } from "@earendil-works/pi-coding-agent";
+ import { StringEnum } from "@earendil-works/pi-ai";
+-import { Text, truncateToWidth } from "@earendil-works/pi-tui";
++import { sliceByColumn, Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+ import { Type } from "typebox";
+ import { orderAgents } from "./agent-order.ts";
+ import {
+@@ -33,6 +33,12 @@ import {
+ } from "./activity.ts";
+ import { parseChildExtensionPolicy } from "./child-extension-policy.ts";
+ import { Engine, statusLabel, type AgentHandle } from "./engine.ts";
++import {
++	describeFastState,
++	readFastState,
++	setFastDesired,
++	setOwnedAgentFast,
++} from "./fast-control.ts";
+ import {
+ 	formatFeedLines,
+ 	formatKillResult,
+@@ -141,10 +147,11 @@ function agentSystemPrompt(name: string, systemPrompt: string, spawnedBy: string
+ 		`You are agent "${name}" in a multi-agent system.`,
+ 		`You were spawned by "${spawnedBy}".`,
+ 		"You can talk to other agents with these tools:",
+-		"- spawn_agent({name, systemPrompt, overrideModel?, overrideThinkingLevel?, message?}): create a new agent (message = optional first task).",
++		"- spawn_agent({name, systemPrompt, overrideModel?, overrideThinkingLevel?, fast?, message?}): create a new agent (message = optional first task; omitted fast inherits your desired Fast state).",
+ 		"- send_message({to, content}): to is an array of agent names (multicast); fire-and-forget (e.g. [\"main\"]).",
+ 		"- list_agents(): see who exists.",
+ 		"- kill_agent({name}): terminate agents by name array (you cannot kill 'main').",
++		"- set_fast({enabled, agent?}): change your Fast state or that of one directly owned child.",
+ 		"- set_status({status}): set your short status line (shown to others in list_agents); empty string clears.",
+ 		"Messages you receive are prefixed with [message from <sender>].",
+ 		"",
+@@ -355,6 +362,7 @@ export default function subagents(pi: ExtensionAPI) {
+ 					name: a.name,
+ 					model: a.model,
+ 					thinkingLevel: a.thinkingLevel,
++					fastEffective: readFastState(a.sessionId)?.effective,
+ 					context: formatContext(a.view?.getContextUsage()),
+ 					status: statusLabel(a),
+ 					customStatus: a.customStatus,
+@@ -362,7 +370,7 @@ export default function subagents(pi: ExtensionAPI) {
+ 					targets: formatSendTargets(matrix, a.name),
+ 				})),
+ 				width,
+-				{ styleStatus: styler },
++				{ display: { visibleWidth, sliceByColumn }, styleStatus: styler },
+ 			).map((line) => truncateToWidth(line, width));
+ 			const running = background.filter((a) => a.streaming).length;
+ 			const stateLine = swarmStateLine(engine.isFrozen(), running);
+@@ -471,6 +479,9 @@ export default function subagents(pi: ExtensionAPI) {
+ 							"by AGENTS.md or the user; Pi clamps it to the target model's capabilities.",
+ 					}),
+ 				),
++				fast: Type.Optional(
++					Type.Boolean({ description: "Omit to inherit this session's desired Fast state; pass true or false to override" }),
++				),
+ 				message: Type.Optional(
+ 					Type.String({ description: "Optional first message delivered to the new agent right after spawn" }),
+ 				),
+@@ -483,6 +494,7 @@ export default function subagents(pi: ExtensionAPI) {
+ 						systemPrompt: args.systemPrompt,
+ 						model: args.overrideModel,
+ 						thinkingLevel: args.overrideThinkingLevel,
++						fast: args.fast,
+ 						message: args.message,
+ 					},
+ 					selfName,
+@@ -580,6 +592,31 @@ export default function subagents(pi: ExtensionAPI) {
+ 				return { content: [{ type: "text", text }], details: {} };
+ 			},
+ 		}),
++		defineTool({
++			name: "set_fast",
++			label: "Set Fast",
++			renderCall: (args, theme, context) => renderToolArgs("set_fast", args as Record<string, unknown>, theme as RenderTheme, context?.expanded ?? false),
++			description:
++				"Change Codex Fast mode for yourself, or for one directly owned child. " +
++				"The change affects the target's next provider request, not a request already streaming.",
++			parameters: Type.Object({
++				enabled: Type.Boolean({ description: "Desired Fast state" }),
++				agent: Type.Optional(
++					Type.String({ description: "Directly owned child to change; omit to change yourself" }),
++				),
++			}),
++			execute: async (_id, args) => {
++				const result = setOwnedAgentFast(engine.list(), selfName, args.agent, args.enabled);
++				if (!result.ok) {
++					return { content: [{ type: "text", text: `error: ${result.reason}` }], details: {} };
++				}
++				notifyActivity();
++				return {
++					content: [{ type: "text", text: `${result.agent}: ${describeFastState(result.state)}` }],
++					details: {},
++				};
++			},
++		}),
+ 		defineTool({
+ 			name: "set_status",
+ 			label: "Set Status",
+@@ -636,7 +673,7 @@ export default function subagents(pi: ExtensionAPI) {
+ 	// persisted session (restart resume); otherwise it starts a fresh persisted session under
+ 	// subDir (or in-memory when no main-session dir is available).
+ 	const createSession = async (
+-		spec: { name: string; systemPrompt: string; spawnedBy: string; model: unknown; thinkingLevel?: ThinkingLevel },
++		spec: { name: string; systemPrompt: string; spawnedBy: string; model: unknown; thinkingLevel?: ThinkingLevel; fast?: boolean },
+ 		existingFile?: string,
+ 	): Promise<{ session: SessionLike; sessionFile?: string }> => {
+ 		const childSettings = SettingsManager.create(cwd, realAgentDir);
+@@ -684,13 +721,32 @@ export default function subagents(pi: ExtensionAPI) {
+ 			settingsManager: childSettings,
+ 		});
+ 		// SDK sessions do not start extension lifecycles until the host explicitly binds them.
+-		await session.bindExtensions({
+-			mode: "print",
+-			onError: (error) => {
+-				console.error(`Subagent extension error (${error.extensionPath}): ${error.error}`);
+-			},
+-		});
++		// Bind first so codex-fast can register this session, then apply inherited/explicit state
++		// before the first prompt. A missing controller is a capability-policy error, not a silent
++		// fallback: close the partially created runtime and fail the spawn visibly.
++		try {
++			await session.bindExtensions({
++				mode: "print",
++				onError: (error) => {
++					console.error(`Subagent extension error (${error.extensionPath}): ${error.error}`);
++				},
++			});
++			const applied = setFastDesired(sm.getSessionId(), spec.fast ?? false);
++			if (!applied.ok) throw new Error(applied.reason);
++		} catch (error) {
++			try {
++				const runner = session.extensionRunner;
++				if (runner.hasHandlers("session_shutdown")) {
++					await runner.emit({ type: "session_shutdown", reason: "quit" });
++				}
++			} catch {
++				/* Preserve the primary bind/control error. */
++			}
++			session.dispose();
++			throw error;
++		}
+ 		const managedSession: SessionLike = {
++			sessionId: sm.getSessionId(),
+ 			sendUserMessage: (text, options) => session.sendUserMessage(text, options),
+ 			abort: () => session.abort(),
+ 			shutdown: async () => {
+@@ -719,6 +775,7 @@ export default function subagents(pi: ExtensionAPI) {
+ 		engine,
+ 		resolveModel,
+ 		createSession,
++		getFastState: readFastState,
+ 		onActivity: notifyActivity,
+ 		listAvailableModels: () => (modelRegistry?.getAvailable() ?? []).map((m) => `${m.provider}/${m.id}`),
+ 	});
+@@ -853,10 +910,11 @@ export default function subagents(pi: ExtensionAPI) {
+ 		captureForegroundModel(ctx.model);
+ 		captureForegroundThinkingLevel(ctx.thinkingLevel);
+ 		// Locate this main session's subagents dir (persistence + restore are keyed by it).
++		let mainSessionId: string | undefined;
+ 		try {
+-			const id = ctx.sessionManager.getSessionId();
++			mainSessionId = ctx.sessionManager.getSessionId();
+ 			const dir = ctx.sessionManager.getSessionDir();
+-			subDir = id && dir ? subagentsDir(dir, id) : undefined;
++			subDir = mainSessionId && dir ? subagentsDir(dir, mainSessionId) : undefined;
+ 		} catch {
+ 			subDir = undefined;
+ 		}
+@@ -880,12 +938,16 @@ export default function subagents(pi: ExtensionAPI) {
+ 				turns: 0,
+ 				lastActivity: Date.now(),
+ 				streaming: false,
++				sessionId: mainSessionId,
+ 				view: {
+ 					getMessages: () => [], // main transcript = the main chat (not mirrored)
+ 					getContextUsage: () => mainState().usage, // globalThis-backed, survives /reload
+ 					subscribe: () => () => {},
+ 				},
+ 			});
++		} else {
++			const main = engine.get("main");
++			if (main) main.sessionId = mainSessionId;
+ 		}
+ 		await restoreSwarm();
+ 		updateActivitySource(true);
+diff --git a/panel-logic.test.ts b/panel-logic.test.ts
+index f413abb..43fbd8c 100644
+--- a/panel-logic.test.ts
++++ b/panel-logic.test.ts
+@@ -2,7 +2,7 @@ import { test } from "node:test";
+ import assert from "node:assert/strict";
+ import {
+ 	formatContext,
+-	formatRoster,
++	formatRoster as formatRosterCore,
+ 	moveSelection,
+ 	clampScroll,
+ 	chatboxToRoute,
+@@ -89,20 +89,46 @@ test("formatSendTargets: ➜name[count], count omitted for a single message; ''
+ // ── formatRoster: responsive aligned single-line table ──
+ const re = (over: Record<string, unknown> = {}) => ({ name: "a", model: "x/y", context: "", status: "idle", ...over });
+ 
++// Production call sites inject Pi TUI's exact visibleWidth/sliceByColumn. This SDK-free fixture
++// covers the test corpus, including the one-column Nerd glyph and two-column regional indicator.
++const testSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
++const testSegmentWidth = (segment: string): number => {
++	if (/^\p{Regional_Indicator}$/u.test(segment) || /^\p{RGI_Emoji}$/v.test(segment)) return 2;
++	if (/^\p{Mark}+$/u.test(segment)) return 0;
++	return 1;
++};
++const testVisibleWidth = (text: string): number =>
++	[...testSegmenter.segment(text)].reduce((width, { segment }) => width + testSegmentWidth(segment), 0);
++const testSliceByColumn = (text: string, start: number, length: number): string => {
++	const end = start + length;
++	let column = 0;
++	let result = "";
++	for (const { segment } of testSegmenter.segment(text)) {
++		const next = column + testSegmentWidth(segment);
++		if (column >= start && next <= end) result += segment;
++		column = next;
++	}
++	return result;
++};
++const TEST_DISPLAY = { visibleWidth: testVisibleWidth, sliceByColumn: testSliceByColumn };
++type TestRosterOptions = Omit<Parameters<typeof formatRosterCore>[2], "display">;
++const formatRoster = (
++	entries: Parameters<typeof formatRosterCore>[0],
++	width: number,
++	opts: TestRosterOptions = {},
++) => formatRosterCore(entries, width, { ...opts, display: TEST_DISPLAY });
++
+ test("formatRoster: aligns the status column across rows (shared name-column width)", () => {
+ 	const rows = formatRoster([re({ name: "ab", status: "idle" }), re({ name: "abcdef", status: "thinking" })], 200);
+ 	assert.equal(rows[0].indexOf("idle"), rows[1].indexOf("thinking")); // same x → aligned
+ });
+ 
+-test("formatRoster: name middle-ellipsis keeps the distinguishing tail (shared-prefix names stay distinct)", () => {
+-	const rows = formatRoster(
+-		[re({ name: "risk-R-UniformApp-pipeline-5" }), re({ name: "risk-R-UniformApp-pipeline-7" })],
+-		200,
+-	);
+-	assert.notEqual(rows[0], rows[1]); // tails preserved → distinguishable
+-	assert.match(rows[0], /…/); // middle ellipsis applied (name > cap 24)
+-	assert.match(rows[0], /5\b/);
+-	assert.match(rows[1], /7\b/);
++test("formatRoster: long agent names are shown in full without fixed-cap ellipsis", () => {
++	const names = ["risk-R-UniformApp-pipeline-5", "risk-R-UniformApp-pipeline-7"];
++	const rows = formatRoster(names.map((name) => re({ name })), 200);
++	assert.match(rows[0], new RegExp(names[0]));
++	assert.match(rows[1], new RegExp(names[1]));
++	assert.doesNotMatch(rows.join("\n"), /…/);
+ });
+ 
+ test("formatRoster: custom status leads, system status trails, both present", () => {
+@@ -180,12 +206,44 @@ test("formatRoster: passes the error tone to the styler", () => {
+ 	assert.match(row, /drafting joke/);
+ });
+ 
+-test("formatRoster: model id and effective thinking level are shown together", () => {
+-	const row = formatRoster(
+-		[re({ model: "openai-codex/gpt-5.6-sol", thinkingLevel: "xhigh", status: "thinking" })],
++test("formatRoster: effective Fast marker follows model and thinking level", () => {
++	const enabled = formatRoster(
++		[re({ model: "openai-codex/gpt-5.6-sol", thinkingLevel: "xhigh", fastEffective: true, status: "thinking" })],
++		200,
++	)[0];
++	assert.match(enabled, /gpt-5\.6-sol@xhigh 󱐋 fast/);
++
++	const disabled = formatRoster(
++		[re({ model: "openai-codex/gpt-5.6-sol", thinkingLevel: "xhigh", fastEffective: false, status: "thinking" })],
+ 		200,
+ 	)[0];
+-	assert.match(row, /gpt-5\.6-sol@xhigh/);
++	assert.match(disabled, /gpt-5\.6-sol@xhigh/);
++	assert.doesNotMatch(disabled, /󱐋 fast/);
++});
++
++test("formatRoster: Fast model cell remains visible at its exact terminal display width", () => {
++	const entry = re({
++		name: "a",
++		status: "idle",
++		model: "openai-codex/gpt-5.6-sol",
++		thinkingLevel: "xhigh",
++		fastEffective: true,
++		context: "",
++	});
++	const complete = "  a idle gpt-5.6-sol@xhigh 󱐋 fast";
++	assert.equal(formatRoster([entry], 33)[0], complete);
++	assert.doesNotMatch(formatRoster([entry], 32)[0], /gpt-5\.6-sol/);
++});
++
++test("formatRoster: terminal-width measurement aligns an isolated regional indicator", () => {
++	const rows = formatRoster([
++		re({ name: "a", customStatus: "🇺", status: "idle" }),
++		re({ name: "b", customStatus: "x", status: "idle" }),
++	], 200);
++	assert.equal(
++		testVisibleWidth(rows[0].slice(0, rows[0].indexOf("idle"))),
++		testVisibleWidth(rows[1].slice(0, rows[1].indexOf("idle"))),
++	);
+ });
+ 
+ test("swarmStateLine: paused buffering vs live with activity count", () => {
+diff --git a/panel-logic.ts b/panel-logic.ts
+index 8bdfaac..a392a8e 100644
+--- a/panel-logic.ts
++++ b/panel-logic.ts
+@@ -1,5 +1,6 @@
+ /** Pure helpers for the subagents panel — no pi/TUI dependency, fully testable. */
+ import { formatEtaSuffix } from "./eta.ts";
++import { FAST_ROSTER_MARKER } from "./fast-control.ts";
+ import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
+ 
+ export interface ContextUsageLike {
+@@ -93,6 +94,8 @@ export interface RosterEntry {
+ 	name: string;
+ 	model: string;
+ 	thinkingLevel?: ThinkingLevel;
++	/** Effective Fast state; rendered directly after model@thinking. */
++	fastEffective?: boolean;
+ 	context: string;
+ 	/** System status from engine.statusLabel (spawning/thinking/writing/tool:.../idle/halted). */
+ 	status: string;
+@@ -152,34 +155,42 @@ export function formatModel(model: string | undefined, thinkingLevel: ThinkingLe
+ //
+ // One single-line row per agent, columns aligned across rows. Reading order:
+ //   name · custom-status · system-status · eta · context · model · targets
+-// Protected columns (name, system-status, eta) are never hidden. The rest collapse — whole
+-// column dropped, all rows — when the terminal is too narrow, in this order:
++// Protected columns (name, system-status, eta) are never hidden. Agent names have no fixed cap;
++// callers still apply terminal-safe clipping only when the physical terminal is too narrow.
++// The rest collapse — whole column dropped, all rows — when the terminal narrows, in this order:
+ //   model → targets → context → custom-status
+ // Alignment requires a roster-wide pass (column widths = max content across agents), so this
+-// replaces any per-row formatting. Layout math is plain-text (ASCII content + single-width
+-// glyphs); the status cell is styled only AFTER padding so ANSI never corrupts the widths.
+-// Callers still wrap each line in the ANSI-aware truncateToWidth as a final overflow guard.
++// replaces any per-row formatting. Layout math uses terminal display columns so astral Nerd Font
++// glyphs and other Unicode do not cause premature column collapse. The status cell is styled only
++// AFTER padding so ANSI never corrupts the widths.
+ 
+-const NAME_CAP = 24; // names beyond this are middle-elided (keeps the distinguishing tail)
+ export const CUSTOM_STATUS_MAX = 32; // hard cap on the agent-set status (also stated in the set_status prompt)
+ const SYS_STATUS_CAP = 18;
+ 
+-/** Truncate to width with a trailing ellipsis (plain-text width). */
+-function fitEnd(s: string, w: number): string {
++export interface RosterDisplayWidth {
++	visibleWidth(text: string): number;
++	sliceByColumn(text: string, startColumn: number, length: number, strict?: boolean): string;
++}
++
++/** Truncate to terminal display width with a trailing ellipsis. */
++function fitEnd(s: string, w: number, display: RosterDisplayWidth): string {
+ 	if (w <= 0) return "";
+-	if (s.length <= w) return s;
+-	return w === 1 ? "…" : `${s.slice(0, w - 1)}…`;
++	if (display.visibleWidth(s) <= w) return s;
++	return w === 1 ? "…" : `${display.sliceByColumn(s, 0, w - 1, true)}…`;
+ }
+ 
+-/** Truncate to width keeping head + tail (middle ellipsis) — for names, whose tail distinguishes. */
+-function fitMiddle(s: string, w: number): string {
++/** Truncate to display width keeping head + tail (middle ellipsis) — for names, whose tail distinguishes. */
++function fitMiddle(s: string, w: number, display: RosterDisplayWidth): string {
+ 	if (w <= 0) return "";
+-	if (s.length <= w) return s;
++	const total = display.visibleWidth(s);
++	if (total <= w) return s;
+ 	if (w === 1) return "…";
+ 	const keep = w - 1;
+-	const head = Math.ceil(keep / 2);
+-	const tail = keep - head;
+-	return `${s.slice(0, head)}…${tail > 0 ? s.slice(s.length - tail) : ""}`;
++	const headWidth = Math.ceil(keep / 2);
++	const tailWidth = keep - headWidth;
++	const head = display.sliceByColumn(s, 0, headWidth, true);
++	const tail = tailWidth > 0 ? display.sliceByColumn(s, total - tailWidth, tailWidth, true) : "";
++	return `${head}…${tail}`;
+ }
+ 
+ interface ColSpec {
+@@ -200,29 +211,39 @@ interface ColSpec {
+ export function formatRoster(
+ 	entries: RosterEntry[],
+ 	width: number,
+-	opts: { selectedIndex?: number; styleStatus?: (label: string, tone: StatusTone) => string } = {},
++	opts: {
++		display: RosterDisplayWidth;
++		selectedIndex?: number;
++		styleStatus?: (label: string, tone: StatusTone) => string;
++	},
+ ): string[] {
++	const { display } = opts;
+ 	const styleStatus = opts.styleStatus ?? ((l) => l);
+ 	// The ETA column exists only when at least one agent has set an ETA (otherwise wasted space).
+ 	const hasEta = entries.some((e) => e.etaTs != null);
+ 
+ 	const cols: ColSpec[] = [
+-		{ key: "name", collapseRank: 0, fit: "middle", cap: NAME_CAP, cellOf: (e) => e.name },
++		{ key: "name", collapseRank: 0, fit: "middle", cellOf: (e) => e.name },
+ 		{ key: "custom", collapseRank: 4, fit: "end", cap: CUSTOM_STATUS_MAX, cellOf: (e) => e.customStatus ?? "" },
+ 		{ key: "status", collapseRank: 0, fit: "end", cap: SYS_STATUS_CAP, cellOf: (e) => e.status },
+ 		...(hasEta
+ 			? [{ key: "eta", collapseRank: 0, fit: "end", cellOf: (e: RosterEntry) => (e.etaTs != null ? formatEtaSuffix(e.etaTs) : "") } as ColSpec]
+ 			: []),
+ 		{ key: "context", collapseRank: 3, fit: "end", cellOf: (e) => e.context },
+-		{ key: "model", collapseRank: 1, fit: "end", cellOf: (e) => formatModel(e.model, e.thinkingLevel) },
++		{
++			key: "model",
++			collapseRank: 1,
++			fit: "end",
++			cellOf: (e) => `${formatModel(e.model, e.thinkingLevel)}${e.fastEffective ? ` ${FAST_ROSTER_MARKER}` : ""}`,
++		},
+ 		{ key: "targets", collapseRank: 2, fit: "end", cellOf: (e) => e.targets ?? "" },
+ 	];
+ 
+-	// Natural width per column = widest content across agents, clamped to its cap.
++	// Natural display width per column = widest content across agents, clamped to its cap.
+ 	const widthOf = new Map<string, number>();
+ 	for (const c of cols) {
+ 		let w = 0;
+-		for (const e of entries) w = Math.max(w, c.cellOf(e).length);
++		for (const e of entries) w = Math.max(w, display.visibleWidth(c.cellOf(e)));
+ 		widthOf.set(c.key, c.cap != null ? Math.min(w, c.cap) : w);
+ 	}
+ 
+@@ -247,9 +268,10 @@ export function formatRoster(
+ 		const cursor = opts.selectedIndex === i ? "▸" : " ";
+ 		const cells = visible.map((c) => {
+ 			const w = widthOf.get(c.key) ?? 0;
+-			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w).padEnd(w);
++			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w, display);
++			const padded = `${fitted}${" ".repeat(Math.max(0, w - display.visibleWidth(fitted)))}`;
+ 			// Tone styling keys off the SYSTEM status only, applied after padding so widths stay exact.
+-			return c.key === "status" ? styleStatus(fitted, statusTone(e.status)) : fitted;
++			return c.key === "status" ? styleStatus(padded, statusTone(e.status)) : padded;
+ 		});
+ 		return `${cursor} ${cells.join(" ")}`.replace(/ +$/, "");
+ 	});
+diff --git a/panel.ts b/panel.ts
+index c848614..9ef2e54 100644
+--- a/panel.ts
++++ b/panel.ts
+@@ -6,10 +6,11 @@
+  * with the main chat; the agent's system prompt is shown at the top. Defensive try/catch
+  * around each component falls back to plain text so a render error never freezes the TUI.
+  */
+-import { Editor, type EditorTheme, Key, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
++import { Editor, type EditorTheme, Key, matchesKey, sliceByColumn, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+ import { AssistantMessageComponent, ToolExecutionComponent, UserMessageComponent } from "@earendil-works/pi-coding-agent";
+ import { orderAgents } from "./agent-order.ts";
+ import { statusLabel, type Engine } from "./engine.ts";
++import { readFastState } from "./fast-control.ts";
+ import {
+ 	clampScroll,
+ 	formatContext,
+@@ -282,6 +283,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
+ 					name: a.name,
+ 					model: a.model,
+ 					thinkingLevel: a.thinkingLevel,
++					fastEffective: readFastState(a.sessionId)?.effective,
+ 					context: formatContext(a.view?.getContextUsage()),
+ 					status: statusLabel(a),
+ 					customStatus: a.customStatus,
+@@ -289,7 +291,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
+ 					targets: formatSendTargets(matrix, a.name),
+ 				})),
+ 				width,
+-				{ styleStatus: styler, selectedIndex },
++				{ display: { visibleWidth, sliceByColumn }, styleStatus: styler, selectedIndex },
+ 			)) {
+ 				lines.push(truncateToWidth(line, width));
+ 			}
+diff --git a/persistence-logic.test.ts b/persistence-logic.test.ts
+index 13c4685..c8711b3 100644
+--- a/persistence-logic.test.ts
++++ b/persistence-logic.test.ts
+@@ -76,6 +76,8 @@ test("roster round-trip serialize -> parse", () => {
+ 			thinkingLevel: "xhigh" as const,
+ 			systemPrompt: "do x",
+ 			sessionFile: "/a.jsonl",
++			sessionId: "live-session-only",
++			fast: true,
+ 		},
+ 		{ name: "pending", spawnedBy: "main", depth: 1, model: "(spawning)" }, // no sessionFile -> dropped
+ 	];
+@@ -83,6 +85,8 @@ test("roster round-trip serialize -> parse", () => {
+ 	assert.equal(roster.length, 1);
+ 	assert.equal(roster[0].name, "a");
+ 	assert.equal(roster[0].thinkingLevel, "xhigh");
++	assert.equal("sessionId" in roster[0], false, "live control linkage is not persisted");
++	assert.equal("fast" in roster[0], false, "Fast intent is not persisted");
+ 	const json = JSON.stringify(roster);
+ 	assert.deepEqual(parseRoster(json), roster);
+ });
+diff --git a/spawner.test.ts b/spawner.test.ts
+index be56cc7..4fcf973 100644
+--- a/spawner.test.ts
++++ b/spawner.test.ts
+@@ -5,6 +5,7 @@ import { Engine } from "./engine.ts";
+ import { createSpawner, type SessionLike, type ThinkingLevel } from "./spawner.ts";
+ 
+ class FakeSession implements SessionLike {
++	sessionId?: string;
+ 	delivered: string[] = [];
+ 	aborted = 0;
+ 	isStreaming = false;
+@@ -51,6 +52,7 @@ function withMain(engine: Engine, inbox: string[]) {
+ 		turns: 0,
+ 		lastActivity: 0,
+ 		streaming: false,
++		sessionId: "session-main",
+ 	});
+ }
+ 
+@@ -202,6 +204,82 @@ test("restored agents expose the reopened session's effective thinking level", (
+ 	assert.equal(engine.get("restored")?.thinkingLevel, "low");
+ });
+ 
++test("spawn inherits Fast per owner, accepts explicit overrides, and supports nested inheritance", async () => {
++	const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3, turnBudget: 5 });
++	withMain(engine, []);
++	const states = new Map<string, { desired: boolean; effective: boolean; model: { provider: string; id: string } }>([
++		["session-main", { desired: true, effective: true, model: { provider: "openai-codex", id: "gpt-5.6-sol" } }],
++	]);
++	const requested: Array<{ name: string; fast: boolean | undefined }> = [];
++	const spawner = createSpawner({
++		engine,
++		resolveModel: () => ({ provider: "openai-codex", id: "gpt-5.6-sol", model: {} }),
++		createSession: async (spec) => {
++			requested.push({ name: spec.name, fast: spec.fast });
++			const session = new FakeSession();
++			session.sessionId = `session-${spec.name}`;
++			states.set(session.sessionId, {
++				desired: spec.fast ?? false,
++				effective: spec.fast ?? false,
++				model: { provider: "openai-codex", id: "gpt-5.6-sol" },
++			});
++			return { session };
++		},
++		getFastState: (sessionId) => sessionId ? states.get(sessionId) : undefined,
++	});
++
++	const lead = await spawner.spawnAgent({ name: "lead", systemPrompt: "lead" }, "main");
++	assert.equal(lead.ok, true);
++	assert.match(lead.msg, /Fast desired on; effective on/);
++	assert.equal(engine.get("lead")?.sessionId, "session-lead");
++
++	await spawner.spawnAgent({ name: "worker", systemPrompt: "work" }, "lead");
++	await spawner.spawnAgent({ name: "slow", systemPrompt: "slow", fast: false }, "lead");
++	assert.deepEqual(requested, [
++		{ name: "lead", fast: true },
++		{ name: "worker", fast: true },
++		{ name: "slow", fast: false },
++	]);
++	assert.equal(states.get("session-worker")?.desired, true);
++	assert.equal(states.get("session-slow")?.desired, false);
++});
++
++test("spawn fails visibly when inheritance or child Fast registration is unavailable", async () => {
++	const missingOwner = new Engine({ maxAgents: 8, maxSpawnDepth: 3, turnBudget: 5 });
++	withMain(missingOwner, []);
++	let created = 0;
++	const noOwnerController = createSpawner({
++		engine: missingOwner,
++		resolveModel: () => ({ provider: "openai-codex", id: "gpt-5.6-sol", model: {} }),
++		createSession: async () => {
++			created++;
++			return { session: new FakeSession() };
++		},
++		getFastState: () => undefined,
++	});
++	const inherited = await noOwnerController.spawnAgent({ name: "missing", systemPrompt: "x" }, "main");
++	assert.equal(inherited.ok, false);
++	assert.match(inherited.msg, /Fast controller.*main.*unavailable/i);
++	assert.equal(created, 0);
++
++	const missingChild = new Engine({ maxAgents: 8, maxSpawnDepth: 3, turnBudget: 5 });
++	withMain(missingChild, []);
++	const state = { desired: false, effective: false, model: { provider: "openai-codex", id: "gpt-5.6-sol" } };
++	const session = new FakeSession();
++	session.sessionId = "unregistered-child";
++	const noChildController = createSpawner({
++		engine: missingChild,
++		resolveModel: () => ({ provider: "openai-codex", id: "gpt-5.6-sol", model: {} }),
++		createSession: async () => ({ session }),
++		getFastState: (sessionId) => sessionId === "session-main" ? state : undefined,
++	});
++	const child = await noChildController.spawnAgent({ name: "orphan", systemPrompt: "x" }, "main");
++	assert.equal(child.ok, false);
++	assert.match(child.msg, /failed to start.*Fast controller.*child.*unavailable/i);
++	assert.equal(missingChild.has("orphan"), false);
++	assert.deepEqual(session.lifecycle, ["abort", "shutdown", "dispose"]);
++});
++
+ test("background compaction contributes activity independently from streaming", async () => {
+ 	const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3, turnBudget: 5 });
+ 	withMain(engine, []);
+diff --git a/spawner.ts b/spawner.ts
+index e69788c..192f927 100644
+--- a/spawner.ts
++++ b/spawner.ts
+@@ -4,6 +4,7 @@
+  * Design: docs/superpowers/specs/2026-06-15-actor-swarm-pi-extension-design.md
+  */
+ import type { AgentHandle, AgentView, Engine, StopReason } from "./engine.ts";
++import { describeFastState, type FastState } from "./fast-control.ts";
+ import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
+ 
+ export type { ThinkingLevel } from "./thinking-level.ts";
+@@ -19,6 +20,8 @@ function lastStopReason(messages: unknown[]): StopReason | undefined {
+ 
+ /** Minimal slice of an AgentSession that the orchestration needs. */
+ export interface SessionLike {
++	/** Live UUID used by the in-memory Fast controller; absent only in legacy test adapters. */
++	readonly sessionId?: string;
+ 	sendUserMessage(text: string, options?: { deliverAs?: "steer" | "followUp" }): Promise<void> | void;
+ 	abort(): Promise<void> | void;
+ 	/** Emit child extension session_shutdown before disposal. */
+@@ -46,6 +49,8 @@ export interface SpawnSpec {
+ 	model?: string;
+ 	/** Optional override; omitted means inherit the spawning agent's effective level. */
+ 	thinkingLevel?: ThinkingLevel;
++	/** Optional Fast override; omitted means inherit the spawning session's desired state. */
++	fast?: boolean;
+ 	/** Optional first message: delivered atomically to the new agent right after spawn. */
+ 	message?: string;
+ }
+@@ -68,7 +73,10 @@ export interface SpawnerDeps {
+ 		spawnedBy: string;
+ 		model: unknown;
+ 		thinkingLevel?: ThinkingLevel;
++		fast: boolean;
+ 	}) => Promise<{ session: SessionLike; sessionFile?: string }>;
++	/** Read a live per-session Fast controller state. Omitted only by legacy tests. */
++	getFastState?: (sessionId: string | undefined) => FastState | undefined;
+ 	/** Called after every relevant activity (e.g. refresh the status footer). */
+ 	onActivity?: () => void;
+ }
+@@ -121,7 +129,7 @@ function createSessionCloser(session: SessionLike, detach: () => void = () => {}
+ }
+ 
+ export function createSpawner(deps: SpawnerDeps): Spawner {
+-	const { engine, resolveModel, createSession, onActivity, listAvailableModels } = deps;
++	const { engine, resolveModel, createSession, getFastState, onActivity, listAvailableModels } = deps;
+ 
+ 	// Subscribe to a background session's lifecycle to enforce the turn budget and
+ 	// track streaming state.
+@@ -228,6 +236,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			turns: 0,
+ 			lastActivity: Date.now(),
+ 			streaming: false,
++			sessionId: spec.session.sessionId,
+ 			halted: spec.halted,
+ 		});
+ 		onActivity?.();
+@@ -238,6 +247,15 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 		const inheritRef = spec.model ?? spawner?.model;
+ 		// The Map Is Not the Territory: inherit the observed effective level, not prior intent.
+ 		const thinkingLevel = spec.thinkingLevel ?? spawner?.thinkingLevel;
++		let desiredFast = spec.fast;
++		if (desiredFast === undefined && getFastState) {
++			const ownerFast = getFastState(spawner?.sessionId);
++			if (!ownerFast) {
++				return { ok: false, msg: `error: Fast controller for owner '${spawnerName}' is unavailable` };
++			}
++			desiredFast = ownerFast.desired;
++		}
++		desiredFast ??= false;
+ 
+ 		// 1) Reserve the name synchronously (atomic: duplicate/cap/depth) — closes races.
+ 		const reserved = engine.reserve(spec.name, spawnerName);
+@@ -256,7 +274,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 		}
+ 
+ 		// 2) Slow session creation (await). A concurrent send_message buffers meanwhile.
+-		let session: SessionLike;
++		let session: SessionLike | undefined;
+ 		let sessionFile: string | undefined;
+ 		try {
+ 			({ session, sessionFile } = await createSession({
+@@ -265,8 +283,23 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 				spawnedBy: spawnerName,
+ 				model: resolved.model,
+ 				thinkingLevel,
++				fast: desiredFast,
+ 			}));
++			if (getFastState) {
++				const childFast = getFastState(session.sessionId);
++				if (!childFast) throw new Error(`Fast controller for child '${spec.name}' is unavailable`);
++				if (childFast.desired !== desiredFast) {
++					throw new Error(`Fast controller for child '${spec.name}' did not apply desired state ${desiredFast}`);
++				}
++			}
+ 		} catch (e) {
++			if (session) {
++				try {
++					await createSessionCloser(session)();
++				} catch {
++					/* Preserve the primary creation/control error. */
++				}
++			}
+ 			if (engine.get(spec.name) === reservation) engine.release(spec.name);
+ 			onActivity?.();
+ 			return { ok: false, msg: `error: failed to start '${spec.name}': ${e instanceof Error ? e.message : String(e)}` };
+@@ -296,6 +329,8 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			systemPrompt: spec.systemPrompt,
+ 			sessionFile,
+ 		});
++		const attached = engine.get(spec.name);
++		if (attached) attached.sessionId = session.sessionId;
+ 		onActivity?.();
+ 
+ 		// 4) Deliver the optional first message atomically (no race; the agent is registered).
+@@ -307,7 +342,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			else sent = ` (initial message NOT delivered: ${outcome.reason})`;
+ 		}
+ 		const model = formatModelThinking(`${resolved.provider}/${resolved.id}`, session.thinkingLevel);
+-		return { ok: true, msg: `spawned '${spec.name}' (model ${model})${sent}` };
++		const childFast = getFastState?.(session.sessionId);
++		const fast = childFast ? ` · ${describeFastState(childFast)}` : "";
++		return { ok: true, msg: `spawned '${spec.name}' (model ${model}${fast})${sent}` };
+ 	};
+ 
+ 	return { spawnAgent, restoreAgent };
