@@ -69,7 +69,7 @@ Use two related state concepts:
 - **effective**: desired is on and the current model is a compatible
   `openai-codex` GPT-5.4, GPT-5.5, or GPT-5.6 model.
 
-The `󱐋 fast` marker should represent effective state. Diagnostic output such
+The `⚡ fast` marker should represent effective state. Diagnostic output such
 as `/fast status` and `list_agents` should distinguish an enabled but
 unsupported state from an effective one.
 
@@ -87,7 +87,7 @@ subagent manager.
   add Fast state to the persisted roster.
 - Set the child's inherited or explicit state after child extensions have been
   bound but before its first prompt is submitted.
-- Append `󱐋 fast` to the model cell after `<model>@<thinking-level>` when Fast
+- Append `⚡ fast` to the model cell after `<model>@<thinking-level>` when Fast
   is effective. It follows the model column's existing responsive drop
   behavior rather than appearing beside lifecycle state.
 - Show agent names without a fixed cap or middle ellipsis whenever the physical
@@ -138,11 +138,11 @@ As of the date above:
   `openai-codex/gpt-5.6-sol` at `high` thinking level.
 - `dotfiles/pi/hosts/nixos-work/settings.json` contains the commit-pinned
   `futile/pi-statusline` Git package at
-  `90bc5a39bf1ea4597126a3d0eb3d478510f4b0bf`. This revision includes generic
+  `383c2c901476c361ce21b9706e3f26b0c3167d46`. This revision includes generic
   keyed extension statuses, MCP-only right alignment with a compact `🔌 MCP N/N`
   presentation under the default emoji icon style, aggregate agent activity/progress,
   the project-local working-tree override described below, inline warning-colored
-  `󱐋 fast`, and one-space context rendering (`🪟 60.2%/272K`).
+  `⚡ fast`, and one-space context rendering (`🪟 60.2%/272K`).
 - `home-modules/pi.nix` copies fdietze's subagent source from the pinned
   `fdietze-dotfiles` flake input and applies five repository patches:
   - `patches/fdietze-pi-subagents-bind-errors.patch`
@@ -325,7 +325,7 @@ logging and should remain diagnosable.
 - Foreground status: publish plain `fast` through
   `ctx.ui.setStatus("fast", "fast")`; clear it when ineffective. Styling belongs
   to the statusline, not the publisher.
-- Child roster: append `󱐋 fast` after `<model>@<thinking-level>` only when
+- Child roster: append `⚡ fast` after `<model>@<thinking-level>` only when
   effective; leave lifecycle state independent.
 - Agent names have no fixed shortening cap or middle ellipsis.
 - `list_agents`: show the marker after the model when effective and always
@@ -343,7 +343,7 @@ change should:
 1. Read `footerData.getExtensionStatuses()` on every render.
 2. Preserve generic keyed statuses in a stable segment. Keep their publisher
    styling by default; the approved keyed `fast` presentation is the narrow UI
-   exception and adds `󱐋` plus the theme warning color at render time.
+   exception and adds `⚡` plus the theme warning color at render time.
 3. Keep Fast inline after effort, keep only configured keys such as `mcp`
    right-aligned, and allow normal responsive dropping when space is genuinely
    unavailable.
@@ -567,7 +567,7 @@ flake.lock                   # committed development-tool pin
 
 ### Subagent presentation
 
-- roster lines show `<model>@<thinking-level> 󱐋 fast` for effective sessions;
+- roster lines show `<model>@<thinking-level> ⚡ fast` for effective sessions;
 - long agent names have no fixed ellipsis cap, and narrow layouts remain
   terminal-safe through whole-column dropping plus final clipping;
 - production roster layout injects Pi TUI's exact `visibleWidth` and
@@ -610,7 +610,7 @@ build path before switching.
 
 ### Completed deployment validation
 
-Validation on `nixos-work` completed on 2026-08-10:
+Validation on `nixos-work` completed on 2026-08-10, with the Fast-marker follow-up validated on 2026-08-11:
 
 - `just format-check`, `nice -n 19 just check`, and the full
   `nice -n 19 just build` passed. The built and activated system was
@@ -622,11 +622,11 @@ Validation on `nixos-work` completed on 2026-08-10:
   and the generated child policy contains exactly the pinned MCP adapter, web
   tools, context-prune, and Fast extension. It does not contain the statusline.
 - The managed statusline checkout resolves to exact commit
-  `90bc5a39bf1ea4597126a3d0eb3d478510f4b0bf` and has no npm audit findings.
+  `383c2c901476c361ce21b9706e3f26b0c3167d46` and has no npm audit findings.
 - Fresh managed Pi processes verified bare `/fast`, explicit `/fast toggle`,
   and `/fast on|off|status`. With Fast on, the
   warning-colored inline status rendered as
-  `🧠 high > 󱐋 fast > 🪟 0.0%/272K`, with one space after the context icon,
+  `🧠 high > ⚡ fast > 🪟 0.0%/272K`, with one space after the context icon,
   while `🔌 MCP 0/3` remained at the right edge.
 - A fresh Pi RPC process exercised the deployed extensions with an eligible
   Codex model. Main self-control was effective; an omitted child override
@@ -635,6 +635,12 @@ Validation on `nixos-work` completed on 2026-08-10:
   main changed its direct child off; and both child-to-main and main-to-grandchild
   non-owner controls were rejected. Roster and `list_agents` output tracked the
   effective marker transitions, and all fixture agents were terminated.
+- The `⚡ fast` follow-up passed the statusline's 256 tests, typecheck, and flake
+  check plus all 142 store-built subagent tests. A full host build and switch
+  activated `/nix/store/06pw3ni0lb0w72cp18z7gp101532wiq8-nixos-system-nixos-work-26.11.20260807.f13ff45`.
+  Fresh fullscreen Pi smokes rendered warning-colored `⚡ fast` in the foreground
+  footer and `gpt-5.6-sol@xhigh ⚡ fast` in the deployed subagent roster while
+  preserving the right-aligned `🔌 MCP 0/3` status.
 
 ## Known boundaries and deferred choices
 
@@ -645,7 +651,7 @@ Validation on `nixos-work` completed on 2026-08-10:
 - The first statusline fork should preserve upstream features. Exact later
   removals are intentionally deferred.
 - The keyed Fast presentation is fixed inline after effort as warning-colored
-  `󱐋 fast`; MCP remains the independently configured right-aligned status.
+  `⚡ fast`; MCP remains the independently configured right-aligned status.
 - Publishing a forked npm package is unnecessary unless Git-package loading
   becomes inconvenient.
 - The fork is consumed as a pinned Pi Git package, not a submodule or flake

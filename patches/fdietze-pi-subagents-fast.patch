@@ -148,7 +148,7 @@ index 0000000..b002641
 +    model: { provider: "anthropic", id: "claude-opus-4-6" },
 +  };
 +  assert.match(describeFastState(unsupported), /desired on.*effective off.*unsupported/i);
-+  assert.equal(FAST_ROSTER_MARKER, "󱐋 fast");
++  assert.equal(FAST_ROSTER_MARKER, "⚡ fast");
 +});
 diff --git a/fast-control.ts b/fast-control.ts
 new file mode 100644
@@ -192,7 +192,7 @@ index 0000000..f428d73
 +	| { ok: true; agent: string; state: FastState }
 +	| { ok: false; reason: string };
 +
-+export const FAST_ROSTER_MARKER = "󱐋 fast";
++export const FAST_ROSTER_MARKER = "⚡ fast";
 +const FAST_REGISTRY_KEY = Symbol.for("futile.pi.codex-fast.registry.v1");
 +
 +function registry(): FastRegistry | undefined {
@@ -308,7 +308,7 @@ index df02e09..4e32a95 100644
 +			sessionId: "session-scout",
 +		}),
 +	], 0, 100, "main");
-+	assert.match(out, /gpt-5\.6-sol@xhigh 󱐋 fast/);
++	assert.match(out, /gpt-5\.6-sol@xhigh ⚡ fast/);
 +	assert.match(out, /Fast desired on; effective on/);
 +});
 +
@@ -317,7 +317,7 @@ index df02e09..4e32a95 100644
 +	const out = formatSnapshot([
 +		rec({ name: "scout", model: "anthropic/claude-opus-4-6", sessionId: "session-scout" }),
 +	], 0, 100, "main");
-+	assert.doesNotMatch(out, /󱐋 fast/);
++	assert.doesNotMatch(out, /⚡ fast/);
 +	assert.match(out, /Fast desired on; effective off; unsupported model/i);
 +});
 +
@@ -636,7 +636,7 @@ index f413abb..43fbd8c 100644
 +		[re({ model: "openai-codex/gpt-5.6-sol", thinkingLevel: "xhigh", fastEffective: true, status: "thinking" })],
 +		200,
 +	)[0];
-+	assert.match(enabled, /gpt-5\.6-sol@xhigh 󱐋 fast/);
++	assert.match(enabled, /gpt-5\.6-sol@xhigh ⚡ fast/);
 +
 +	const disabled = formatRoster(
 +		[re({ model: "openai-codex/gpt-5.6-sol", thinkingLevel: "xhigh", fastEffective: false, status: "thinking" })],
@@ -644,7 +644,7 @@ index f413abb..43fbd8c 100644
  	)[0];
 -	assert.match(row, /gpt-5\.6-sol@xhigh/);
 +	assert.match(disabled, /gpt-5\.6-sol@xhigh/);
-+	assert.doesNotMatch(disabled, /󱐋 fast/);
++	assert.doesNotMatch(disabled, /⚡ fast/);
 +});
 +
 +test("formatRoster: Fast model cell remains visible at its exact terminal display width", () => {
@@ -656,9 +656,9 @@ index f413abb..43fbd8c 100644
 +		fastEffective: true,
 +		context: "",
 +	});
-+	const complete = "  a idle gpt-5.6-sol@xhigh 󱐋 fast";
-+	assert.equal(formatRoster([entry], 33)[0], complete);
-+	assert.doesNotMatch(formatRoster([entry], 32)[0], /gpt-5\.6-sol/);
++	const complete = "  a idle gpt-5.6-sol@xhigh ⚡ fast";
++	assert.equal(formatRoster([entry], 34)[0], complete);
++	assert.doesNotMatch(formatRoster([entry], 33)[0], /gpt-5\.6-sol/);
 +});
 +
 +test("formatRoster: terminal-width measurement aligns an isolated regional indicator", () => {
