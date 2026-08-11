@@ -138,9 +138,9 @@ As of the date above:
   `openai-codex/gpt-5.6-sol` at `high` thinking level.
 - `dotfiles/pi/hosts/nixos-work/settings.json` contains the commit-pinned
   `futile/pi-statusline` Git package at
-  `383c2c901476c361ce21b9706e3f26b0c3167d46`. This revision includes generic
-  keyed extension statuses, MCP-only right alignment with a compact `🔌 MCP N/N`
-  presentation under the default emoji icon style, aggregate agent activity/progress,
+  `9f849d14d5c03cc19c13ea478125842cb31ebfed`. This revision includes generic
+  keyed extension statuses, a right-aligned `🐴 ponytail: MODE > 🔌 MCP N/N`
+  cluster with Ponytail-first responsive dropping, aggregate agent activity/progress,
   the project-local working-tree override described below, inline warning-colored
   `⚡ fast`, and one-space context rendering (`🪟 60.2%/272K`).
 - `home-modules/pi.nix` copies fdietze's subagent source from the pinned
@@ -344,9 +344,9 @@ change should:
 2. Preserve generic keyed statuses in a stable segment. Keep their publisher
    styling by default; the approved keyed `fast` presentation is the narrow UI
    exception and adds `⚡` plus the theme warning color at render time.
-3. Keep Fast inline after effort, keep only configured keys such as `mcp`
-   right-aligned, and allow normal responsive dropping when space is genuinely
-   unavailable.
+3. Keep Fast inline after effort. Keep configured keys such as `ponytail` and
+   `mcp` right-aligned in order, using the main separator; drop leftmost right-side
+   values first so MCP survives narrower layouts.
 4. Preserve ANSI styling and use terminal display width rather than JavaScript
    string length.
 5. Ensure `setStatus` changes trigger the expected re-render.
@@ -622,7 +622,7 @@ Validation on `nixos-work` completed on 2026-08-10, with the Fast-marker follow-
   and the generated child policy contains exactly the pinned MCP adapter, web
   tools, context-prune, and Fast extension. It does not contain the statusline.
 - The managed statusline checkout resolves to exact commit
-  `383c2c901476c361ce21b9706e3f26b0c3167d46` and has no npm audit findings.
+  `9f849d14d5c03cc19c13ea478125842cb31ebfed` and has no npm audit findings.
 - Fresh managed Pi processes verified bare `/fast`, explicit `/fast toggle`,
   and `/fast on|off|status`. With Fast on, the
   warning-colored inline status rendered as
@@ -641,6 +641,11 @@ Validation on `nixos-work` completed on 2026-08-10, with the Fast-marker follow-
   Fresh fullscreen Pi smokes rendered warning-colored `⚡ fast` in the foreground
   footer and `gpt-5.6-sol@xhigh ⚡ fast` in the deployed subagent roster while
   preserving the right-aligned `🔌 MCP 0/3` status.
+- The right-cluster follow-up passed all 257 statusline tests, typecheck, flake
+  check, repository format/check, and the full host build/switch. A fresh
+  fullscreen Pi rendered `🐴 ponytail: 🌿 LITE > 🔌 MCP 0/3` at the far right
+  with no leading Ponytail activity circle; narrow-width tests verify Ponytail
+  drops before MCP.
 
 ## Known boundaries and deferred choices
 
@@ -651,7 +656,8 @@ Validation on `nixos-work` completed on 2026-08-10, with the Fast-marker follow-
 - The first statusline fork should preserve upstream features. Exact later
   removals are intentionally deferred.
 - The keyed Fast presentation is fixed inline after effort as warning-colored
-  `⚡ fast`; MCP remains the independently configured right-aligned status.
+  `⚡ fast`; Ponytail and MCP form the independently configured right-aligned
+  cluster, with Ponytail dropping first under width pressure.
 - Publishing a forked npm package is unnecessary unless Git-package loading
   becomes inconvenient.
 - The fork is consumed as a pinned Pi Git package, not a submodule or flake
