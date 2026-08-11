@@ -140,11 +140,12 @@ As of the date above:
   `openai-codex/gpt-5.6-sol` at `high` thinking level.
 - `dotfiles/pi/hosts/nixos-work/settings.json` contains the commit-pinned
   `futile/pi-statusline` Git package at
-  `9f849d14d5c03cc19c13ea478125842cb31ebfed`. This revision includes generic
+  `5a58bd2e29c8ccfc75fae9c098852df1fedf8226`. This revision includes generic
   keyed extension statuses, a right-aligned `🐴 ponytail: MODE > 🔌 MCP N/N`
-  cluster with Ponytail-first responsive dropping, aggregate agent activity/progress,
-  the project-local working-tree override described below, inline warning-colored
-  `⚡ fast`, and one-space context rendering (`🪟 60.2%/272K`).
+  cluster with Ponytail-first responsive dropping, aggregate agent activity/progress
+  with renderer-restart reassertion, the project-local working-tree override described
+  below, inline warning-colored `⚡ fast`, and one-space context rendering
+  (`🪟 60.2%/272K`).
 - `home-modules/pi.nix` copies fdietze's subagent source from the pinned
   `fdietze-dotfiles` flake input and applies five repository patches:
   - `patches/fdietze-pi-subagents-bind-errors.patch`
@@ -620,13 +621,13 @@ Validation on `nixos-work` completed on 2026-08-10, with the Fast-marker follow-
   `nice -n 19 just build` passed. The built and activated system was
   `/nix/store/zc1041jjr9n9vcwh535k885fkdmmz7sa-nixos-system-nixos-work-26.11.20260807.f13ff45`.
 - The built subagent extension passed all 142 tests. The local Fast extension
-  passed all 9 tests; the pinned statusline had previously passed all 256 tests,
-  typecheck, and its flake check.
+  passed all 9 tests; the pinned statusline passed all 264 tests, typecheck, and
+  its flake check.
 - The activated foreground Fast link resolves to the repository working tree,
   and the generated child policy contains the pinned MCP adapter, web tools,
   Ponytail, context-prune, and Fast extension. It does not contain the statusline.
 - The managed statusline checkout resolves to exact commit
-  `9f849d14d5c03cc19c13ea478125842cb31ebfed` and has no npm audit findings.
+  `5a58bd2e29c8ccfc75fae9c098852df1fedf8226` and has no npm audit findings.
 - Fresh managed Pi processes verified bare `/fast`, explicit `/fast toggle`,
   and `/fast on|off|status`. With Fast on, the
   warning-colored inline status rendered as
@@ -655,6 +656,12 @@ Validation on `nixos-work` completed on 2026-08-10, with the Fast-marker follow-
   All 142 store-built subagent tests passed. A fresh direct child and its nested
   child each reported the exact injected marker `PONYTAIL MODE ACTIVE — level: lite`;
   both spawn calls omitted `fast`, and the direct child inherited Fast off.
+- The terminal-progress follow-up passed all 264 statusline tests, typecheck, flake
+  check, repository format/check, and the full host build/switch. During a real
+  deployed Engine pending interval, switching regular to fullscreen emitted three
+  active OSC sequences before alternate-screen entry and eight afterward while the
+  roster and union timer stayed active. Quitting fullscreen during another active
+  interval emitted no active sequence after the final clear or alternate-screen exit.
 
 ## Known boundaries and deferred choices
 
