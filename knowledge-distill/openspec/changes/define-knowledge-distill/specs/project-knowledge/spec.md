@@ -16,7 +16,7 @@ The root node's `owned_files` patterns SHALL define the source-file universe cov
 
 #### Scenario: Changed file is outside root coverage
 - **WHEN** a changed file matches none of the root node's `owned_files` patterns
-- **THEN** the knowledge gate creates no source-triggered reconciliation obligation for that file
+- **THEN** the knowledge check creates no source-triggered reconciliation candidate for that file
 
 #### Scenario: New file has no descendant owner
 - **WHEN** a new file matches the root node but no descendant node's `owned_files`
@@ -74,16 +74,28 @@ Each parent SHALL track the identity, hierarchy position, and semantic content o
 - **WHEN** parent prose is updated during reconciliation
 - **THEN** its semantic hash changes and its direct parent becomes pending
 
-### Requirement: Merge gate
-The system SHALL provide deterministic validation that blocks integration while any knowledge node has a fingerprint mismatch or structural error.
+### Requirement: Deterministic knowledge check
+The system SHALL provide a policy-neutral, VCS-independent check that reports fingerprint mismatches, malformed hierarchy, ambiguous ownership, and invalid links in human-readable and machine-readable forms.
 
-#### Scenario: Branch contains pending knowledge
-- **WHEN** validation runs on a branch with unreconciled source or child changes
-- **THEN** validation fails and lists every pending node with its triggering files or children
+#### Scenario: Current tree contains pending knowledge
+- **WHEN** the check runs with unreconciled source or child changes
+- **THEN** it lists every pending node with its triggering files or children
 
-#### Scenario: Main is fully reconciled
-- **WHEN** every stored fingerprint matches and the hierarchy is structurally valid
-- **THEN** validation reports zero pending reconciliation entries
+#### Scenario: Knowledge or file link is invalid
+- **WHEN** a knowledge node links to a missing knowledge node or repository file
+- **THEN** the check reports the source node and invalid target
+
+#### Scenario: Repository chooses strict automation
+- **WHEN** the check is invoked in strict mode and finds any validation issue
+- **THEN** it returns a failing status suitable for optional CI or pull-request enforcement
+
+#### Scenario: Repository chooses advisory operation
+- **WHEN** the check is invoked in advisory mode and finds stale knowledge
+- **THEN** it reports warnings without itself preventing commits, pushes, or integration
+
+#### Scenario: Current tree is fully reconciled
+- **WHEN** every stored fingerprint matches and all structural and link invariants are valid
+- **THEN** the check reports zero pending reconciliation entries
 
 ### Requirement: Context-compatible knowledge reads
 The system SHALL page knowledge nodes into active agent context while recording consulted node identity and content hash in state that survives folding, compaction, and session resume.

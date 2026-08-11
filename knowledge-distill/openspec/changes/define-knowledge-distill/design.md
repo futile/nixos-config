@@ -2,7 +2,7 @@
 
 The context-collapse extension already provides reversible, session-local movement between live messages and folded summaries. Durable project knowledge has different semantics: it is shared, curated, current-state documentation rather than colder transcript storage. The two systems should compose through page-in, collapse, and explicit write-back rather than pretending that a fold can be losslessly moved into documentation.
 
-The repository is the collaboration boundary. Pull-request branches may temporarily contain stale knowledge, but the default branch should pass a deterministic check proving that each knowledge node has been reconciled against the source and direct child knowledge it represents. Full session archives are useful evidence but must remain optional.
+The repository is the collaboration boundary. Its knowledge state must be deterministically inspectable, but maintainers decide whether stale knowledge is blocked in pull requests, reported as warnings, checked manually, or temporarily accepted on the default branch. Full session archives are useful evidence but must remain optional.
 
 ## Goals / Non-Goals
 
@@ -10,6 +10,7 @@ The repository is the collaboration boundary. Pull-request branches may temporar
 
 - Maintain a single-rooted hierarchy of concise, agent-facing project knowledge.
 - Detect source changes that may invalidate existing knowledge, including new files in previously unclassified areas.
+- Provide a policy-neutral check for stale fingerprints, malformed hierarchy, ambiguous ownership, and invalid links.
 - Store lightweight reconciliation receipts in knowledge nodes using VCS-independent fingerprints.
 - Propagate substantive child documentation changes upward without invalidating every ancestor for metadata-only changes.
 - Track consulted knowledge across context folding and compaction, while keeping reads cheap and non-punitive.
@@ -23,6 +24,7 @@ The repository is the collaboration boundary. Pull-request branches may temporar
 - Requiring every search result or consulted node to be edited.
 - Requiring session archival for normal knowledge creation or reconciliation.
 - Providing live cross-clone locking or presence through Git.
+- Requiring pull requests, blocking merges, or requiring the default branch to remain fully reconciled.
 
 ## Decisions
 
@@ -68,17 +70,17 @@ Consequences:
 
 This controlled bubbling prevents every source change from automatically reaching the root.
 
-### Derive branch gating from current state
+### Provide deterministic, policy-neutral checking
 
-The validator recomputes fingerprints from the checked-out tree. A branch may contain mismatches while work is in progress; merge is blocked until every node matches. The default branch therefore has zero pending reconciliation without storing branch names or mutable pending markers in nodes.
+The checker recomputes fingerprints from the checked-out tree and validates hierarchy structure, ownership, and links to knowledge or repository files. It reports every mismatch in human-readable and machine-readable forms without assuming Git, branches, pull requests, or a special default branch.
 
-Adding or modifying source after reconciliation changes the computed fingerprint and reopens the node automatically.
+Repositories may use the same result as a strict CI/PR gate, an advisory warning, a manual maintenance command, or information they intentionally ignore. Adding or modifying source after reconciliation still changes the computed fingerprint and reopens the node automatically; whether that state blocks collaboration is repository policy.
 
 ### Treat knowledge reads as page-ins, not hard invalidations
 
 `knowledge_read` records the node and its content hash in extension/session state. This consulted set survives context collapse, compaction, and session resume. Folded content remains recoverable using the existing context tools.
 
-Consultation is a soft reconciliation prompt, not by itself a merge blocker. `knowledge_search` does not mark returned nodes. Hard obligations come from fingerprint mismatches or an explicit affected-node signal. This avoids incentivizing agents to bypass the knowledge tools.
+Consultation is a soft reconciliation prompt, not by itself a deterministic check failure. `knowledge_search` does not mark returned nodes. Hard reconciliation candidates come from fingerprint mismatches or an explicit affected-node signal. This avoids incentivizing agents to bypass the knowledge tools.
 
 `knowledge_distill` is an explicit semantic promotion from one or more live/folded ranges into selected knowledge nodes. It is not an automatic archive operation.
 
@@ -104,10 +106,10 @@ The curated hierarchy remains authoritative. Session archives are sparse evidenc
 2. Create the root knowledge node with a deliberately narrow initial `owned_files` scope.
 3. Compute initial fingerprints and reconcile the first hierarchy manually.
 4. Add local status and reconciliation commands.
-5. Add the merge gate after existing nodes pass validation.
+5. Document optional manual, advisory, and strict CI/PR uses of the checker.
 6. Add context-tool integration and optional session archival independently.
 
-Rollback consists of removing the gate while retaining ordinary Markdown documentation; no source code depends on the knowledge metadata.
+Rollback consists of disabling any repository-specific automation while retaining the checker and ordinary Markdown documentation; no source code depends on enforcement policy.
 
 ## Open Questions
 
