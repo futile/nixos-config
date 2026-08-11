@@ -2,144 +2,125 @@
 
 ## Worktrees And Build Reuse
 
-When creating git worktrees, isolated workspaces, or subagent work areas, check whether duplicate build outputs, caches, or dependency downloads would cause expensive cold rebuilds, repeated setup work, or wasted disk.
+Before creating git worktrees, isolated workspaces, or subagent areas, check whether duplicated outputs, caches, or downloads cause cold rebuilds, repeated setup, or disk waste.
 
-When iterating on Rust packages in `~/gits/nixpkgs` or another nixpkgs checkout, prefer `~/nixos/bin/nix-build-sccached` over plain `nix build` when the build should use shared sccache. See `~/nixos/docs/nix-sccache.md`.
-
-After creating or changing `.codex/config.toml`, restart Codex before relying on new config. Subagents created before that restart may keep stale config and must not prove new config is active. Verify with a fresh Codex session or a fresh subagent after restart.
+For Rust packages in `~/gits/nixpkgs` or another nixpkgs checkout, prefer `~/nixos/bin/nix-build-sccached` over `nix build` when shared sccache should be used. See `~/nixos/docs/nix-sccache.md`.
 
 ## Skill Adjustments
 
-This section overrides skills. Always respect these overrides over skill instructions. Never ignore them. Missing any override here is a critical error. If unsure, ask.
+Overrides below apply to specific or all skills.
+ALWAYS prefer these overrides over skill instructions. Missing one is CRITICAL ERROR.
+If unsure, MUST ASK.
 
 ### Skill overrides:
 
-#### the-elements-of-style:writing-clearly-and-concisely
-
-- Do not silently start using this skill; it adds non-trivial token-window load.
-- Do not auto-use it for prose or human-readable text.
-- Only use it when explicitly asked, or for longer, non-trivial docs such as specs and plans.
-- If you want to use it, explicitly ask unless already instructed.
-- Tell the user when it would be a good time to use the skill.
-
 #### Subagent routing
 
-- Before spawning a subagent, apply the net-savings gate:
-  - Would an available deterministic tool (`rg`, CBM, Serena, RTK, or equivalent) answer this cheaper?
-  - Is the task independent enough that the subagent does not need broad main-thread context?
-  - Can the prompt be smaller than the main-thread context it replaces?
-  - Is the expected output compact and directly usable?
-  - Can the main thread verify the result cheaply?
-- Prefer subagents for bounded scouts, focused review packets, log/output triage, and narrow patch work with clear acceptance criteria.
-- Prefer the main thread for architecture decisions, cross-cutting design, final synthesis, final verification, small edits where context is already loaded, and tightly coupled implementation.
-- Treat names like `reviewer`, `implementer`, `code_mapper`, and `architect` as roles unless matching configured Codex agents exist.
-- Main thread owns decisions. Subagents may gather evidence, propose options, or produce bounded changes; they do not decide architecture or completion.
+- Before spawning, apply net-savings gate:
+  - Can deterministic tool (`rg`, CBM, Serena, RTK, or equivalent) answer cheaper?
+  - Is task independent, without broad main-thread context?
+  - Can prompt be smaller than context replaced?
+  - Will output be compact and directly usable?
+  - Can main thread verify cheaply?
+- Prefer subagents for bounded scouts, focused review packets, log/output triage, and narrow patches with clear acceptance criteria.
+- Prefer main thread for architecture, cross-cutting design, final synthesis and verification, small loaded-context edits, and tightly coupled work.
+- Names such as `reviewer`, `implementer`, `code_mapper`, and `architect` are roles unless configured agents exist.
+- Main thread decides. Subagents gather evidence, propose options, or make bounded changes; they do not decide architecture or completion.
 
 #### Subagent model guidance
 
-Use these routes only after the tool-first check and net-savings gate pass.
+Use routes only after tool-first and net-savings gates pass.
 
-Model names age faster than role boundaries. If user asks for best/current model, model choice materially affects result, or a newer family exists, verify current official OpenAI model guidance and models callable in active surface. Prefer verified current-surface availability over public docs; preserve explicitly requested model. Otherwise map newer models to capability tiers instead of treating literal versions as permanent.
+Model names age quickly. If user asks for best/current model, model choice matters, or newer family exists, verify official OpenAI guidance and active-surface models. Active availability beats public docs. Preserve explicit model requests. Otherwise map newer models by capability tier, not permanent literal versions.
 
-For the current GPT-5.6 family:
+For current GPT-5.6 family:
 
-- Prefer `gpt-5.6-luna` at `xhigh` for efficient, high-volume, low-risk scout/support packets and balanced bounded work where prioritization and judgment matter, including ordinary focused review. Use `max` for the hardest higher-judgment Luna packets.
-- Prefer `gpt-5.6-sol` (or the `gpt-5.6` alias) for the most subtle, consequential, or quality-first bounded reviews and debugging packets.
+- Prefer `gpt-5.6-luna` at `xhigh` for efficient high-volume, low-risk scout/support packets and balanced bounded work needing prioritization and judgment, including ordinary focused review. Use `max` for hardest higher-judgment Luna packets.
+- Prefer `gpt-5.6-sol` (or `gpt-5.6` alias) for subtle, consequential, quality-first bounded reviews and debugging.
 
-Do not use `gpt-5.6-luna` below `xhigh` unless the human operator explicitly allows a lower reasoning effort.
+Do not use `gpt-5.6-luna` below `xhigh` unless human operator explicitly permits lower effort.
 
-Use `medium` as the normal balanced reasoning baseline. Use `high` or `xhigh` when the task has subtle interactions and the extra reasoning is likely to produce material quality gain. Reserve `max` for the hardest quality-first packets; compare it with `xhigh` rather than assuming the highest setting is automatically best. When migrating a proven route to GPT-5.6, start at the existing effort and consider one level lower because the newer family may reach same quality more efficiently.
+Normal balanced baseline: `medium`. Use `high` or `xhigh` when subtle interactions justify cost. Reserve `max` for hardest quality-first packets; compare with `xhigh`, not automatically highest. When moving proven route to GPT-5.6, start at existing effort and consider one level lower if equally capable.
 
-Strongly consider the efficient scout tier (`gpt-5.6-luna` at `xhigh`) where work is high-volume, low-risk, and mostly extraction or summary:
+Strongly consider efficient scout tier (currently `gpt-5.6-luna`) for high-volume, low-risk extraction and summary:
 
 - Large-file or repo scans returning compact evidence.
 - Docs/log/transcript/test-output triage.
 - File maps, dependency/config inventories, stale-reference checks.
-- Broad search summaries where exact source refs are enough.
-- Issue/bead/thread summary.
+- Broad search summaries needing exact source references.
+- Issue/bead/thread summaries.
 - Output-compression packets replacing large raw reads.
 
-Do not use the efficient scout tier when the main thread must redo reasoning, findings are subtle, or wrong prioritization would waste significant time.
+Avoid efficient tier if main thread must redo reasoning, findings are subtle, or bad prioritization wastes much time.
 
-Strongly consider `gpt-5.6-luna` at `max` or the frontier tier (`gpt-5.6-sol`) for higher-judgment support packets that remain bounded and reviewable:
+Strongly consider `gpt-5.6-luna` at `max` or frontier tier (currently `gpt-5.6-sol`) for bounded, reviewable higher-judgment support:
 
-- Focused architecture evidence gathering without final decision authority.
-- Bounded code review where subtle regressions or test gaps matter.
-- Comparing implementation options from existing evidence.
-- Debugging scouts where symptoms cross few files/systems but final fix choice stays main thread.
-- Synthesizing scout/tool outputs into options, risks, and next checks.
+- Focused architecture evidence without decision authority.
+- Bounded review for subtle regressions or test gaps.
+- Existing-evidence option comparisons.
+- Debugging scouts crossing few files/systems while main thread chooses fix.
+- Synthesis of scout/tool outputs into options, risks, and next checks.
 
-Use the frontier tier for subtle, high-value review; use Luna at `max` when its quality is sufficient and cost or latency matters. Do not use either as a substitute for main-thread ownership of architecture, security, final synthesis, or high-risk judgment.
+Use frontier tier for subtle, high-value review; use Luna at `max` when sufficient and cost or latency matters. Neither replaces main-thread ownership of architecture, security, final synthesis, or high-risk judgment.
 
-Use a configured fast execution model such as `gpt-5.3-codex-spark` only when it is available and the packet is bounded, low-risk, and cheaply verifiable:
-
-- Small single-file or tightly scoped patches.
-- Tiny UI/CSS/copy/config/test adjustments.
-- Applying an established repo pattern to clearly identified file.
-- Fixing a known failing test when expected behavior is explicit.
-- Mechanical edits with cheap diff/test check.
-- Quick experiments where wrong is cheap and result reviewed.
-
-Do not use Spark for broad refactors, architecture, deep debugging, security-sensitive changes, multi-system planning, or anything where hidden debt is likely. Spark output should be smallest correct patch, verification run, changed files, and uncertainty.
-
-Escalate back to the main thread or a stronger model when a cheaper subagent hits ambiguity, conflicting evidence, repeated failure, broad context needs, risky edits, or signs that the main thread would need to redo the result.
+Escalate to main thread or stronger model on ambiguity, conflicting evidence, repeated failure, broad-context needs, risky edits, or likely redo.
 
 #### Subagent reuse
 
 - Prefer fresh subagents for independent tasks, high-risk review, or role changes.
-- Reuse a subagent only when it continues same bounded role over same scope and its context is still accurate.
-- Before reuse, restate current scope, decisions, changed files, expected output, and stop conditions.
-- Do not reuse a subagent across unrelated beads/tasks, architecture changes, or from implementation into final review.
+- Reuse only for same bounded role and scope with accurate context.
+- Before reuse, restate scope, decisions, changed files, output, and stop conditions.
+- Never reuse across unrelated beads/tasks, architecture changes, or implementation-to-final-review transitions.
 
 #### Subagent packet contract
 
-Every subagent prompt should include:
+Every prompt includes:
 
 - Role: scout, reviewer, patch worker, log triager, etc.
 - Scope: files, commands, issue/bead, or subsystem boundaries.
 - Goal: concrete question or deliverable.
 - Constraints: allowed edits, forbidden areas, model ceiling, expected tools.
-- Output: concise findings, evidence, changed files, verification run, and open questions.
-- Stop condition: when to return instead of continuing.
+- Output: concise findings, evidence, changed files, verification, open questions.
+- Stop condition: when to return.
 
 ## Tool Usage
 
-- Prefer `rtk <command>` for shell commands that may produce noisy output when exact raw output is not required, especially `git status`, `git diff`, build/test/lint commands, package-manager commands, and logs. Examples: `rtk git diff --cached`, `rtk just check`, `rtk cargo test`, `rtk journalctl --user --since "10 min ago"`.
-- Use raw commands when exact byte-for-byte output matters, when invoking interactive tools, or when debugging RTK. Use RTK metadata commands directly: `rtk gain`, `rtk gain --history`, `rtk discover`, and `rtk proxy <cmd>`.
-- Do not use shell-call count as proxy for token cost. `rtk` already compacts noisy output, so prioritize token-saving work around large raw `sed`/`cat`, broad `rg`, `git diff`/`git show`, large JSON/log output, validation output, and repeated source reads. Prefer available targeted summaries or indexes before reaching for a subagent.
-- Use codebase-memory-mcp when it is configured and useful for indexed codebase exploration: architecture summaries, graph-backed code search, known symbol lookup, call/data-flow tracing, and code snippets. Useful tools include `get_architecture`, `search_code`, `search_graph`, `get_code_snippet`, `trace_path`, and `query_graph`.
-- Do not treat codebase-memory-mcp as a replacement for `rg`. Use `rg` directly for exact strings, file paths, config values, docs, non-code text, or when CBM results look incomplete or noisy.
-- For CBM CLI usage, discover project names with `codebase-memory-mcp cli list_projects '{}'`, query architecture with `codebase-memory-mcp cli get_architecture '{"project":"PROJECT_NAME","aspects":["all"]}'`, and index missing or stale projects with `codebase-memory-mcp cli index_repository '{"repo_path":"/absolute/path/to/repo"}'`.
-- For broad CBM orientation, prefer `get_architecture` with `aspects: ["all"]`; targeted or natural-language aspect names may return only thin graph counts.
-- For `get_architecture`, `aspects` is an enum list, not a free-text or semantic query field. Valid values are `all`, `languages`, `packages`, `entry_points`, `routes`, `hotspots`, `boundaries`, `layers`, `file_tree`, `structure`, and `dependencies`. Omit `aspects`, pass an empty array, or use `["all"]` for the full architecture summary. Use specific enum values such as `["structure", "dependencies", "entry_points"]` when only those sections are needed.
-- For `search_code`, pass `regex: true` when using grep-style alternatives such as `foo|bar`; otherwise the pattern may be treated literally.
-- Prefer `search_graph` BM25 `query` for concept discovery. Treat `semantic_query` as experimental and verify its results against `search_graph`, `search_code`, or `rg`.
-- Treat `query_graph` edge queries as suspect unless verified in the current project; when call/data-flow matters, prefer `trace_path`, `search_graph`, and `get_code_snippet`, then confirm with source reads.
-- Before source exploration or modification, check for Serena integration. Do not assume exact MCP server name; it may be `serena`, `serena_stream`, or another alias. Identify Serena via server instructions or tools such as `activate_project`, `get_current_config`, `get_symbols_overview`, and `find_symbol`.
-- If available and its Instructions Manual is unread this session, read it before code exploration via MCP server instructions or Serena's `initial_instructions`, whichever is exposed.
-- Ensure current repository is active. Check Serena configuration if uncertain; call `activate_project` only when correct project is not already active. Servers using `--project-from-cwd` may already have activated it.
-- Then prefer Serena symbolic tools for code structure, symbol lookup, references, and whole-symbol edits. Use ordinary search and file tools for exact text, docs, config, non-code files, and narrow source ranges.
-- Before broadly reading an external GitHub dependency's source, use DeepWiki for repository-level orientation: architecture, subsystem relationships, data/control flow, public API concepts, and likely implementation locations. Use the result to narrow subsequent source inspection.
-- Treat DeepWiki as an orientation and discovery source, not as authority for the revision pinned by this repository. Verify version-sensitive behavior, exact APIs, implementation details, and claims that affect code or configuration against the pinned source; the pinned source wins on conflict.
-- When using DeepWiki, repository names are case-sensitive. Use the exact GitHub owner/repository casing from the URL when available. For example, BitCraft public server docs are indexed as `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
+- Prefer `rtk <command>` for potentially noisy shell output when exact raw output is unnecessary, especially `git status`, `git diff`, build/test/lint, package-manager commands, and logs. Examples: `rtk git diff --cached`, `rtk just check`, `rtk cargo test`, `rtk journalctl --user --since "10 min ago"`.
+- Use raw commands for byte-exact output, interactive tools, or RTK debugging. Run metadata directly: `rtk gain`, `rtk gain --history`, `rtk discover`, and `rtk proxy <cmd>`.
+- Shell-call count is not token cost. Because `rtk` compacts noisy output, focus savings on large raw `sed`/`cat`, broad `rg`, `git diff`/`git show`, large JSON/log output, validation output, and repeated reads. Prefer targeted summaries or indexes before subagents.
+- Use codebase-memory-mcp when configured and useful for indexed exploration: architecture, graph search, known symbols, call/data-flow, snippets. Tools: `get_architecture`, `search_code`, `search_graph`, `get_code_snippet`, `trace_path`, `query_graph`.
+- CBM does not replace `rg`. Use `rg` for exact strings, paths, config, docs, non-code text, or incomplete or noisy CBM results.
+- For CBM CLI, discover projects with `codebase-memory-mcp cli list_projects '{}'`, query architecture with `codebase-memory-mcp cli get_architecture '{"project":"PROJECT_NAME","aspects":["all"]}'`, and index stale or missing projects with `codebase-memory-mcp cli index_repository '{"repo_path":"/absolute/path/to/repo"}'`.
+- For broad orientation, prefer `get_architecture` with `aspects: ["all"]`; targeted or natural-language aspect names can return thin counts.
+- For `get_architecture`, `aspects` is enum list, not semantic query. Values: `all`, `languages`, `packages`, `entry_points`, `routes`, `hotspots`, `boundaries`, `layers`, `file_tree`, `structure`, `dependencies`. Omit `aspects`, use empty array, or `["all"]` for full summary. Use `["structure", "dependencies", "entry_points"]` for selected sections.
+- For `search_code`, pass `regex: true` for grep alternatives such as `foo|bar`; otherwise pattern may be literal.
+- Prefer `search_graph` BM25 `query` for discovery. `semantic_query` is experimental; verify via `search_graph`, `search_code`, or `rg`.
+- Distrust `query_graph` edge queries unless project-verified. For call/data-flow, prefer `trace_path`, `search_graph`, `get_code_snippet`, then source confirmation.
+- Before source exploration or modification, check for Serena integration. Server may be `serena`, `serena_stream`, or another alias. Identify via instructions or tools: `activate_project`, `get_current_config`, `get_symbols_overview`, `find_symbol`.
+- If available and unread this session, read Serena Instructions Manual before exploration via server instructions or `initial_instructions`.
+- Ensure current repository is active Serena project. Check config if unsure; call `activate_project` only if wrong. Servers using `--project-from-cwd` may already activate it.
+- After activation, prefer Serena symbolic tools for structure, symbol lookup and references, and whole-symbol edits. Use ordinary tools for exact text, docs, config, non-code, and narrow ranges.
+- Before broad external GitHub dependency inspection, use DeepWiki for architecture, relationships, data/control flow, public API concepts, and likely locations; then narrow source reads.
+- DeepWiki orients, but pinned revision is authority. Verify version-sensitive behavior, exact APIs, implementation, and consequential claims against pinned source.
+- DeepWiki repository names ARE ALWAYS case-sensitive. Use exact GitHub owner/repository casing; e.g. `clockworklabs/BitCraftPublic`, not `clockworklabs/bitcraftpublic`.
 
 ## Context Hygiene
 
-When reversible context-editing tools are available:
+When reversible context-editing tools exist:
 
-- Treat phase boundaries, point before final verification, and completed batches within a long exploration, debugging, implementation, or verification phase as context-maintenance checkpoints. During a long phase, reassess after several large tool results; do not wait for phase end or automatic compaction.
-- A checkpoint requires judgment, not necessarily a `context_map` call or a fold. Material being safe to fold is not by itself enough reason to fold it, and a no-op assessment satisfies the checkpoint.
-- Fold when there is meaningful completed or superseded bulk and either enough subsequent model/tool work is likely to reuse smaller context, or context-window or quality pressure justifies immediate maintenance.
-- Prefer to piggy-back maintenance on an already-required tool loop. If a final response is imminent and pressure is low, finish instead of creating a maintenance-only round trip.
-- When maintenance is worthwhile, orient with `context_map` and batch-collapse bulky reads, logs, compiler or test output, rejected approaches, and completed details after capturing their conclusions in a resume-quality summary. Prefer one useful batch over folding small items individually.
-- Keep governing instructions, active user request, unresolved errors, active evidence, open decisions, and information needed verbatim for upcoming work live.
-- A recent successful maintenance pass satisfies later phase-end checkpoints unless substantial new foldable bulk has accumulated. Interpret “collapse immediately once a topic closes” as “assess promptly and batch-collapse when worthwhile,” not as a requirement to fold every completed item.
+- Treat phase boundaries, pre-final verification, and completed batches in long work as maintenance checkpoints. Reassess after several large results; do not await phase end or auto-compaction.
+- Checkpoint means judgment, not mandatory `context_map` or fold. Safe-to-fold alone is insufficient; no-op is valid.
+- Fold meaningful completed or superseded bulk when enough later model/tool work benefits or context or quality pressure warrants it.
+- Piggy-back maintenance on required tool loops. If final response is near and pressure low, finish.
+- When useful, orient with `context_map`, then batch-collapse bulky reads, logs, compiler or test output, rejected paths, and completed details with resume-quality summary. Prefer one batch over tiny folds.
+- Keep governing instructions, request, unresolved errors, active evidence and decisions, and soon-needed verbatim data live.
+- Recent successful maintenance satisfies phase-end checks until substantial new bulk. “Collapse immediately once topic closes” means assess promptly and batch when worthwhile, not fold everything.
 
 ## Coding and Implementation Guidelines
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+Guidelines reduce common LLM coding mistakes. Merge with project rules.
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+**Tradeoff:** Caution over speed; use judgment for trivial tasks.
 
 ### Think Before Coding
 
@@ -147,159 +128,7 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 Before implementing:
 
-- State assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-<SUBAGENT-STOP>
-If you were dispatched as a subagent to execute a specific task, skip the rest of this file.
-</SUBAGENT-STOP>
-
-## Inlined Superpowers Startup Skill
-
-This section inlines full body of `superpowers:using-superpowers` skill. Do not separately load `superpowers:using-superpowers` only to read this policy to satisfy `superpowers:using-superpowers` startup policy.
-
-Other applicable skills MUST still be loaded before use.
-
-<EXTREMELY-IMPORTANT>
-If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
-
-IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
-
-This is not negotiable. This is not optional. You cannot rationalize your way out of this.
-</EXTREMELY-IMPORTANT>
-
-### Instruction Priority
-
-Superpowers skills override default system prompt behavior, but **user instructions always take precedence**:
-
-1. **User's explicit instructions** (CLAUDE.md, GEMINI.md, AGENTS.md, direct requests) - highest priority
-2. **Superpowers skills** - override default system behavior where they conflict
-3. **Default system prompt** - lowest priority
-
-If CLAUDE.md, GEMINI.md, or AGENTS.md says "don't use TDD" and a skill says "always use TDD," follow the user's instructions. The user is in control.
-
-### Claude -> Codex Adaptation
-
-Skills sometimes use Claude Code tool names, resolve them using the following mapping.
-
-#### Codex Tool Mapping
-
-When you encounter these in a skill, use your platform equivalent:
-
-| Skill references                 | Codex equivalent                                    |
-| -------------------------------- | --------------------------------------------------- |
-| `Task` tool (dispatch subagent)  | `spawn_agent`                                       |
-| Multiple `Task` calls (parallel) | Multiple `spawn_agent` calls                        |
-| Task returns result              | `wait_agent`                                        |
-| Task completes automatically     | `close_agent` to free slot                          |
-| `TodoWrite` (task tracking)      | `update_plan`                                       |
-| `Skill` tool (invoke a skill)    | Skills load natively - just follow the instructions |
-| `Read`, `Write`, `Edit` (files)  | Use your native file tools                          |
-| `Bash` (run commands)            | Use your native shell tools                         |
-
-##### Superpowers And Subagents
-
-Superpowers subagent skills define useful workflows, but still apply the local subagent net-savings gate before spawning agents. Use `subagent-driven-development` when there is a written plan with independent slices large enough to amortize startup cost. For smaller work, prefer main-thread implementation plus bounded scout/review packets.
-
-##### Environment Detection
-
-Skills that create worktrees or finish branches should detect their environment with read-only git commands before proceeding:
-
-```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
-BRANCH=$(git branch --show-current)
-```
-
-- `GIT_DIR != GIT_COMMON` -> already in a linked worktree (skip creation)
-- `BRANCH` empty -> detached HEAD (cannot branch/push/PR from sandbox)
-
-See `using-git-worktrees` Step 0 and `finishing-a-development-branch` Step 1 for how each skill uses these signals.
-
-##### Codex App Finishing
-
-When sandbox blocks branch/push operations (detached HEAD in externally managed worktree), agent commits all work and tells user to use App native controls:
-
-- **"Create branch"** - names branch, then commit/push/PR via App UI
-- **"Hand off to local"** - transfers work to user's local checkout
-
-Agent can still run tests, stage files, and output suggested branch names, commit messages, and PR descriptions for user to copy.
-
-## Using Skills
-
-### The Rule
-
-**Invoke relevant or requested skills before any response or action.** Even a 1% chance a skill might apply means invoke it to check. If an invoked skill turns out to be wrong, you do not need to use it.
-
-```dot
-digraph skill_flow {
-    "User message received" [shape=doublecircle];
-    "About to EnterPlanMode?" [shape=doublecircle];
-    "Already brainstormed?" [shape=diamond];
-    "Invoke brainstorming skill" [shape=box];
-    "Might any skill apply?" [shape=diamond];
-    "Invoke Skill tool" [shape=box];
-    "Announce: 'Using [skill] to [purpose]'" [shape=box];
-    "Has checklist?" [shape=diamond];
-    "Create TodoWrite todo per item" [shape=box];
-    "Follow skill exactly" [shape=box];
-    "Respond (including clarifications)" [shape=doublecircle];
-
-    "About to EnterPlanMode?" -> "Already brainstormed?";
-    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
-    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
-    "Invoke brainstorming skill" -> "Might any skill apply?";
-
-    "User message received" -> "Might any skill apply?";
-    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
-    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
-    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
-    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
-    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
-    "Has checklist?" -> "Follow skill exactly" [label="no"];
-    "Create TodoWrite todo per item" -> "Follow skill exactly";
-}
-```
-
-### Red Flags
-
-These thoughts mean stop, you are rationalizing:
-
-| Thought                             | Reality                                                            |
-| ----------------------------------- | ------------------------------------------------------------------ |
-| "This is just a simple question"    | Questions are tasks. Check for skills.                             |
-| "I need more context first"         | Skill check comes before any clarification.                       |
-| "Let me explore the codebase first" | Skills tell you how to explore. Check first.                      |
-| "I can check git/files quickly"     | Files lack conversation context. Check for skills.                |
-| "Let me gather information first"   | Skills tell you how to gather information.                        |
-| "This doesn't need a formal skill"  | If a skill exists, use it.                                         |
-| "I remember this skill"             | Skills evolve. Read current version.                               |
-| "This doesn't count as a task"      | Action = task. Check for skills.                                   |
-| "The skill is overkill"             | Simple things become complex. Use it.                              |
-| "I'll just do this one thing first"  | Check before doing anything.                                       |
-| "This feels productive"             | Undisciplined action wastes time. Skills prevent this.             |
-| "I know what that means"            | Knowing the concept is not same as using the skill. Invoke it.     |
-
-### Skill Priority
-
-When multiple skills could apply, use this order:
-
-1. **Process skills first** (brainstorming, debugging) - these determine how to approach task
-2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
-
-"Let's build X" -> brainstorming first, then implementation skills.
-"Fix this bug" -> debugging first, then domain-specific skills.
-
-### Skill Types
-
-**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
-
-**Flexible** (patterns): Adapt principles to context.
-
-The skill itself tells you which.
-
-### User Instructions
-
-Instructions say what, not how. "Add X" or "Fix Y" does not mean skip workflows.
+- State assumptions. Ask if uncertain.
+- Present multiple interpretations; do not silently choose.
+- Name simpler options and push back when warranted.
+- If unclear, stop, explain confusion, ask.
