@@ -393,7 +393,7 @@ index b24840a..200fede 100644
  		`You were spawned by "${spawnedBy}".`,
  		"You can talk to other agents with these tools:",
 -		"- spawn_agent({name, systemPrompt, overrideModel?, overrideThinkingLevel?, message?}): create a new agent (message = optional first task).",
-+		"- spawn_agent({name, systemPrompt, overrideModel?, overrideThinkingLevel?, fast?, message?}): create a new agent (message = optional first task; omitted fast inherits your desired Fast state).",
++		"- spawn_agent({name, systemPrompt, overrideModel?, overrideThinkingLevel?, fast?, message?}): create a new agent (message = optional first task; omit fast unless the human operator explicitly requested an override; omission inherits your desired Fast state).",
  		"- send_message({to, content}): to is an array of agent names (multicast); fire-and-forget (e.g. [\"main\"]).",
  		"- list_agents(): see who exists.",
  		"- kill_agent({name}): terminate agents by name array (you cannot kill 'main').",
@@ -423,7 +423,7 @@ index b24840a..200fede 100644
  					}),
  				),
 +				fast: Type.Optional(
-+					Type.Boolean({ description: "Omit to inherit this session's desired Fast state; pass true or false to override" }),
++					Type.Boolean({ description: "Omit unless the human operator explicitly requested an override; omission inherits this session's desired Fast state" }),
 +				),
  				message: Type.Optional(
  					Type.String({ description: "Optional first message delivered to the new agent right after spawn" }),

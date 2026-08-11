@@ -62,6 +62,7 @@ in
       extensions = [
         "npm:pi-mcp-adapter@2.17.0"
         "npm:@juicesharp/rpiv-web-tools@2.3.1"
+        "git:github.com/DietrichGebert/ponytail"
         "${config.home.homeDirectory}/.pi/agent/extensions/context-prune"
         "${config.home.homeDirectory}/.pi/agent/extensions/codex-fast"
       ];

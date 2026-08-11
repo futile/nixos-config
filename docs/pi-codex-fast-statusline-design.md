@@ -79,7 +79,9 @@ Patch the existing fdietze subagent extension rather than introduce a second
 subagent manager.
 
 - Add optional `fast?: boolean` to `spawn_agent`. Omission inherits the
-  spawning session's desired state; `true` or `false` overrides it.
+  spawning session's desired state; `true` or `false` overrides it. The tool
+  schema tells AI callers to omit this override unless the human operator
+  explicitly requested it.
 - Add `set_fast({ enabled, agent? })` to the per-agent custom tool set.
   Omitting `agent` changes the caller. Supplying `agent` is allowed only for a
   directly owned child (`target.spawnedBy === caller`).
@@ -161,6 +163,8 @@ As of the date above:
   `~/.config/pi/subagents/child-extensions.json` allowlists only:
   - `pi-mcp-adapter@2.17.0`
   - `@juicesharp/rpiv-web-tools@2.3.1`
+  - `git:github.com/DietrichGebert/ponytail`, so children receive the configured
+    default Ponytail mode through its session hooks
   - the repository-managed context-prune extension
   - the repository-managed Codex Fast extension
 - `~/.pi/agent/settings.json` is an out-of-store symlink to the host settings
@@ -619,8 +623,8 @@ Validation on `nixos-work` completed on 2026-08-10, with the Fast-marker follow-
   passed all 9 tests; the pinned statusline had previously passed all 256 tests,
   typecheck, and its flake check.
 - The activated foreground Fast link resolves to the repository working tree,
-  and the generated child policy contains exactly the pinned MCP adapter, web
-  tools, context-prune, and Fast extension. It does not contain the statusline.
+  and the generated child policy contains the pinned MCP adapter, web tools,
+  Ponytail, context-prune, and Fast extension. It does not contain the statusline.
 - The managed statusline checkout resolves to exact commit
   `9f849d14d5c03cc19c13ea478125842cb31ebfed` and has no npm audit findings.
 - Fresh managed Pi processes verified bare `/fast`, explicit `/fast toggle`,
@@ -646,6 +650,11 @@ Validation on `nixos-work` completed on 2026-08-10, with the Fast-marker follow-
   fullscreen Pi rendered `🐴 ponytail: 🌿 LITE > 🔌 MCP 0/3` at the far right
   with no leading Ponytail activity circle; narrow-width tests verify Ponytail
   drops before MCP.
+- The child-policy follow-up built and activated
+  `/nix/store/i4r86ffqjz71faabvrin8wq2c27v7wg4-nixos-system-nixos-work-26.11.20260807.f13ff45`.
+  All 142 store-built subagent tests passed. A fresh direct child and its nested
+  child each reported the exact injected marker `PONYTAIL MODE ACTIVE — level: lite`;
+  both spawn calls omitted `fast`, and the direct child inherited Fast off.
 
 ## Known boundaries and deferred choices
 
