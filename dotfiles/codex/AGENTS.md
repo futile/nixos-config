@@ -21,4 +21,4 @@ These rules override conflicting skill guidance.
 
 ## Context
 
-- When reversible context tools are available and more work remains, batch-fold bulky completed work with a resume-quality summary. Keep instructions, the request, unresolved errors, active evidence, and soon-needed verbatim details live; skip maintenance near the final response.
+- When reversible context tools are available and more work remains, batch-fold bulky completed work with a resume-quality summary. Keep instructions, the request, unresolved errors, active evidence, and soon-needed verbatim details live.
