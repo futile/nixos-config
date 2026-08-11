@@ -21,4 +21,12 @@ These rules override conflicting skill guidance.
 
 ## Context
 
-- When reversible context tools are available and more work remains, batch-fold bulky completed work with a resume-quality summary. Keep instructions, the request, unresolved errors, active evidence, and soon-needed verbatim details live.
+When reversible context-editing tools are available:
+
+- Treat phase boundaries, the point before final verification, and completed batches within a long exploration, debugging, implementation, or verification phase as context-maintenance checkpoints. During a long phase, reassess after several large tool results; do not wait for phase end or automatic compaction.
+- A checkpoint requires judgment, not necessarily a `context_map` call or a fold. Material being safe to fold is not by itself enough reason to fold it, and a no-op assessment satisfies the checkpoint _if_ there is not enough worth folding.
+- Fold when there is meaningful completed or superseded bulk and either enough subsequent model/tool work is likely to reuse the smaller context, or context-window or quality pressure justifies immediate maintenance.
+- Prefer to piggy-back maintenance on an already-required tool loop.
+- When maintenance is worthwhile, orient with `context_map` and batch-collapse bulky reads, logs, compiler or test output, rejected approaches, and completed details after capturing their conclusions in a resume-quality summary. Prefer one useful batch over folding small items individually.
+- Keep governing instructions, the active user request, unresolved errors, active evidence, open decisions, and information needed verbatim for upcoming work live.
+- A recent successful maintenance pass satisfies later phase-end checkpoints unless substantial new foldable bulk has accumulated. Interpret “collapse immediately once a topic closes” as “assess promptly and batch-collapse when worthwhile,” not as a requirement to fold every completed item.
