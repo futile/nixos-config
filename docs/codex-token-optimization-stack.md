@@ -21,7 +21,7 @@ a different source of waste:
 | 2     | context-mode        | Keep large command/file/web output in a local searchable store and return summaries. | Implemented for `nixos-work` as a Bun-backed Nix package, Codex MCP server, and hook provider.                                                 |
 | 3     | RTK                 | Compress shell output before it enters context.                                      | Implemented for `nixos-work` through `pkgs.rtk` and `AGENTS.md` guidance.                                                                      |
 | 4     | Headroom            | Anthropic API proxy that compresses request payloads.                                | Defer. It adds an API service/proxy and is not the first thing to adopt.                                                                       |
-| 5     | Caveman             | Make agent replies shorter and compress memory files.                                | Partly implemented: only the `caveman-compress` skill is installed, for explicit file compression. Global Caveman speech style is not enabled. |
+| 5     | Caveman             | Make agent replies shorter and compress memory files.                                | Not adopted. Concise hand-written instructions are simpler than a compression workflow.                                                       |
 
 The companion repo contains:
 
@@ -47,13 +47,7 @@ Current `nixos-work` setup:
 - context-mode is packaged locally with Bun, installed through Home Manager,
   registered as a Codex MCP server, and wired through reviewed Codex hooks.
 - `~/.agents/skills` is managed skill-by-skill in `home-modules/agents.nix`.
-  Local skills stay live-editable; upstream helper assets can be pinned through
-  flake inputs.
-- Caveman is pinned as a non-flake input, but only
-  `skills/caveman-compress` is exposed. Its `SKILL.md` is repo-owned, while the
-  derivation reuses upstream helper scripts for detection and validation.
-- Global Caveman speech style is not enabled. Use Caveman only when explicitly
-  compressing selected memory/instruction files.
+  Local skills stay live-editable.
 - Codebase Memory MCP is installed from its upstream flake and registered as a
   Codex MCP server on `nixos-work`. Headroom remains deferred because it changes
   the API request path.
@@ -99,14 +93,11 @@ configuration. Existing sessions and subagents may keep stale config.
 1. Add RTK through Nix. Done for `nixos-work`.
 2. Add context-mode as a Nix package and Codex MCP server/hook provider. Done
    for `nixos-work`.
-3. Add Caveman's `caveman-compress` skill declaratively for explicit memory-file
-   compression. Done via a pinned non-flake input, upstream helper scripts, and
-   a repo-owned `SKILL.md`.
-4. Add Codebase Memory MCP via its upstream flake and Codex MCP config.
-5. Add Serena from its upstream flake as an optional semantic code MCP/server
+3. Add Codebase Memory MCP via its upstream flake and Codex MCP config.
+4. Add Serena from its upstream flake as an optional semantic code MCP/server
    layer, using the existing editor tool bundle for language-server availability.
    Done for `nixos-work`.
-6. Revisit Headroom later, only after the local-only layers are working.
+5. Revisit Headroom later, only after the local-only layers are working.
 
 This order avoids API proxy complexity and starts with tools that are either
 already in nixpkgs or have explicit Codex support.
@@ -364,89 +355,8 @@ project-selection behavior.
 
 ## Caveman
 
-Caveman is no longer only a Claude plugin. Its repo says Codex CLI support is:
-
-```sh
-npx skills add JuliusBrussee/caveman -a codex
-```
-
-That is not a Nix-native install. Do not use it as persistent setup on this
-machine.
-
-Current setup installs only Caveman's `caveman-compress` skill. It does not
-enable Caveman's global speech-style hook. This matches the intended scope:
-compress selected memory/instruction files when explicitly asked, while keeping
-normal Codex replies under the existing `personality = "pragmatic"` and
-`model_verbosity = "medium"` config.
-
-The flake has a pinned non-flake input:
-
-```nix
-caveman = {
-  url = "github:JuliusBrussee/caveman";
-  flake = false;
-};
-```
-
-`home-modules/agents.nix` exposes agent skills individually under
-`~/.agents/skills` rather than symlinking all of `~/.agents`. Local skills stay
-live-editable through `mkOutOfStoreSymlink`, while `caveman-compress` is a small
-derivation that copies upstream helper scripts and replaces `SKILL.md` with the
-repo-owned version:
-
-```nix
-cavemanCompressSkill = pkgs.runCommand "caveman-compress-skill" { } ''
-  cp -R ${flake-inputs.caveman}/skills/caveman-compress "$out"
-  chmod -R u+w "$out"
-  cp ${../dotfiles/agents/skills/caveman-compress/SKILL.md} "$out/SKILL.md"
-'';
-
-home.file.".agents/skills/caveman-compress".source = cavemanCompressSkill;
-```
-
-The repo-owned skill makes "running agent does the compression" the preferred
-workflow. Upstream's helper scripts are still available for detection and
-validation, but the full CLI pipeline is no longer the default because it shells
-out to `claude` when no Anthropic API client is configured.
-
-When using `$caveman:caveman-compress <file>` in-place:
-
-1. Resolve the file and confirm it is natural-language input, not
-   `*.original.md`.
-2. Create `<filename>.original.md` before overwriting.
-3. Compress only prose, preserving headings, code blocks, inline code, URLs,
-   paths, commands, proper nouns, dates, versions, and environment variables.
-4. Run the upstream validator:
-
-```sh
-python3 -m scripts.validate <backup_path> <compressed_path>
-```
-
-5. Fix only listed validation errors; do not recompress the whole file.
-
-When using explicit output mode:
-
-```text
-$caveman-compress dotfiles/codex/AGENTS.source.md to dotfiles/codex/AGENTS.md
-```
-
-The source stays unchanged, no `.original.md` backup is created, and validation
-uses the source file as the original reference.
-
-If updating Caveman, run:
-
-```sh
-nix flake update caveman
-nix build --no-link '.#nixosConfigurations.nixos-work.config.home-manager.users.felix.home.file.".agents/skills/caveman-compress".source'
-```
-
-Then review whether upstream `skills/caveman-compress/scripts/` changed in a way
-that requires updating `dotfiles/agents/skills/caveman-compress/SKILL.md`, then
-rerun `just format-check` and `just check`.
-
-The first migration away from `~/.agents` as a whole-directory symlink required a
-one-time switch to make `~/.agents` a real directory. The final module no longer
-contains that migration shim.
+Caveman is not part of the active setup. Its compression skill and pinned input
+were removed; the short `dotfiles/codex/AGENTS.md` is maintained directly.
 
 ## Headroom
 
@@ -654,9 +564,6 @@ For packages not in nixpkgs:
 Custom package status:
 
 - `context-mode` is implemented as a repo-local custom package backed by Bun.
-- `caveman` is a pinned non-flake input, not a package. Only
-  `skills/caveman-compress` is exposed; upstream scripts are reused with a
-  repo-owned `SKILL.md`.
 - `codebase-memory-mcp` is consumed from its upstream flake.
 - `serena` is consumed from upstream's `github:oraios/serena/main` flake and
   installed through `codex-token-optimization.nix`. The local custom package is
@@ -683,31 +590,16 @@ Completed:
 5. Verified `context-mode doctor` after `just switch`; it reports Bun-backed
    JavaScript and TypeScript, `Performance: FAST`, hook registration, MCP
    registration, storage access, server initialization, and FTS5/SQLite.
-6. Added Caveman as a non-flake flake input and exposed only the
-   `caveman-compress` skill through `home-modules/agents.nix`.
-7. Switched `~/.agents` management from one whole-directory symlink to
-   individual skill links:
-   - local `find-skills`
-   - repo-owned `caveman-compress` instructions with upstream helper scripts
-8. Added Serena first as a local custom package, then switched the active
+6. Switched `~/.agents` management from one whole-directory symlink to
+   individual links for local skills.
+7. Added Serena first as a local custom package, then switched the active
    installation to upstream's `github:oraios/serena/main` flake while keeping
    the local package as `serena-custom`.
-9. Keep readable global Codex instructions in
-   `dotfiles/codex/AGENTS.source.md` and regenerate compressed
-   `dotfiles/codex/AGENTS.md` with:
+8. Simplified `dotfiles/codex/AGENTS.md` and removed its source/generated
+   compression workflow.
 
-```sh
-just compress-codex-agents
-```
-
-Next patch set:
-
-1. Restart Codex after switching, so the CBM MCP server and updated
-   `caveman-compress` skill are loaded by a fresh session.
-2. Verify `just compress-codex-agents` in a controlled run and inspect the
-   resulting `dotfiles/codex/AGENTS.md` diff before relying on it unattended.
-3. Keep observing RTK/context-mode/CBM/Caveman-compress gains before considering
-   Headroom or any global Caveman style hook.
+Next patch set: keep observing RTK, context-mode, and CBM before considering
+Headroom.
 
 ## Sources Checked
 

@@ -78,11 +78,6 @@
       flake = false;
     };
 
-    caveman = {
-      url = "github:JuliusBrussee/caveman";
-      flake = false;
-    };
-
     fdietze-dotfiles = {
       url = "git+https://github.com/fdietze/dotfiles?rev=262fb764dedc2678b1522a21cbbd8818622be56c";
       flake = false;

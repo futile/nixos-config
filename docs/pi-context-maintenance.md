@@ -85,35 +85,15 @@ large results. An agent could therefore comply while postponing most
 maintenance until the end of a long phase. They also did not distinguish
 material that was safe to fold from material worth folding immediately.
 
-The readable `AGENTS.source.md` and generated `AGENTS.md` now adopt this policy:
+The shared `AGENTS.md` keeps only the durable core of this policy:
 
-> - Treat phase boundaries, the point before final verification, and completed
->   batches within a long phase as context-maintenance checkpoints. Reassess
->   after several large tool results rather than waiting for phase end or
->   automatic compaction.
-> - A checkpoint requires judgment, not necessarily a `context_map` call or a
->   fold. Safe-to-fold material alone is not enough reason to fold, and a no-op
->   assessment satisfies the checkpoint.
-> - Fold meaningful completed or superseded bulk when enough subsequent work is
->   likely to reuse the smaller context, or when context-window or quality
->   pressure justifies immediate maintenance.
-> - Prefer to piggy-back maintenance on an already-required tool loop. If a
->   final response is imminent and pressure is low, finish instead of creating
->   a maintenance-only round trip.
-> - When maintenance is worthwhile, use `context_map` and batch-collapse bulky
->   completed material with resume-quality conclusions. Prefer one useful batch
->   over folding small items individually.
-> - Keep governing instructions, the active request, unresolved errors, active
->   evidence, open decisions, and verbatim upcoming needs live.
-> - Treat a recent successful pass as satisfying later phase-end checkpoints
->   unless substantial new foldable bulk accumulated.
+> - When reversible context tools are available and more work remains,
+>   batch-fold bulky completed work with a resume-quality summary. Keep
+>   instructions, the request, unresolved errors, active evidence, and
+>   soon-needed verbatim details live; skip maintenance near the final response.
 
-The user-global Pi file resolves to the generated repository file. The adopted
-policy also explicitly interprets context-prune's generic "collapse immediately
-once a topic closes" wording as "assess promptly and batch-collapse when
-worthwhile," not as a requirement to fold every completed item. This is the
-immediate compatibility rule; if context-prune's injected guidance becomes
-configurable, align that prompt directly as well.
+The user-global Pi file resolves to this repository file. Context-prune's more
+specific injected guidance still applies within Pi.
 
 ## Model capability and reminder value
 

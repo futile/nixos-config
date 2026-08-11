@@ -29,14 +29,14 @@ The initial setup was implemented on 2026-08-02:
 - fdietze's private repository is a non-flake input pinned to `262fb764dedc2678b1522a21cbbd8818622be56c`. It uses authenticated `git+https` rather than the anonymous `github:` archive fetcher; `flake.lock` contains no credential.
 - Current upstream subagents provide the child lifecycle, effective thinking-level inheritance, and accurate pause/resume behavior that previously required broad local patches. Home Manager writes the fail-closed child-extension policy for `pi-mcp-adapter`, context-prune, and `rpiv-web-tools`; narrow local patches retain AGENTS-aware model routing, child extension error logging, and scheduler-state reset during shutdown.
 - `modules/searxng-local.nix` runs SearXNG on `127.0.0.1:8888`, enables HTML and JSON search responses, and generates a persistent root-owned secret at `/var/lib/searx/searx.env` on first activation. Port `8080` was already owned by the local `process-compose` supervisor.
-- the shared global `AGENTS.source.md` and generated `AGENTS.md` no longer name context-mode, so Codex and Pi can use the same file without a filtered Pi variant.
+- the shared global `AGENTS.md` is harness-neutral, so Codex and Pi use the same file without a filtered variant.
 
 ## Executive summary
 
 The recommended shape is:
 
 1. Add a reusable `home-modules/pi.nix` that manages Pi configuration files but does not install Pi.
-2. Point both `~/.codex/AGENTS.md` and `~/.pi/agent/AGENTS.md` at the existing generated `dotfiles/codex/AGENTS.md`.
+2. Point both `~/.codex/AGENTS.md` and `~/.pi/agent/AGENTS.md` at `dotfiles/codex/AGENTS.md`.
 3. Continue using `~/.agents/skills` for skills shared by both harnesses.
 4. Use `pi-mcp-adapter` for DeepWiki, Serena, and codebase-memory-mcp.
 5. Exclude context-mode from the initial Pi package list and MCP configuration. The existing Nix-provided context-mode installation remains available to Codex; the Pi research below is retained for a possible later phase.
@@ -98,17 +98,11 @@ Codex agent TOML and Pi subagent Markdown should not be linked together automati
 
 ### Harness-specific global guidance
 
-The shared `AGENTS.md` currently contains two context-mode-specific references: the subagent net-savings gate names `ctx_execute_file` and `ctx_batch_execute`, and the tool policy prefers `ctx_*` tools for bulky/queryable data. Pi would see those instructions even though context-mode is deliberately absent.
-
-Do not maintain a filtered Pi copy of the compressed file. That would create a second generated artifact, make compression updates harder to review, and weaken the decision that both harnesses share one global instruction file. Instead:
-
-1. Keep `dotfiles/codex/AGENTS.source.md` as the readable source and `dotfiles/codex/AGENTS.md` as its compressed, harness-neutral output. Pi loads only `AGENTS.md`; `AGENTS.source.md` is not an agent instruction file at runtime.
-2. Remove the explicit context-mode tool names and preference from the shared source, generalizing the net-savings rule to available deterministic tools. Regenerate the compressed file with `just compress-codex-agents`.
-3. If the explicit preference still proves useful for Codex, put the short context-mode routing rule in the Codex host config's supported `developer_instructions` field. This is an additive Codex-only instruction surface and leaves the shared `AGENTS.md` unchanged for Pi.
-4. Do not use `model_instructions_file` for this overlay; Codex documents it as a replacement for built-in model instructions, which is much broader than this small harness-specific rule.
-5. Restart Codex after changing its config and verify with a new session or newly created subagent; existing sessions and subagents may retain the old instruction/config state.
-
-The selected initial policy is to remove the context-mode-specific wording from the shared files. Add the Codex-only `developer_instructions` overlay only if normal MCP tool descriptions and context-mode's own guidance do not produce reliable routing in practice.
+Keep the single hand-maintained `dotfiles/codex/AGENTS.md` harness-neutral. Put
+harness-specific rules in supported Codex or Pi configuration rather than
+creating generated or filtered instruction variants. Restart the affected
+harness after changing its configuration; existing sessions and subagents may
+retain old instructions.
 
 ## MCP support
 
@@ -400,7 +394,7 @@ The fdietze extensions are local Home Manager resources rather than entries in P
 ## Recorded decisions
 
 1. Keep the Pi executable installed through `nix profile`; the Home Manager module manages configuration and pinned extensions, not Pi itself.
-2. Share the generated global `AGENTS.md` and shared skills between Codex and Pi.
+2. Share the global `AGENTS.md` and shared skills between Codex and Pi.
 3. Use fdietze's subagents and context-prune implementations from a pinned non-flake input.
 4. Exclude context-mode from the initial Pi package list, MCP configuration, foreground session, and children. Retain its research as a deferred option.
 5. Keep normal child extension discovery disabled and generate the explicit child capability policy with only extensions audited as headless and reentrant.
@@ -432,7 +426,7 @@ The initial answers below are decisions. The last column records validation gate
 | Shared Codex/Pi MCP generation | Duplicate the small initial Pi JSON configuration instead of refactoring the working Codex TOML. | Revisit a shared generated source only after the Pi setup stabilizes and configuration drift becomes a demonstrated problem. |
 | Pin compatibility and updates | Treat Pi, `pi-mcp-adapter`, `rpiv-web-tools`, and the fdietze revision as one tested compatibility set; update one deliberate batch at a time. | Record the first passing versions and require loader, subagent, MCP, web-search, reload, and Home Manager checks before advancing any pin. |
 | Deferred context-mode | Leave it entirely out of Pi for now. The Nix-provided Codex integration is unaffected. | No initial blocker. Revisit only if Pi usage demonstrates a context-ingestion or continuity problem that context-prune and MCP output guarding do not solve. |
-| Harness-specific instructions | Keep the shared generated `AGENTS.md` free of context-mode-specific tool names. Do not create a filtered Pi variant. | Add a Codex-only `developer_instructions` rule only if MCP/tool-provided guidance proves insufficient; restart Codex and test in a fresh session. |
+| Harness-specific instructions | Keep the shared `AGENTS.md` free of context-mode-specific tool names. Do not create a filtered Pi variant. | Add a Codex-only `developer_instructions` rule only if MCP/tool-provided guidance proves insufficient; restart Codex and test in a fresh session. |
 
 ## Suggested verification
 
