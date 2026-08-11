@@ -43,6 +43,8 @@ def account_id_from_token(token: str | None) -> str | None:
 
 
 def load_auth(codex_home: Path) -> tuple[str, str | None]:
+    # Codex normally refreshes an expired access token when it starts. If that
+    # fails, renew the login with `codex logout` followed by `codex login`.
     auth_path = codex_home / "auth.json"
     auth = json.loads(auth_path.read_text(encoding="utf-8"))
     tokens = auth.get("tokens")
