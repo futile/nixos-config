@@ -2,9 +2,9 @@
 
 Status: design and research; extension not yet implemented
 
-Last checked: 2026-08-06
+Last checked: 2026-08-12 against Pi 0.84.1
 
-Tracking issue: `nixos-kmc`
+Tracking issues: `nixos-kmc` (original research), `nixos-ghl` (adaptive design)
 
 ## Executive summary
 
@@ -19,6 +19,15 @@ than a `pi-system-reminders` reminder. The package is useful shared machinery
 for a suite of reminders, but its fixed visible `steer` delivery with
 `triggerTurn: true` makes exact streaming/finality gating mandatory and removes
 useful delivery control from a precision-sensitive reminder.
+
+Tracking the last few `context_collapse` savings is feasible and cheap because
+context-prune already reports a positive net `deltaTokens`. Convert that value
+to percentage points using the active context window and persist the sample in
+the owning Pi session. It is an estimated fold yield, not evidence that the
+session itself is degrading: small targeted folds, concise source material, or
+a mostly-active context also produce small values. Escalate only when high
+pressure, several low-yield attempts, and one failed broader maintenance pass
+coincide. Never replace a session automatically.
 
 Use a hybrid trigger:
 
@@ -79,21 +88,18 @@ that Pi has no more automatic work for the current interaction.
 
 ## Global instruction policy
 
-Before this research, the shared global instructions strongly required
-phase-end maintenance but only said to "check context pressure" after several
-large results. An agent could therefore comply while postponing most
-maintenance until the end of a long phase. They also did not distinguish
-material that was safe to fold from material worth folding immediately.
-
-The shared `AGENTS.md` keeps only the durable core of this policy:
-
-> - When reversible context tools are available and more work remains,
->   batch-fold bulky completed work with a resume-quality summary. Keep
->   instructions, the request, unresolved errors, active evidence, and
->   soon-needed verbatim details live; skip maintenance near the final response.
+The shared `AGENTS.md` now treats phase boundaries, pre-verification, and
+completed batches during long work as assessment checkpoints. It explicitly
+allows a no-op, requires enough meaningful completed bulk or actual pressure,
+prefers piggy-backing and one batched fold over tiny folds, and protects active
+instructions, evidence, decisions, and errors. That is the durable policy; the
+extension should supply timing and current measurements rather than repeat it.
 
 The user-global Pi file resolves to this repository file. Context-prune's more
-specific injected guidance still applies within Pi.
+specific injected guidance still applies within Pi and currently uses stronger
+"collapse immediately" wording. The global policy provides the safety and
+materiality interpretation; align the injected wording if it becomes locally
+configurable.
 
 ## Model capability and reminder value
 
@@ -362,6 +368,195 @@ This is not recommended for version one:
 
 Log those fields first and tune the simpler hybrid policy from evidence.
 
+## Adaptive collapse-yield tracking
+
+### Feasibility and metric
+
+**Observed in the configured context-prune extension:** every
+`context_collapse` result currently exposes:
+
+```ts
+{
+  action: "collapse";
+  ok: boolean;
+  msgs: number;
+  deltaTokens: number;
+}
+```
+
+For collapse results, `deltaTokens` is the positive net estimate of live tokens
+removed after subtracting the replacement stub or summary. The extension uses
+Pi-compatible `chars / 4` token estimates, not provider tokenization. A
+companion extension can observe `tool_result` and calculate:
+
+```text
+saving percentage points = 100 * max(deltaTokens, 0) / contextWindow
+```
+
+This is better than subtracting two calls to `ctx.getContextUsage()`: usage
+lags a just-applied fold and the next assistant/tool output would confound the
+before/after difference. The percentage-point calculation still remains an
+estimate, but it measures the fold itself rather than unrelated transcript
+growth.
+
+Record every collapse attempt in the recent ring, including no-op and
+non-saving attempts as `0 pp`; omitting them would make the history falsely
+optimistic. A useful initial ring size is three. Persist `deltaTokens`,
+`contextWindow`, computed percentage points, `ok`, message count, and timestamp
+in a small `pi.appendEntry()` custom entry. Storing the window at event time is
+necessary because a later model switch can change it. Reconstruct only from the
+active session branch so `/tree` semantics remain correct.
+
+The tracker is naturally per agent. Pi creates a separate extension factory
+instance for the foreground session and each SDK child session, and the local
+subagent host binds only the extensions in its fail-closed child policy. Adding
+the companion extension to that policy therefore gives each child isolated
+state without agent-name routing or a global registry.
+
+### What the samples can and cannot say
+
+Call the samples **recent collapse yields**, not efficiency or session health.
+A falling or low sequence can mean:
+
+- little completed material remains;
+- most remaining context is active evidence or governing instructions;
+- the agent chose several intentionally small ranges;
+- summaries are long relative to the folded material;
+- earlier maintenance already succeeded.
+
+Consequently, `last N < threshold` alone must not trigger a fresh session. Use
+it only as an escalation input while pressure remains high. A reasonable v1
+rule is:
+
+1. At urgent pressure, show the last three yields without interpreting them.
+2. If all three are below `3 pp`, or total less than `6 pp`, request one broader
+   but still safety-preserving sweep.
+3. Only if that explicitly broader pass saves less than `3 pp` and pressure
+   remains urgent should the agent prepare a resume-quality handoff and advise
+   replacing the session.
+
+"Broader" means batching more completed or superseded ranges. It never means
+folding active evidence, unresolved errors, the user request, or governing
+instructions merely to hit a target. Without adding another tool or protocol,
+the extension cannot verify semantic breadth; it can only mark the next
+collapse after that reminder as the requested pass. The final reminder must say
+"reported low-yield pass," not claim that the agent actually searched every
+safe range.
+
+These numbers are deliberately coarse initial tuning values, not measured
+optima. Log the actual sequences before changing them.
+
+## Concrete version-one design
+
+### Thresholds and reminder state
+
+Use percentage thresholds for readability, but retain token-growth and absolute
+headroom checks because the same percentage means different token counts on
+128k and 272k windows.
+
+| Level | Initial trigger | Behavior |
+| --- | --- | --- |
+| Advisory | at least `60%` and either `24k` growth since positive maintenance or `8 pp` interaction growth | no-op-capable assessment; prefer piggy-backing |
+| Firm | at least `75%` and `5 pp` growth since positive maintenance | ask for `context_map` before broadening exploration |
+| Urgent | at least `80%`, one-shot | request one meaningful batched sweep if safe |
+| Critical | remaining window at most configured reserve plus about `8k` tokens | stop token-chasing; handoff if the post-escalation yield is still low |
+
+The critical trigger should use Pi's effective compaction reserve when that
+becomes directly available. For v1, expose a local constant defaulting to Pi's
+documented `16,384` tokens rather than pretending that `90%` is portable. Keep
+the constants in code; a user-facing configuration format is unnecessary until
+real sessions show they need tuning.
+
+Evaluate ordinary reminders only on a continuing tool-bearing `turn_end`:
+`stopReason === "toolUse"` with nonempty tool results. Deliver with a custom
+`pi.sendMessage(..., { deliverAs: "steer" })` and do not set
+`triggerTurn: true`. This lets the next already-required model call receive the
+reminder without waking an idle agent solely for maintenance.
+
+Use one latch per level. Re-arm a level only after usage falls at least `5 pp`
+below it, or after another `15k`--`25k` tokens of growth following its reminder.
+A positive-net collapse establishes a pending baseline; take the fresh baseline
+from the next valid usage reading because the immediate reading still lags the
+fold. Reset pressure baselines on model change and Pi compaction, but retain the
+historical yield samples with their original windows.
+
+### Reminder text
+
+Keep injected messages much shorter than the standing global/tool guidance.
+They should report state and point at that guidance, not paste it again.
+
+Advisory:
+
+```text
+<context-maintenance>
+Context 64% (+9 pp this interaction). Assessment checkpoint: if a meaningful
+completed/superseded batch exists and more work remains, piggy-back one
+context_map and batched context_collapse. Otherwise continue; no-op is valid.
+</context-maintenance>
+```
+
+Urgent with yield history:
+
+```text
+<context-maintenance urgent>
+Context 82%. Recent collapse yields: 5.8, 1.7, 0.6 pp. Before broadening the
+work, do one broader safe sweep of completed phases, superseded reads/logs, and
+dead ends. Preserve the request, instructions, open loops, unresolved errors,
+and active evidence.
+</context-maintenance>
+```
+
+Critical after a low-yield broader pass:
+
+```text
+<context-maintenance critical>
+Context headroom is near Pi compaction reserve; the broader pass saved 1.4 pp.
+Stop repeated tiny folds. Finish or preserve a resume-quality handoff and
+recommend a fresh session after the current safe stopping point. Do not discard
+active evidence to force a lower percentage.
+</context-maintenance>
+```
+
+For the foreground TUI, also issue one short `ctx.ui.notify(..., "warning")` at
+critical level so the human sees the recommendation. Child sessions run in
+`print` mode and have no UI. Their reminder can instruct the child to send its
+handoff/replacement recommendation to `main`, but that is agent-mediated rather
+than guaranteed. A guaranteed central per-child alert would require a small
+subagent-host API or shared event bridge and is not justified in v1; the current
+subagent panel already exposes each child's token/window usage.
+
+### Minimal repository structure
+
+```text
+dotfiles/pi/extensions/context-pressure/
+  index.ts          # Pi events, delivery, persistence, context-prune adapter
+  policy.ts         # pure threshold/latch/yield decision function
+  policy.test.ts    # one node:test table for hysteresis and escalation
+```
+
+No package, timer, background process, model call, dependency, custom tool, or
+standing system-prompt text is needed. The extension should stay silent below a
+trigger and rely on the existing global/context-prune guidance.
+`home-modules/pi.nix` would link the directory into the foreground extension
+set and add the same path to `child-extensions.json`. The nontrivial state
+machine belongs in a pure function; the extension shell should remain small.
+
+### Integration options and trade-offs
+
+| Option | Accuracy | Coupling and cost | Verdict |
+| --- | --- | --- | --- |
+| Standalone companion observes `context_collapse` `tool_result.details` | Best available fold-local estimate | Small runtime/schema coupling to context-prune; no upstream fork | **Recommended v1**; validate details and fail visibly if they change |
+| Context-prune emits a typed `pi.events` yield event; companion consumes it | Same accuracy with explicit contract | Requires an upstream change or local patch to the pinned external source | Best long-term contract if upstream accepts it |
+| Put reminder policy inside context-prune | Exact access, simplest state transfer | Mixes mechanism with personal policy and makes the external source a maintained fork | Sensible only if the feature is upstream-configurable |
+| Track before/after `getContextUsage()` generically | Works with any pruning tool | Lagged and contaminated by new assistant/tool content; model switches complicate it | Too misleading for savings history |
+| Track all children centrally in the subagent extension | Guaranteed parent UI and roster integration | Does not cover standalone Pi, couples maintenance to orchestration, broadens the local patch stack | Defer unless missing child alerts are a real problem |
+| Use `pi-system-reminders` | Shared reminder discovery | Still needs this state machine and gives less delivery control | Not worthwhile for one reminder |
+
+The standalone option should treat the details shape as a capability check: if
+`action`, `ok`, or numeric `deltaTokens` is absent, skip the sample and log one
+warning rather than guessing. A one-line upstream event would be cleaner, but
+forking the whole context-prune implementation only for that contract is not.
+
 ## Can maintenance piggy-back on existing LLM calls?
 
 ### What can be shared
@@ -597,28 +792,33 @@ has not been measured for this setup.
    adopted safety/materiality/timing policy. The global instructions now supply
    the compatibility interpretation; update the injected prompt directly if it
    becomes configurable.
-2. Implement a standalone, visible-but-non-user reminder extension with
-   structured debug logging.
+2. Implement the standalone three-file companion above and load it in both the
+   foreground and fail-closed child policy.
 3. Use Option A's growth/high-water policy with the piggy-back-first behavior
-   from Option B.
+   from Option B and the advisory/firm/urgent/critical levels above.
 4. Track a session-level maintenance baseline and a per-interaction baseline,
    using `agent_start`, `agent_settled`, model selection, session compaction,
    qualifying tool-bearing turns, and positive maintenance without resetting
    cumulative growth on every low-level retry or continuation.
-5. Treat a collapse as positive maintenance only when its result reports
+5. Observe context-prune's collapse result, persist the last three yield samples
+   with their context windows, and fail visibly rather than estimate if its
+   details contract changes.
+6. Treat a collapse as positive maintenance only when its result reports
    `action === "collapse"`, `ok === true`, and `deltaTokens > 0`; establish a
    fresh usage baseline afterward.
-6. Allow another ordinary reminder only after 15,000--25,000 additional tokens;
-   use a separate one-shot emergency latch for high absolute utilization.
-7. Log trigger cause, reminder/map/result sizes, whether a collapse followed,
-   net tokens freed, future call count, and reported input/cache/output token
+7. Escalate low yields only under high pressure, require one explicitly broader
+   pass before recommending a new session, and never replace automatically.
+8. Allow another ordinary reminder only after 15,000--25,000 additional tokens;
+   use a separate one-shot emergency latch for low absolute headroom.
+9. Log trigger cause, reminder/map/result sizes, yield samples, whether a
+   collapse followed, future call count, and reported input/cache/output token
    categories. Compare those categories with Codex credits or direct API costs
    according to the active provider.
-8. Review several long sessions before changing thresholds or adding
-   cache-aware scoring.
-9. Reconsider `pi-system-reminders` only when there are enough reminder types to
-   justify shared discovery and dispatch, or fork it to expose the required
-   delivery and lifecycle controls.
+10. Review several long foreground and child sessions before changing
+    thresholds, adding central child alerts, or adding cache-aware scoring.
+11. Reconsider `pi-system-reminders` only when there are enough reminder types
+    to justify shared discovery and dispatch, or fork it to expose the required
+    delivery and lifecycle controls.
 
 ## Sources
 
