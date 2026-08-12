@@ -7,6 +7,7 @@ import {
   type PersistentPressureState,
   type PressureDecision,
   type PressureState,
+  type ReminderKind,
   type YieldSample,
   beginInteraction,
   emptyPressureState,
@@ -27,6 +28,183 @@ import {
 
 const STATE_ENTRY = "context-pressure/state";
 const REMINDER_TYPE = "context-pressure/reminder";
+const STATUS_REGISTRY_KEY = "__contextPressureStatus_v1";
+const REMINDER_KINDS: ReminderKind[] = [
+  "advisory",
+  "firm",
+  "urgent",
+  "handoff",
+  "critical",
+];
+
+interface ReminderSummary {
+  counts: Record<ReminderKind, number>;
+  total: number;
+  last?: { kind: ReminderKind; percent?: number };
+}
+
+interface CollapseSummary {
+  attempts: number;
+  productive: number;
+  savedTokens: number;
+}
+
+interface ContextStatusSnapshot {
+  sessionId: string;
+  name: string;
+  usage?: ContextUsage;
+  reminders: ReminderSummary;
+  collapses: CollapseSummary;
+  phase?: "broader pending" | "handoff pending" | "handoff sent";
+}
+
+interface ContextStatusSource {
+  owner: symbol;
+  snapshot: () => ContextStatusSnapshot;
+}
+
+function statusRegistry(): Map<string, ContextStatusSource> {
+  // ponytail: SDK subagents currently share globalThis; add a host bridge if
+  // they move to separate processes.
+  const global = globalThis as Record<string, unknown>;
+  let registry = global[STATUS_REGISTRY_KEY] as
+    | Map<string, ContextStatusSource>
+    | undefined;
+  if (!registry) {
+    registry = new Map();
+    global[STATUS_REGISTRY_KEY] = registry;
+  }
+  return registry;
+}
+
+function isReminderKind(value: unknown): value is ReminderKind {
+  return REMINDER_KINDS.includes(value as ReminderKind);
+}
+
+function emptyReminderCounts(): Record<ReminderKind, number> {
+  return {
+    advisory: 0,
+    firm: 0,
+    urgent: 0,
+    handoff: 0,
+    critical: 0,
+  };
+}
+
+function branchStats(ctx: ExtensionContext): {
+  reminders: ReminderSummary;
+  collapses: CollapseSummary;
+} {
+  const counts = emptyReminderCounts();
+  let total = 0;
+  let last: ReminderSummary["last"];
+  let attempts = 0;
+  let productive = 0;
+  let savedTokens = 0;
+
+  for (const entry of ctx.sessionManager.getBranch()) {
+    if (entry.type === "custom_message" && entry.customType === REMINDER_TYPE) {
+      const details = entry.details as
+        | { kind?: unknown; percent?: unknown }
+        | undefined;
+      if (!isReminderKind(details?.kind)) continue;
+      counts[details.kind] += 1;
+      total += 1;
+      last = {
+        kind: details.kind,
+        ...(typeof details.percent === "number" &&
+        Number.isFinite(details.percent)
+          ? { percent: details.percent }
+          : {}),
+      };
+      continue;
+    }
+    if (
+      entry.type !== "message" ||
+      entry.message.role !== "toolResult" ||
+      entry.message.toolName !== "context_collapse" ||
+      !isCollapseDetails(entry.message.details)
+    )
+      continue;
+    attempts += 1;
+    const deltaTokens = entry.message.details.deltaTokens as number;
+    if (entry.message.details.ok && deltaTokens > 0) {
+      productive += 1;
+      savedTokens += deltaTokens;
+    }
+  }
+
+  return {
+    reminders: { counts, total, ...(last ? { last } : {}) },
+    collapses: { attempts, productive, savedTokens },
+  };
+}
+
+function statusSnapshot(
+  ctx: ExtensionContext,
+  state: PressureState,
+): ContextStatusSnapshot {
+  const sessionId = ctx.sessionManager.getSessionId();
+  const name =
+    ctx.sessionManager.getSessionName()?.trim() || sessionId.slice(0, 8);
+  const phase = state.broaderPassPending
+    ? "broader pending"
+    : state.handoffCandidate
+      ? "handoff pending"
+      : state.handoffSent
+        ? "handoff sent"
+        : undefined;
+  return {
+    sessionId,
+    name,
+    usage: normalizeUsage(ctx.getContextUsage() as ContextUsage | undefined),
+    ...branchStats(ctx),
+    ...(phase ? { phase } : {}),
+  };
+}
+
+function compactTokens(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`;
+  if (value >= 1_000) return `${Math.round(value / 1_000)}k`;
+  return String(Math.round(value));
+}
+
+function formatStatus(
+  snapshots: ContextStatusSnapshot[],
+  mainSessionId: string,
+): string {
+  const ordered = [...snapshots].sort((left, right) => {
+    if (left.sessionId === mainSessionId) return -1;
+    if (right.sessionId === mainSessionId) return 1;
+    return left.name.localeCompare(right.name);
+  });
+  const lines = ordered.map((snapshot) => {
+    const label = snapshot.sessionId === mainSessionId ? "main" : snapshot.name;
+    const usage = snapshot.usage;
+    const context =
+      usage?.tokens == null
+        ? "ctx unavailable"
+        : `ctx ${Math.round(usage.percent ?? 0)}% · headroom ${compactTokens(usage.contextWindow - usage.tokens)}`;
+    const reminderParts = REMINDER_KINDS.flatMap((kind) =>
+      snapshot.reminders.counts[kind]
+        ? [`${kind[0].toUpperCase()}${snapshot.reminders.counts[kind]}`]
+        : [],
+    );
+    const reminders = `reminders ${snapshot.reminders.total}${reminderParts.length ? ` (${reminderParts.join(" ")})` : ""}`;
+    const last = snapshot.reminders.last;
+    const latest = last
+      ? ` · last ${last.kind[0].toUpperCase()}${last.percent === undefined ? "" : `@${Math.round(last.percent)}%`}`
+      : "";
+    const folds = snapshot.collapses.attempts
+      ? `folds ${snapshot.collapses.productive}/${snapshot.collapses.attempts}, ${compactTokens(snapshot.collapses.savedTokens)} saved`
+      : "folds 0";
+    return `${label} · ${context} · ${reminders}${latest} · ${folds}${snapshot.phase ? ` · ${snapshot.phase}` : ""}`;
+  });
+  return [
+    `Context pressure · ${ordered.length} live · current branches · A/F/U/H/C`,
+    ...lines,
+  ].join("\n");
+}
 
 function branchSnapshot(
   ctx: ExtensionContext,
@@ -113,6 +291,9 @@ export default function contextPressure(pi: ExtensionAPI): void {
   let warnedMalformed = false;
   let warnedInvalidWindow = false;
   let warnedInvalidSnapshot = false;
+  let liveContext: ExtensionContext | undefined;
+  let liveSessionId: string | undefined;
+  const statusOwner = Symbol("context-pressure-status");
 
   const warnInvalidSnapshot = (): void => {
     if (warnedInvalidSnapshot) return;
@@ -150,9 +331,18 @@ export default function contextPressure(pi: ExtensionAPI): void {
     restore(ctx);
     warnedMalformed = false;
     warnedInvalidWindow = false;
+    liveContext = ctx;
+    liveSessionId = ctx.sessionManager.getSessionId();
+    statusRegistry().set(liveSessionId, {
+      owner: statusOwner,
+      snapshot: () => statusSnapshot(liveContext ?? ctx, state),
+    });
   });
 
-  pi.on("session_tree", (_event, ctx) => restore(ctx));
+  pi.on("session_tree", (_event, ctx) => {
+    liveContext = ctx;
+    restore(ctx);
+  });
 
   pi.on("model_select", (_event, _ctx) => {
     commit(resetPressure(state));
@@ -235,7 +425,26 @@ export default function contextPressure(pi: ExtensionAPI): void {
     if (decision) notifyReminder(ctx, decision);
   });
 
+  pi.registerCommand("context-status", {
+    description: "Show context-pressure statistics for all live agents",
+    handler: async (_args, ctx) => {
+      const snapshots = [...statusRegistry().values()].map((source) =>
+        source.snapshot(),
+      );
+      ctx.ui.notify(
+        formatStatus(snapshots, ctx.sessionManager.getSessionId()),
+        "info",
+      );
+    },
+  });
+
   pi.on("session_shutdown", () => {
+    if (liveSessionId) {
+      const source = statusRegistry().get(liveSessionId);
+      if (source?.owner === statusOwner) statusRegistry().delete(liveSessionId);
+    }
+    liveContext = undefined;
+    liveSessionId = undefined;
     state = emptyPressureState();
     collapseInCurrentTurn = false;
   });

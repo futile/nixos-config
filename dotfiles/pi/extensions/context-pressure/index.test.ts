@@ -10,6 +10,10 @@ type Handler = (event: any, ctx: ExtensionContext) => unknown;
 
 class FakePi {
   readonly handlers = new Map<string, Handler[]>();
+  readonly commands = new Map<
+    string,
+    { handler: (args: string, ctx: ExtensionContext) => Promise<void> }
+  >();
   readonly sent: any[] = [];
   readonly entries: any[] = [];
   readonly order: string[] = [];
@@ -28,6 +32,15 @@ class FakePi {
     this.sent.push({ message, options });
   }
 
+  registerCommand(
+    name: string,
+    command: {
+      handler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    },
+  ): void {
+    this.commands.set(name, command);
+  }
+
   async emit(name: string, event: any, ctx: ExtensionContext): Promise<void> {
     for (const handler of this.handlers.get(name) ?? [])
       await handler(event, ctx);
@@ -38,6 +51,8 @@ function fakeContext(
   hasUI = true,
   branch: any[] = [],
   contextWindow = 100_000,
+  sessionId = "test",
+  sessionName?: string,
 ) {
   let contextUsage: any = {
     tokens: 10_000,
@@ -49,7 +64,11 @@ function fakeContext(
     hasUI,
     mode: hasUI ? "tui" : "print",
     getContextUsage: () => contextUsage,
-    sessionManager: { getBranch: () => branch },
+    sessionManager: {
+      getBranch: () => branch,
+      getSessionId: () => sessionId,
+      getSessionName: () => sessionName,
+    },
     ui: {
       notify: (message: string, level?: string) =>
         notifications.push({ message, level }),
@@ -72,6 +91,83 @@ const turn = {
   message: { stopReason: "toolUse" },
   toolResults: [{ toolName: "read" }],
 };
+
+test("context-status reports branch-local stats for main and live children", async () => {
+  const mainBranch = [
+    {
+      type: "custom_message",
+      customType: "context-pressure/reminder",
+      details: { kind: "advisory", percent: 62 },
+    },
+    {
+      type: "custom_message",
+      customType: "context-pressure/reminder",
+      details: { kind: "urgent", percent: 81 },
+    },
+    {
+      type: "message",
+      message: {
+        role: "toolResult",
+        toolName: "context_collapse",
+        details: { action: "collapse", ok: true, deltaTokens: 12_000 },
+      },
+    },
+    {
+      type: "message",
+      message: {
+        role: "toolResult",
+        toolName: "context_collapse",
+        details: { action: "collapse", ok: false, deltaTokens: 0 },
+      },
+    },
+  ];
+  const mainPi = new FakePi();
+  contextPressure(mainPi as unknown as ExtensionAPI);
+  const main = fakeContext(true, mainBranch, 100_000, "main-id", "renamed");
+  main.setUsage(72_000);
+  await mainPi.emit(
+    "session_start",
+    { type: "session_start", reason: "startup" },
+    main.ctx,
+  );
+
+  const childPi = new FakePi();
+  contextPressure(childPi as unknown as ExtensionAPI);
+  const child = fakeContext(false, [], 200_000, "child-id", "scan");
+  child.setUsage(126_000);
+  await childPi.emit(
+    "session_start",
+    { type: "session_start", reason: "startup" },
+    child.ctx,
+  );
+
+  await mainPi.commands.get("context-status")?.handler("", main.ctx);
+  assert.equal(main.notifications.length, 1);
+  assert.match(main.notifications[0].message, /2 live/);
+  assert.match(
+    main.notifications[0].message,
+    /main · ctx 72% · headroom 28k · reminders 2 \(A1 U1\) · last U@81% · folds 1\/2, 12k saved/,
+  );
+  assert.match(
+    main.notifications[0].message,
+    /scan · ctx 63% · headroom 74k · reminders 0 · folds 0/,
+  );
+
+  await childPi.emit(
+    "session_shutdown",
+    { type: "session_shutdown", reason: "quit" },
+    child.ctx,
+  );
+  await mainPi.commands.get("context-status")?.handler("", main.ctx);
+  assert.match(main.notifications[1].message, /1 live/);
+  assert.doesNotMatch(main.notifications[1].message, /scan/);
+
+  await mainPi.emit(
+    "session_shutdown",
+    { type: "session_shutdown", reason: "quit" },
+    main.ctx,
+  );
+});
 
 test("sends a steer only on a continuing tool loop", async () => {
   const pi = new FakePi();
