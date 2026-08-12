@@ -11,6 +11,7 @@ These rules override conflicting skill guidance.
 
 - Delegate only when parallelism or context isolation outweighs prompting and verification; otherwise use deterministic tools or the main thread.
 - In Pi, pass provider-qualified subagent model IDs: use `openai-codex/gpt-5.6-luna` at `xhigh` for bounded, low-risk scanning, extraction, triage, and routine review; use `openai-codex/gpt-5.6-sol` for subtle, cross-cutting, consequential, or high-risk work. The provider is `openai-codex`, not `openai`. Preserve explicit model requests.
+- Always include the initial task in `spawn_agent.message`. A system prompt alone only defines the role; without a first message the agent starts idle and does no work. After the agent acknowledges the task and asks clarifying questions, send an explicit go-ahead with answers or reasonable defaults.
 - Main thread owns final decisions and verification. Reuse agents only for the same role and scope.
 - Prompts state goal, scope, constraints, expected evidence/output, and stop condition.
 
