@@ -10,7 +10,7 @@ These rules override conflicting skill guidance.
 ## Subagents
 
 - Delegate only when parallelism or context isolation outweighs prompting and verification; otherwise use deterministic tools or the main thread.
-- Use `gpt-5.6-luna` at `xhigh` for bounded, low-risk scanning, extraction, triage, and routine review; use `gpt-5.6-sol` for subtle, cross-cutting, consequential, or high-risk work. Preserve explicit model requests.
+- In Pi, pass provider-qualified subagent model IDs: use `openai-codex/gpt-5.6-luna` at `xhigh` for bounded, low-risk scanning, extraction, triage, and routine review; use `openai-codex/gpt-5.6-sol` for subtle, cross-cutting, consequential, or high-risk work. The provider is `openai-codex`, not `openai`. Preserve explicit model requests.
 - Main thread owns final decisions and verification. Reuse agents only for the same role and scope.
 - Prompts state goal, scope, constraints, expected evidence/output, and stop condition.
 
