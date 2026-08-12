@@ -54,6 +54,8 @@ in
 
       ".pi/agent/extensions/subagents".source = patchedSubagents;
       ".pi/agent/extensions/context-prune".source = "${upstreamExtensions}/context-prune";
+      ".pi/agent/extensions/context-pressure".source =
+        config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/context-pressure";
       ".pi/agent/extensions/codex-fast".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/codex-fast";
     };
@@ -64,6 +66,7 @@ in
         "npm:@juicesharp/rpiv-web-tools@2.3.1"
         "git:github.com/DietrichGebert/ponytail"
         "${config.home.homeDirectory}/.pi/agent/extensions/context-prune"
+        "${config.home.homeDirectory}/.pi/agent/extensions/context-pressure"
         "${config.home.homeDirectory}/.pi/agent/extensions/codex-fast"
       ];
     };

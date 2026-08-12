@@ -1,6 +1,6 @@
 # Pi context maintenance: triggers, economics, and reminder design
 
-Status: design and research; extension not yet implemented
+Status: v1 extension implemented in `dotfiles/pi/extensions/context-pressure/`; this document retains the design evidence and tuning notes.
 
 Last checked: 2026-08-12 against Pi 0.84.1
 
@@ -14,8 +14,12 @@ maintenance pass is worthwhile when it removes a meaningful amount of
 completed material and either enough model work remains to reuse the smaller
 context or context pressure and quality risk justify the churn.
 
-The recommended first implementation is a small standalone Pi extension rather
-than a `pi-system-reminders` reminder. The package is useful shared machinery
+The v1 implementation is a standalone Pi extension rather than a
+`pi-system-reminders` reminder. It is not tiny: correct branch-local yield,
+latch, and escalation persistence makes the policy and event shell roughly 800
+lines before tests. If sessions do not show enough benefit to justify that
+state machine, the honest simplification is to delete adaptive escalation and
+keep only pressure-threshold reminders. The package is useful shared machinery
 for a suite of reminders, but its fixed visible `steer` delivery with
 `triggerTurn: true` makes exact streaming/finality gating mandatory and removes
 useful delivery control from a precision-sensitive reminder.
@@ -529,16 +533,17 @@ subagent panel already exposes each child's token/window usage.
 
 ```text
 dotfiles/pi/extensions/context-pressure/
-  index.ts          # Pi events, delivery, persistence, context-prune adapter
+  index.ts          # Pi events, delivery, snapshot persistence, prune adapter
   policy.ts         # pure threshold/latch/yield decision function
-  policy.test.ts    # one node:test table for hysteresis and escalation
+  index.test.ts     # shell/lifecycle/persistence integration tests
+  policy.test.ts    # node:test tables for hysteresis and escalation
 ```
 
 No package, timer, background process, model call, dependency, custom tool, or
 standing system-prompt text is needed. The extension should stay silent below a
 trigger and rely on the existing global/context-prune guidance.
-`home-modules/pi.nix` would link the directory into the foreground extension
-set and add the same path to `child-extensions.json`. The nontrivial state
+`home-modules/pi.nix` links the directory into the foreground extension set
+and adds the same path to `child-extensions.json`. The nontrivial state
 machine belongs in a pure function; the extension shell should remain small.
 
 ### Integration options and trade-offs
@@ -786,30 +791,35 @@ The window and exact-prefix caching behavior are documented. The magnitude of
 quality improvement from removing irrelevant material is task-dependent and
 has not been measured for this setup.
 
-## Recommended implementation sequence
+## Implemented v1 and follow-up sequence
 
-1. Keep context-prune's active "collapse immediately" guidance aligned with the
-   adopted safety/materiality/timing policy. The global instructions now supply
-   the compatibility interpretation; update the injected prompt directly if it
-   becomes configurable.
-2. Implement the standalone three-file companion above and load it in both the
-   foreground and fail-closed child policy.
-3. Use Option A's growth/high-water policy with the piggy-back-first behavior
-   from Option B and the advisory/firm/urgent/critical levels above.
-4. Track a session-level maintenance baseline and a per-interaction baseline,
-   using `agent_start`, `agent_settled`, model selection, session compaction,
+The standalone v1 companion is now wired for foreground and child sessions,
+with policy and shell/lifecycle tests and no bespoke repository test architecture.
+It keeps a versioned, branch-local session snapshot containing recent yields,
+armed pressure latches, and phase flags. Items 1--8
+below describe the implemented shape; items 9--11 remain follow-up measurement
+and tuning work.
+
+1. Retain context-prune's active guidance and the global safety/materiality/
+   timing interpretation; no fork or prompt bridge is required for v1.
+2. The standalone companion is loaded in both the foreground and fail-closed
+   child policy.
+3. Use Option A's growth/high-water policy with piggy-back delivery and the
+   advisory/firm/urgent/critical levels above.
+4. Track session-level maintenance and per-interaction baselines through
+   `agent_start`, `agent_settled`, model selection, session compaction,
    qualifying tool-bearing turns, and positive maintenance without resetting
-   cumulative growth on every low-level retry or continuation.
+   cumulative growth on retries or continuations.
 5. Observe context-prune's collapse result, persist the last three yield samples
-   with their context windows, and fail visibly rather than estimate if its
-   details contract changes.
+   with their original windows, and warn visibly rather than estimate if its
+   details contract or context window is invalid.
 6. Treat a collapse as positive maintenance only when its result reports
    `action === "collapse"`, `ok === true`, and `deltaTokens > 0`; establish a
-   fresh usage baseline afterward.
+   fresh usage baseline on the next valid reading.
 7. Escalate low yields only under high pressure, require one explicitly broader
    pass before recommending a new session, and never replace automatically.
-8. Allow another ordinary reminder only after 15,000--25,000 additional tokens;
-   use a separate one-shot emergency latch for low absolute headroom.
+8. Use one-shot pressure latches with hysteresis and a short post-attempt
+   cooldown; critical headroom uses Pi's reserve plus 8,000 tokens.
 9. Log trigger cause, reminder/map/result sizes, yield samples, whether a
    collapse followed, future call count, and reported input/cache/output token
    categories. Compare those categories with Codex credits or direct API costs
