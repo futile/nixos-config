@@ -84,7 +84,7 @@ function sendReminder(pi: ExtensionAPI, decision: PressureDecision): void {
     {
       customType: REMINDER_TYPE,
       content: reminderText(decision),
-      display: false,
+      display: true,
       details: { kind: decision.kind, percent: decision.percent },
     },
     { deliverAs: "steer" },

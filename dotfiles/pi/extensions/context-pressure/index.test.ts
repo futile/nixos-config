@@ -88,6 +88,7 @@ test("sends a steer only on a continuing tool loop", async () => {
   session.setUsage(70_000);
   await pi.emit("turn_end", turn, session.ctx);
   assert.equal(pi.sent.length, 1);
+  assert.equal(pi.sent[0].message.display, true);
   assert.equal(pi.sent[0].options.deliverAs, "steer");
   assert.equal(pi.sent[0].options.triggerTurn, undefined);
 
