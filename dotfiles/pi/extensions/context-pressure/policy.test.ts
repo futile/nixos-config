@@ -9,8 +9,10 @@ import {
   makeYieldSample,
   noteToolTurn,
   observeUsage,
+  persistentPressureState,
   recordCollapse,
   resetPressure,
+  restorePressureState,
 } from "./policy.ts";
 
 const usage = (
@@ -178,6 +180,21 @@ test("reset preserves samples but first interaction captures its fresh maintenan
   assert.equal(deferred.maintenance?.tokens, 10_000);
   assert.equal(deferred.interaction, null);
   assert.equal(deferred.pendingBaseline, true);
+});
+
+test("high-water mark tracks peak context percentage and survives resets and restore", () => {
+  let state = observeUsage(emptyPressureState(), usage(80_000, 80));
+  state = observeUsage(state, usage(500_000, 50, 1_000_000));
+  assert.deepEqual(state.highWaterMark, {
+    tokens: 80_000,
+    contextWindow: 100_000,
+    percent: 80,
+  });
+
+  const restored = restorePressureState(
+    persistentPressureState(resetPressure(state)),
+  );
+  assert.deepEqual(restored.highWaterMark, state.highWaterMark);
 });
 
 test("invalid context windows never create yield samples", () => {

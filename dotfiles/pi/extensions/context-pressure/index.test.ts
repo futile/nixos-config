@@ -141,16 +141,17 @@ test("context-status reports branch-local stats for main and live children", asy
     child.ctx,
   );
 
+  main.setUsage(60_000);
   await mainPi.commands.get("context-status")?.handler("", main.ctx);
   assert.equal(main.notifications.length, 1);
   assert.match(main.notifications[0].message, /2 live/);
   assert.match(
     main.notifications[0].message,
-    /main · ctx 72% · headroom 28k · reminders 2 \(A1 U1\) · last U@81% · folds 1\/2, 12k saved/,
+    /main · ctx 60% · HWM 72% · headroom 40k · reminders 2 \(A1 U1\) · last U@81% · folds 1\/2, 12k saved/,
   );
   assert.match(
     main.notifications[0].message,
-    /scan · ctx 63% · headroom 74k · reminders 0 · folds 0/,
+    /scan · ctx 63% · HWM 63% · headroom 74k · reminders 0 · folds 0/,
   );
 
   await childPi.emit(
@@ -310,6 +311,7 @@ test("a pending broader phase restores across restart and is consumed by the nex
     { type: "session_start", reason: "resume" },
     session.ctx,
   );
+  const entriesAfterStart = pi.entries.length;
   await pi.emit(
     "tool_result",
     {
@@ -319,10 +321,11 @@ test("a pending broader phase restores across restart and is consumed by the nex
     },
     session.ctx,
   );
-  assert.equal(pi.entries.length, 1);
-  assert.equal(pi.entries[0].customType, "context-pressure/state");
-  assert.equal(pi.entries[0].data.yields.at(-1).broader, true);
-  assert.equal(pi.entries[0].data.broaderPassPending, false);
+  assert.equal(pi.entries.length, entriesAfterStart + 1);
+  const latest = pi.entries.at(-1);
+  assert.equal(latest.customType, "context-pressure/state");
+  assert.equal(latest.data.yields.at(-1).broader, true);
+  assert.equal(latest.data.broaderPassPending, false);
 });
 
 test("settled preserves an unacted broader phase", async () => {
@@ -348,8 +351,9 @@ test("settled preserves an unacted broader phase", async () => {
     { type: "session_start", reason: "resume" },
     session.ctx,
   );
+  const entriesAfterStart = pi.entries.length;
   await pi.emit("agent_settled", { type: "agent_settled" }, session.ctx);
-  assert.equal(pi.entries.length, 0);
+  assert.equal(pi.entries.length, entriesAfterStart);
 });
 
 test("restored pressure snapshots suppress duplicate reminders at every level", async () => {
@@ -615,6 +619,7 @@ test("invalid context windows skip persistence and warn only once", async () => 
     { type: "session_start", reason: "startup" },
     session.ctx,
   );
+  const entriesAfterStart = pi.entries.length;
   const originalWarn = console.warn;
   const warnings: unknown[][] = [];
   console.warn = (...args: unknown[]) => warnings.push(args);
@@ -640,7 +645,7 @@ test("invalid context windows skip persistence and warn only once", async () => 
   } finally {
     console.warn = originalWarn;
   }
-  assert.equal(pi.entries.length, 0);
+  assert.equal(pi.entries.length, entriesAfterStart);
   assert.equal(warnings.length, 1);
   assert.match(String(warnings[0][0]), /valid context window/i);
 });
@@ -654,6 +659,7 @@ test("valid collapse results persist a zero-yield attempt and malformed details 
     { type: "session_start", reason: "startup" },
     session.ctx,
   );
+  const entriesAfterStart = pi.entries.length;
   await pi.emit(
     "tool_result",
     {
@@ -663,9 +669,10 @@ test("valid collapse results persist a zero-yield attempt and malformed details 
     },
     session.ctx,
   );
-  assert.equal(pi.entries.length, 1);
-  assert.equal(pi.entries[0].customType, "context-pressure/state");
-  assert.equal(pi.entries[0].data.yields.at(-1).percentagePoints, 0);
+  assert.equal(pi.entries.length, entriesAfterStart + 1);
+  const latest = pi.entries.at(-1);
+  assert.equal(latest.customType, "context-pressure/state");
+  assert.equal(latest.data.yields.at(-1).percentagePoints, 0);
   await pi.emit(
     "tool_result",
     {
@@ -675,5 +682,5 @@ test("valid collapse results persist a zero-yield attempt and malformed details 
     },
     session.ctx,
   );
-  assert.equal(pi.entries.length, 1);
+  assert.equal(pi.entries.length, entriesAfterStart + 1);
 });

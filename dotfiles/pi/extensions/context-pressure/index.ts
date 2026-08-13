@@ -18,6 +18,7 @@ import {
   makeYieldSample,
   normalizeUsage,
   noteToolTurn,
+  observeHighWaterMark,
   observeUsage,
   persistentPressureState,
   recordCollapse,
@@ -53,6 +54,7 @@ interface ContextStatusSnapshot {
   sessionId: string;
   name: string;
   usage?: ContextUsage;
+  highWaterPercent?: number;
   reminders: ReminderSummary;
   collapses: CollapseSummary;
   phase?: "broader pending" | "handoff pending" | "handoff sent";
@@ -154,10 +156,18 @@ function statusSnapshot(
       : state.handoffSent
         ? "handoff sent"
         : undefined;
+  const usage = normalizeUsage(
+    ctx.getContextUsage() as ContextUsage | undefined,
+  );
+  const highWaterPercent = Math.max(
+    state.highWaterMark?.percent ?? Number.NEGATIVE_INFINITY,
+    usage?.percent ?? Number.NEGATIVE_INFINITY,
+  );
   return {
     sessionId,
     name,
-    usage: normalizeUsage(ctx.getContextUsage() as ContextUsage | undefined),
+    usage,
+    ...(Number.isFinite(highWaterPercent) ? { highWaterPercent } : {}),
     ...branchStats(ctx),
     ...(phase ? { phase } : {}),
   };
@@ -181,10 +191,14 @@ function formatStatus(
   const lines = ordered.map((snapshot) => {
     const label = snapshot.sessionId === mainSessionId ? "main" : snapshot.name;
     const usage = snapshot.usage;
+    const highWater =
+      snapshot.highWaterPercent === undefined
+        ? "HWM unavailable"
+        : `HWM ${Math.round(snapshot.highWaterPercent)}%`;
     const context =
       usage?.tokens == null
-        ? "ctx unavailable"
-        : `ctx ${Math.round(usage.percent ?? 0)}% · headroom ${compactTokens(usage.contextWindow - usage.tokens)}`;
+        ? `ctx unavailable · ${highWater}`
+        : `ctx ${Math.round(usage.percent ?? 0)}% · ${highWater} · headroom ${compactTokens(usage.contextWindow - usage.tokens)}`;
     const reminderParts = REMINDER_KINDS.flatMap((kind) =>
       snapshot.reminders.counts[kind]
         ? [`${kind[0].toUpperCase()}${snapshot.reminders.counts[kind]}`]
@@ -395,7 +409,11 @@ export default function contextPressure(pi: ExtensionAPI): void {
     }
     const sample = makeYieldSample(details, contextWindow);
     if (!sample) return;
-    const next = recordCollapse(state, sample, usage?.tokens ?? null);
+    const observed = observeHighWaterMark(
+      state,
+      usage as ContextUsage | undefined,
+    );
+    const next = recordCollapse(observed, sample, usage?.tokens ?? null);
     commit(next);
     if (sample.ok && sample.deltaTokens > 0) collapseInCurrentTurn = true;
   });
@@ -404,7 +422,9 @@ export default function contextPressure(pi: ExtensionAPI): void {
     const usage = normalizeUsage(
       ctx.getContextUsage() as ContextUsage | undefined,
     );
-    let next = collapseInCurrentTurn ? state : observeUsage(state, usage);
+    let next = collapseInCurrentTurn
+      ? observeHighWaterMark(state, usage)
+      : observeUsage(state, usage);
     collapseInCurrentTurn = false;
 
     const message = event.message as { stopReason?: string };

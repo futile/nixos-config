@@ -45,6 +45,7 @@ export interface YieldSample {
 }
 
 export interface PressureState {
+  highWaterMark: UsageBaseline | null;
   maintenance: UsageBaseline | null;
   interaction: UsageBaseline | null;
   interactionActive: boolean;
@@ -60,6 +61,7 @@ export interface PressureState {
 
 export interface PersistentPressureState {
   version: 1;
+  highWaterMark?: UsageBaseline;
   yields: YieldSample[];
   latches: Partial<Record<PressureLevel, UsageBaseline>>;
   broaderPassPending: boolean;
@@ -79,6 +81,7 @@ export interface PressureDecision {
 
 export function emptyPressureState(): PressureState {
   return {
+    highWaterMark: null,
     maintenance: null,
     interaction: null,
     interactionActive: false,
@@ -151,6 +154,8 @@ export function isPersistentPressureState(
   const snapshot = value as Record<string, unknown>;
   if (
     snapshot.version !== 1 ||
+    (snapshot.highWaterMark !== undefined &&
+      !validBaseline(snapshot.highWaterMark)) ||
     !Array.isArray(snapshot.yields) ||
     snapshot.yields.length > RECENT_YIELD_LIMIT ||
     !snapshot.yields.every(isValidYieldSample) ||
@@ -192,6 +197,9 @@ export function persistentPressureState(
 ): PersistentPressureState {
   return {
     version: 1,
+    ...(state.highWaterMark
+      ? { highWaterMark: { ...state.highWaterMark } }
+      : {}),
     yields: state.yields
       .slice(-RECENT_YIELD_LIMIT)
       .map((sample) => ({ ...sample })),
@@ -217,6 +225,9 @@ export function restorePressureState(
 ): PressureState {
   return {
     ...emptyPressureState(),
+    highWaterMark: snapshot.highWaterMark
+      ? { ...snapshot.highWaterMark }
+      : null,
     yields: snapshot.yields.map((sample) => ({ ...sample })),
     latches: orderedLatches(snapshot.latches),
     broaderPassPending: snapshot.broaderPassPending,
@@ -225,10 +236,11 @@ export function restorePressureState(
   };
 }
 
-/** Reset pressure gates while retaining session-local yields and phase state. */
+/** Reset pressure gates while retaining session-local statistics and phase state. */
 export function resetPressure(state: PressureState): PressureState {
   return {
     ...emptyPressureState(),
+    highWaterMark: state.highWaterMark,
     yields: state.yields.slice(-RECENT_YIELD_LIMIT),
     broaderPassPending: state.broaderPassPending,
     handoffCandidate: state.handoffCandidate,
@@ -262,6 +274,26 @@ export function normalizeUsage(
         percent: current.percent,
       }
     : undefined;
+}
+
+function withHighWaterMark(
+  state: PressureState,
+  current: UsageBaseline,
+): PressureState {
+  const high = state.highWaterMark;
+  return !high ||
+    current.percent > high.percent ||
+    (current.percent === high.percent && current.tokens > high.tokens)
+    ? { ...state, highWaterMark: current }
+    : state;
+}
+
+export function observeHighWaterMark(
+  state: PressureState,
+  usage: ContextUsage | undefined,
+): PressureState {
+  const current = baseline(usage);
+  return current ? withHighWaterMark(state, current) : state;
 }
 
 function latestBroaderSample(state: PressureState): YieldSample | undefined {
@@ -301,12 +333,13 @@ export function observeUsage(
 ): PressureState {
   const current = baseline(usage);
   if (!current) return state;
-  if (state.pendingBaseline) {
+  const observed = withHighWaterMark(state, current);
+  if (observed.pendingBaseline) {
     return rearm(
       {
-        ...state,
+        ...observed,
         maintenance: current,
-        interaction: state.interactionActive ? current : null,
+        interaction: observed.interactionActive ? current : null,
         pendingBaseline: false,
         cooldownUntilTokens: null,
       },
@@ -315,11 +348,11 @@ export function observeUsage(
   }
   return rearm(
     {
-      ...state,
-      maintenance: state.maintenance ?? current,
-      interaction: state.interactionActive
-        ? (state.interaction ?? current)
-        : state.interaction,
+      ...observed,
+      maintenance: observed.maintenance ?? current,
+      interaction: observed.interactionActive
+        ? (observed.interaction ?? current)
+        : observed.interaction,
     },
     current,
   );
@@ -329,13 +362,15 @@ export function beginInteraction(
   state: PressureState,
   usage?: ContextUsage,
 ): PressureState {
-  if (state.interactionActive) return state;
-  const current = state.pendingBaseline ? null : baseline(usage);
+  const current = baseline(usage);
+  const observed = current ? withHighWaterMark(state, current) : state;
+  if (observed.interactionActive) return observed;
+  const interaction = observed.pendingBaseline ? null : current;
   return {
-    ...state,
+    ...observed,
     interactionActive: true,
-    maintenance: state.maintenance ?? current,
-    interaction: current,
+    maintenance: observed.maintenance ?? interaction,
+    interaction,
     toolTurns: 0,
   };
 }
