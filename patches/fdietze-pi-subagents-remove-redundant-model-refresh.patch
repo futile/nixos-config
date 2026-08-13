@@ -1,0 +1,21 @@
+diff --git a/index.ts b/index.ts
+index d2bf54d..bc00647 100644
+--- a/index.ts
++++ b/index.ts
+@@ -229,12 +229,12 @@ export default function subagents(pi: ExtensionAPI) {
+ 	// ModelRuntime. ModelRuntime.create() with no args reads getAgentDir()/auth.json
+ 	// + models.json — the SAME credentials and models the foreground uses. subagents()
+ 	// is synchronous, so build asynchronously and expose the runtime via a promise;
+-	// find()/getAvailable() below read the registry synchronously once refresh() lands
+-	// (well before the first spawn), and guard against the brief pre-ready window.
++	// ModelRuntime.create() initializes the local/cached model snapshot before resolving,
++	// so find()/getAvailable() below can read the registry synchronously afterward and
++	// guard against the brief pre-ready window.
+ 	let modelRegistry: ModelRegistry | undefined;
+-	const modelRuntimeReady = ModelRuntime.create().then(async (runtime) => {
++	const modelRuntimeReady = ModelRuntime.create().then((runtime) => {
+ 		modelRegistry = new ModelRegistry(runtime);
+-		await modelRegistry.refresh();
+ 		return runtime;
+ 	});
+ 

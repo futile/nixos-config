@@ -16,6 +16,7 @@ let
 
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-bind-errors.patch}
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-model-routing.patch}
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-remove-redundant-model-refresh.patch}
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-engine-reset.patch}
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-activity.patch}
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-fast.patch}
