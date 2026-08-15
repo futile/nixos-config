@@ -7,7 +7,7 @@
   "packages": [
     "npm:pi-mcp-adapter@2.17.0",
     "npm:@juicesharp/rpiv-web-tools@2.3.1",
-    "git:github.com/futile/pi-statusline@2fce24f67d01b85aa8e0afa649b7ba1e9187b97e",
+    "git:github.com/futile/pi-statusline@3986044819487245932c12c3ab22be0d4203427e",
     "git:github.com/DietrichGebert/ponytail"
   ],
   "steeringMode": "all",
