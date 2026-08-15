@@ -1,0 +1,37 @@
+--- a/index.ts
++++ b/index.ts
+@@ -103,6 +103,7 @@
+ // v12: route and resume return structured delivery/pause outcomes.
+ // v13: resume releases each paused inbox as one atomic ordered batch.
+ const ENGINE_KEY = "__subagentsEngine_v13";
++const AGENT_NAME_LOOKUP_KEY = Symbol.for("futile.pi.subagents.agent-name-lookup.v1");
+ 
+ function getEngine(): Engine {
+ 	const g = globalThis as Record<string, unknown>;
+@@ -229,6 +230,8 @@
+ 
+ export default function subagents(pi: ExtensionAPI) {
+ 	const engine = getEngine();
++	(globalThis as Record<symbol, unknown>)[AGENT_NAME_LOOKUP_KEY] = (sessionId: string) =>
++		engine.list().find((agent) => agent.sessionId === sessionId)?.name;
+ 
+ 	// This (freshly loaded) instance now owns the main delivery with its live pi —
+ 	// replacing a possibly stale sink from a previous instance.
+@@ -694,15 +697,12 @@
+ 		let sm: SessionManager;
+ 		if (existingFile) {
+ 			sm = SessionManager.open(existingFile);
++			if (!sm.getSessionName()) sm.appendSessionInfo(spec.name);
+ 			reconcileDangling(sm);
+ 		} else if (subDir) {
+ 			fs.mkdirSync(subDir, { recursive: true });
+ 			sm = SessionManager.create(cwd, subDir);
+-			try {
+-				(sm as { setSessionName?: (n: string) => void }).setSessionName?.(spec.name);
+-			} catch {
+-				/* display name is cosmetic; ignore if unsupported */
+-			}
++			sm.appendSessionInfo(spec.name);
+ 		} else {
+ 			sm = SessionManager.inMemory(cwd);
+ 		}

@@ -31,6 +31,9 @@ import {
 const STATE_ENTRY = "context-pressure/state";
 const REMINDER_TYPE = "context-pressure/reminder";
 const STATUS_REGISTRY_KEY = "__contextPressureStatus_v1";
+const SUBAGENT_NAME_LOOKUP_KEY = Symbol.for(
+  "futile.pi.subagents.agent-name-lookup.v1",
+);
 const REMINDER_KINDS: ReminderKind[] = [
   "advisory",
   "firm",
@@ -146,13 +149,28 @@ function branchStats(ctx: ExtensionContext): {
   };
 }
 
+function subagentName(sessionId: string): string | undefined {
+  const lookup = (globalThis as Record<symbol, unknown>)[
+    SUBAGENT_NAME_LOOKUP_KEY
+  ];
+  if (typeof lookup !== "function") return undefined;
+  try {
+    const name = (lookup as (id: string) => unknown)(sessionId);
+    return typeof name === "string" && name.trim() ? name.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function statusSnapshot(
   ctx: ExtensionContext,
   state: PressureState,
 ): ContextStatusSnapshot {
   const sessionId = ctx.sessionManager.getSessionId();
   const name =
-    ctx.sessionManager.getSessionName()?.trim() || sessionId.slice(0, 8);
+    ctx.sessionManager.getSessionName()?.trim() ||
+    subagentName(sessionId) ||
+    sessionId.slice(0, 8);
   const phases = [
     ...(state.urgentPending ? ["urgent pending"] : []),
     ...(state.residualPending ? ["retention pending"] : []),

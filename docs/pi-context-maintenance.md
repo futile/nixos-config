@@ -507,7 +507,10 @@ reading in the new window; Pi compaction clears both because it is maintenance.
 `/context-status` exposes `urgent pending`, the latest `post-fold N%` reading
 (with `high` at or above 60%), and retention reminder counts. Its reminder-level
 header expands each count prefix compactly as
-`(A)dvisory/(F)irm/(U)rgent/(R)etention/(H)andoff/(C)ritical`.
+`(A)dvisory/(F)irm/(U)rgent/(R)etention/(H)andoff/(C)ritical`. Named subagents
+use their roster name even when an older child session lacks Pi display-name
+metadata. `ctx unavailable` means Pi has no current usage sample, commonly just
+after compaction and before the next assistant turn; the HWM remains historical.
 
 ### Reminder text
 

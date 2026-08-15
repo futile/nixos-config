@@ -216,6 +216,48 @@ test("context-status tolerates pre-reload sources without phase metadata", async
   }
 });
 
+test("context-status resolves a child name from the subagent roster bridge", async () => {
+  const lookupKey = Symbol.for("futile.pi.subagents.agent-name-lookup.v1");
+  const globals = globalThis as Record<symbol, unknown>;
+  globals[lookupKey] = (sessionId: string) =>
+    sessionId === "child-id" ? "session-forensics" : undefined;
+
+  const mainPi = new FakePi();
+  contextPressure(mainPi as unknown as ExtensionAPI);
+  const main = fakeContext(true, [], 100_000, "main-id", "main");
+  const childPi = new FakePi();
+  contextPressure(childPi as unknown as ExtensionAPI);
+  const child = fakeContext(false, [], 100_000, "child-id");
+
+  try {
+    await mainPi.emit(
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      main.ctx,
+    );
+    await childPi.emit(
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      child.ctx,
+    );
+    await mainPi.commands.get("context-status")?.handler("", main.ctx);
+    assert.match(main.notifications[0].message, /session-forensics · ctx 10%/);
+    assert.doesNotMatch(main.notifications[0].message, /child-id/);
+  } finally {
+    delete globals[lookupKey];
+    await childPi.emit(
+      "session_shutdown",
+      { type: "session_shutdown", reason: "quit" },
+      child.ctx,
+    );
+    await mainPi.emit(
+      "session_shutdown",
+      { type: "session_shutdown", reason: "quit" },
+      main.ctx,
+    );
+  }
+});
+
 test("sends a steer only on a continuing tool loop", async () => {
   const pi = new FakePi();
   contextPressure(pi as unknown as ExtensionAPI);
