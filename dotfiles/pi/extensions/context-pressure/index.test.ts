@@ -170,6 +170,48 @@ test("context-status reports branch-local stats for main and live children", asy
   );
 });
 
+test("context-status tolerates pre-reload sources without phase metadata", async () => {
+  const pi = new FakePi();
+  contextPressure(pi as unknown as ExtensionAPI);
+  const session = fakeContext(true, [], 100_000, "reload-main");
+  await pi.emit(
+    "session_start",
+    { type: "session_start", reason: "startup" },
+    session.ctx,
+  );
+
+  const registry = (
+    globalThis as unknown as Record<string, Map<string, unknown>>
+  ).__contextPressureStatus_v1;
+  registry.set("legacy-child", {
+    owner: Symbol("legacy"),
+    snapshot: () => ({
+      sessionId: "legacy-child",
+      name: "legacy",
+      usage: { tokens: 20_000, contextWindow: 100_000, percent: 20 },
+      highWaterPercent: 30,
+      reminders: {
+        counts: { advisory: 0, firm: 0, urgent: 0, handoff: 0, critical: 0 },
+        total: 0,
+      },
+      collapses: { attempts: 0, productive: 0, savedTokens: 0 },
+    }),
+  });
+
+  try {
+    await pi.commands.get("context-status")?.handler("", session.ctx);
+    assert.match(session.notifications[0].message, /2 live/);
+    assert.match(session.notifications[0].message, /legacy · ctx 20%/);
+  } finally {
+    registry.delete("legacy-child");
+    await pi.emit(
+      "session_shutdown",
+      { type: "session_shutdown", reason: "quit" },
+      session.ctx,
+    );
+  }
+});
+
 test("sends a steer only on a continuing tool loop", async () => {
   const pi = new FakePi();
   contextPressure(pi as unknown as ExtensionAPI);

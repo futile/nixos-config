@@ -60,7 +60,7 @@ interface ContextStatusSnapshot {
   reminders: ReminderSummary;
   collapses: CollapseSummary;
   lastPostCollapsePercent?: number;
-  phases: string[];
+  phases?: string[];
 }
 
 interface ContextStatusSource {
@@ -223,7 +223,7 @@ function formatStatus(
       snapshot.lastPostCollapsePercent === undefined
         ? ""
         : ` · post-fold ${Math.round(snapshot.lastPostCollapsePercent)}%${snapshot.lastPostCollapsePercent >= HIGH_RESIDUAL_PERCENT ? " high" : ""}`;
-    const phases = snapshot.phases.length
+    const phases = snapshot.phases?.length
       ? ` · ${snapshot.phases.join(", ")}`
       : "";
     return `${label} · ${context} · ${reminders}${latest} · ${folds}${postCollapse}${phases}`;
