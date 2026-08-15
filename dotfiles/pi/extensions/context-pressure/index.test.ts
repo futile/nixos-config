@@ -356,7 +356,7 @@ test("settled preserves an unacted broader phase", async () => {
   assert.equal(pi.entries.length, entriesAfterStart);
 });
 
-test("restored pressure snapshots suppress duplicate reminders at every level", async () => {
+test("restored ordinary latches stay quiet while urgent and critical remain pending", async () => {
   const cases = [
     {
       name: "advisory",
@@ -390,7 +390,12 @@ test("restored pressure snapshots suppress duplicate reminders at every level", 
     sourceSession.setUsage(current.tokens, current.percent);
     await source.emit("turn_end", turn, sourceSession.ctx);
     await source.emit("turn_end", turn, sourceSession.ctx);
-    assert.equal(source.sent.length, 1, `${current.name} should arm once`);
+    const repeats = current.name === "urgent" || current.name === "critical";
+    assert.equal(
+      source.sent.length,
+      repeats ? 2 : 1,
+      `${current.name} pending behavior`,
+    );
 
     const restored = new FakePi();
     contextPressure(restored as unknown as ExtensionAPI);
@@ -415,8 +420,8 @@ test("restored pressure snapshots suppress duplicate reminders at every level", 
     await restored.emit("turn_end", turn, restoredSession.ctx);
     assert.equal(
       restored.sent.length,
-      0,
-      `${current.name} should not duplicate after restore`,
+      repeats ? 2 : 0,
+      `${current.name} restore behavior`,
     );
   }
 });
@@ -456,7 +461,8 @@ test("restored tiny positive fold retains urgent latch and restored handoff stay
   );
   restoredTinySession.setUsage(820_000, 82);
   await restoredTiny.emit("turn_end", turn, restoredTinySession.ctx);
-  assert.equal(restoredTiny.sent.length, 0);
+  assert.equal(restoredTiny.sent.length, 1);
+  assert.match(restoredTiny.sent[0].message.content, /retaining context because/i);
 
   const handoffSnapshot = {
     type: "custom",
@@ -536,7 +542,10 @@ test("candidate clears below urgent and later urgent is ordinary, not handoff", 
   session.setUsage(810_000, 81);
   await pi.emit("turn_end", turn, session.ctx);
   assert.equal(pi.sent.length, 1);
-  assert.doesNotMatch(pi.sent[0].message.content, /handoff|fresh session/i);
+  assert.doesNotMatch(
+    pi.sent[0].message.content,
+    /reported broader pass|recommend a fresh session/i,
+  );
 });
 
 test("malformed newest snapshot falls back to the latest valid one", async () => {
@@ -608,6 +617,97 @@ test("model, compaction, and tree resets anchor the next interaction baseline", 
     );
     assert.equal(pi.sent[0].options.triggerTurn, undefined);
   }
+});
+
+test("model selection preserves urgent pending while compaction clears it", async () => {
+  for (const [eventName, expected] of [
+    ["model_select", 2],
+    ["session_compact", 1],
+  ] as const) {
+    const pi = new FakePi();
+    contextPressure(pi as unknown as ExtensionAPI);
+    const session = fakeContext(false, [], 1_000_000);
+    await pi.emit(
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      session.ctx,
+    );
+    await pi.emit("agent_start", { type: "agent_start" }, session.ctx);
+    session.setUsage(810_000, 81);
+    await pi.emit("turn_end", turn, session.ctx);
+    await pi.emit(eventName, { type: eventName }, session.ctx);
+    session.setUsage(700_000, 70);
+    await pi.emit("turn_end", turn, session.ctx);
+    assert.equal(pi.sent.length, expected, eventName);
+  }
+});
+
+test("urgent repeats through unrelated work and clears after productive maintenance", async () => {
+  const pi = new FakePi();
+  contextPressure(pi as unknown as ExtensionAPI);
+  const session = fakeContext(false, [], 1_000_000);
+  await pi.emit(
+    "session_start",
+    { type: "session_start", reason: "startup" },
+    session.ctx,
+  );
+  await pi.emit("agent_start", { type: "agent_start" }, session.ctx);
+  session.setUsage(810_000, 81);
+  await pi.emit("turn_end", turn, session.ctx);
+  await pi.emit("turn_end", turn, session.ctx);
+  assert.equal(pi.sent.length, 2);
+  assert.match(pi.sent[0].message.content, /STOP other work now/);
+  assert.match(pi.sent[1].message.content, /remains pending/);
+
+  await pi.commands.get("context-status")?.handler("", session.ctx);
+  assert.match(session.notifications[0].message, /urgent pending/);
+
+  await pi.emit(
+    "tool_result",
+    {
+      type: "tool_result",
+      toolName: "context_collapse",
+      details: { action: "collapse", ok: true, deltaTokens: 260_000 },
+    },
+    session.ctx,
+  );
+  await pi.emit("turn_end", turn, session.ctx);
+  session.setUsage(550_000, 55);
+  await pi.emit("turn_end", turn, session.ctx);
+  assert.equal(pi.sent.length, 2);
+});
+
+test("high residual pressure emits a retention choice and appears in context-status", async () => {
+  const pi = new FakePi();
+  contextPressure(pi as unknown as ExtensionAPI);
+  const session = fakeContext(false, [], 1_000_000);
+  await pi.emit(
+    "session_start",
+    { type: "session_start", reason: "startup" },
+    session.ctx,
+  );
+  await pi.emit("agent_start", { type: "agent_start" }, session.ctx);
+  session.setUsage(810_000, 81);
+  await pi.emit("turn_end", turn, session.ctx);
+  await pi.emit(
+    "tool_result",
+    {
+      type: "tool_result",
+      toolName: "context_collapse",
+      details: { action: "collapse", ok: true, deltaTokens: 200_000 },
+    },
+    session.ctx,
+  );
+  await pi.emit("turn_end", turn, session.ctx);
+  session.setUsage(650_000, 65);
+  await pi.emit("turn_end", turn, session.ctx);
+  assert.equal(pi.sent.at(-1)?.message.details.kind, "retention");
+  assert.match(pi.sent.at(-1)?.message.content ?? "", /specific indispensable working set/);
+  assert.match(pi.sent.at(-1)?.message.content ?? "", /child agents send_message main/);
+
+  await pi.commands.get("context-status")?.handler("", session.ctx);
+  assert.match(session.notifications[0].message, /post-fold 65% high/);
+  assert.doesNotMatch(session.notifications[0].message, /urgent pending/);
 });
 
 test("invalid context windows skip persistence and warn only once", async () => {

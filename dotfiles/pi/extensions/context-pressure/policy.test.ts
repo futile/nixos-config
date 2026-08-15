@@ -41,7 +41,7 @@ function ready(tokens: number, percent?: number, contextWindow = 100_000) {
   };
 }
 
-test("advisory and firm use maintenance/interaction growth, while urgent is one-shot", () => {
+test("advisory and firm use maintenance/interaction growth, while urgent stays pending", () => {
   let first = ready(70_000, 70);
   let result = evaluatePressure(first.state, first.current);
   assert.equal(result.decision?.kind, "advisory");
@@ -50,14 +50,18 @@ test("advisory and firm use maintenance/interaction growth, while urgent is one-
   result = evaluatePressure(first.state, first.current);
   assert.equal(result.decision?.kind, "urgent");
   result = evaluatePressure(result.state, first.current);
-  assert.equal(result.decision, undefined);
+  assert.equal(
+    result.decision?.kind,
+    "urgent",
+    "unrelated continuation must not satisfy urgent maintenance",
+  );
 
   const cooled = observeUsage(result.state, usage(740_000, 74, 1_000_000));
   result = evaluatePressure(cooled, first.current);
   assert.equal(
     result.decision?.kind,
     "urgent",
-    "a five-point drop re-arms before the next loop",
+    "usage movement without recorded maintenance must leave urgent pending",
   );
 
   const firm = ready(760_000, 76, 1_000_000);
@@ -78,26 +82,29 @@ test("critical uses reserve headroom rather than a portable percentage", () => {
   assert.equal(result.decision?.headroomTokens, 24_000);
 });
 
-test("still-armed higher latches suppress every lower downgrade", () => {
+test("pending critical and urgent requests repeat while firm suppresses advisory", () => {
   const cases = [
     {
-      name: "critical suppresses urgent",
+      name: "critical becomes a pending urgent request below critical",
       armed: 980_000,
       current: 970_000,
+      expected: "urgent",
     },
     {
-      name: "urgent suppresses firm",
+      name: "urgent remains pending below its threshold",
       armed: 800_000,
       current: 790_000,
+      expected: "urgent",
     },
     {
       name: "firm suppresses advisory",
       armed: 760_000,
       current: 740_000,
+      expected: undefined,
     },
   ];
 
-  for (const { name, armed, current } of cases) {
+  for (const { name, armed, current, expected } of cases) {
     const prepared = ready(armed, undefined, 1_000_000);
     const armedResult = evaluatePressure(
       prepared.state,
@@ -108,7 +115,7 @@ test("still-armed higher latches suppress every lower downgrade", () => {
       armedResult.state,
       usage(current, undefined, 1_000_000),
     );
-    assert.equal(lowerResult.decision, undefined, name);
+    assert.equal(lowerResult.decision?.kind, expected, name);
   }
 });
 
@@ -124,7 +131,7 @@ test("each latch can legitimately retrigger after its five-point rearm", () => {
       name: "urgent rearm permits advisory",
       armed: 800_000,
       current: 740_000,
-      expected: "advisory",
+      expected: "urgent",
     },
     {
       name: "firm rearm permits advisory",
@@ -180,6 +187,28 @@ test("reset preserves samples but first interaction captures its fresh maintenan
   assert.equal(deferred.maintenance?.tokens, 10_000);
   assert.equal(deferred.interaction, null);
   assert.equal(deferred.pendingBaseline, true);
+});
+
+test("model resets preserve unresolved maintenance but remeasure residual pressure", () => {
+  let { state } = ready(800_000, 80, 1_000_000);
+  state = evaluatePressure(state, usage(800_000, 80, 1_000_000)).state;
+  assert.equal(resetPressure(state, true).urgentPending, true);
+  assert.equal(resetPressure(state).urgentPending, false);
+
+  const sample = makeYieldSample(
+    { action: "collapse", ok: true, deltaTokens: 200_000 },
+    1_000_000,
+    1,
+  );
+  if (!sample) throw new Error("expected valid sample");
+  state = observeUsage(
+    recordCollapse(state, sample),
+    usage(650_000, 65, 1_000_000),
+  );
+  const reset = resetPressure(state, true);
+  assert.equal(reset.pendingBaseline, true);
+  assert.equal(reset.residualPending, false);
+  assert.equal(reset.lastPostCollapsePercent, null);
 });
 
 test("high-water mark tracks peak context percentage and survives resets and restore", () => {
@@ -259,7 +288,9 @@ test("tiny positive maintenance retains urgent latch, while a five-point drop re
   state = recordCollapse(state, tiny);
   state = observeUsage(state, usage(790_000, 79, 1_000_000));
   result = evaluatePressure(state, usage(810_000, 81, 1_000_000));
-  assert.equal(result.decision, undefined);
+  assert.equal(result.decision?.kind, "retention");
+  result = evaluatePressure(result.state, usage(810_000, 81, 1_000_000));
+  assert.equal(result.decision, undefined, "the urgent latch remains armed");
 
   const larger = makeYieldSample(
     { action: "collapse", ok: true, deltaTokens: 10_000 },
@@ -270,6 +301,11 @@ test("tiny positive maintenance retains urgent latch, while a five-point drop re
   state = recordCollapse(result.state, larger);
   state = observeUsage(state, usage(750_000, 75, 1_000_000));
   result = evaluatePressure(state, usage(810_000, 81, 1_000_000));
+  assert.equal(result.decision?.kind, "retention");
+  result = evaluatePressure(
+    result.state,
+    usage(810_000, 81, 1_000_000),
+  );
   assert.equal(result.decision?.kind, "urgent");
 });
 
@@ -293,6 +329,7 @@ test("a completed broader sample ages out after three newer ordinary samples", (
   state = {
     ...result.state,
     latches: {},
+    urgentPending: false,
     yields: [...result.state.yields, ordinary].slice(-3),
   };
   result = evaluatePressure(state, usage(800_000, 80, 1_000_000));
@@ -330,6 +367,90 @@ test("urgent low-yield escalation requests one broader pass, then handoff on its
     "If you are a child agent, send_message main",
     /send_message main/,
   );
+});
+
+test("a failed broader pass repeats handoff instead of downgrading to urgent", () => {
+  let { state } = ready(800_000, 80, 1_000_000);
+  const noop = makeYieldSample(
+    { action: "collapse", ok: true, deltaTokens: 0 },
+    1_000_000,
+    1,
+  );
+  if (!noop) throw new Error("expected valid sample");
+  for (let index = 0; index < 3; index += 1) state = recordCollapse(state, noop);
+  state = evaluatePressure(state, usage(800_000, 80, 1_000_000)).state;
+
+  const failed = makeYieldSample(
+    { action: "collapse", ok: false, deltaTokens: 0 },
+    1_000_000,
+    2,
+  );
+  if (!failed) throw new Error("expected valid sample");
+  state = recordCollapse(state, failed);
+  let result = evaluatePressure(state, usage(810_000, 81, 1_000_000));
+  assert.equal(result.decision?.kind, "handoff");
+  result = evaluatePressure(result.state, usage(820_000, 82, 1_000_000));
+  assert.equal(result.decision?.kind, "handoff");
+
+  state = result.state;
+  for (let index = 0; index < 3; index += 1) state = recordCollapse(state, noop);
+  result = evaluatePressure(state, usage(830_000, 83, 1_000_000));
+  assert.equal(result.decision?.kind, "handoff");
+  assert.equal(
+    result.decision?.broaderYield,
+    undefined,
+    "handoff must survive the broader sample aging out",
+  );
+});
+
+test("urgent survives failed maintenance and clears only after a productive collapse", () => {
+  let { state } = ready(800_000, 80, 1_000_000);
+  let result = evaluatePressure(state, usage(800_000, 80, 1_000_000));
+  assert.equal(result.decision?.kind, "urgent");
+  state = result.state;
+
+  const failed = makeYieldSample(
+    { action: "collapse", ok: false, deltaTokens: 0 },
+    1_000_000,
+    1,
+  );
+  if (!failed) throw new Error("expected valid sample");
+  state = recordCollapse(state, failed);
+  result = evaluatePressure(state, usage(800_000, 80, 1_000_000));
+  assert.equal(result.decision?.kind, "urgent");
+
+  const productive = makeYieldSample(
+    { action: "collapse", ok: true, deltaTokens: 250_000 },
+    1_000_000,
+    2,
+  );
+  if (!productive) throw new Error("expected valid sample");
+  state = observeUsage(
+    recordCollapse(result.state, productive),
+    usage(550_000, 55, 1_000_000),
+  );
+  assert.equal(state.urgentPending, false);
+  assert.equal(evaluatePressure(state, usage(550_000, 55, 1_000_000)).decision, undefined);
+});
+
+test("high post-collapse utilization is independent of a large yield", () => {
+  let { state } = ready(800_000, 80, 1_000_000);
+  state = evaluatePressure(state, usage(800_000, 80, 1_000_000)).state;
+  const large = makeYieldSample(
+    { action: "collapse", ok: true, deltaTokens: 200_000 },
+    1_000_000,
+    1,
+  );
+  if (!large) throw new Error("expected valid sample");
+  state = observeUsage(
+    recordCollapse(state, large),
+    usage(600_000, 60, 1_000_000),
+  );
+  const result = evaluatePressure(state, usage(600_000, 60, 1_000_000));
+  assert.equal(result.decision?.kind, "retention");
+  assert.equal(result.state.lastPostCollapsePercent, 60);
+  assert.equal(result.state.urgentPending, false);
+  assert.equal(result.decision?.yields.at(-1)?.percentagePoints, 20);
 });
 
 test("a positive collapse waits for a fresh reading, and reset retains yields", () => {

@@ -4,9 +4,10 @@ export const REARM_DROP_PERCENT = 5;
 export const REARM_GROWTH_TOKENS = 20_000;
 export const COLLAPSE_COOLDOWN_TOKENS = 5_000;
 export const RECENT_YIELD_LIMIT = 3;
+export const HIGH_RESIDUAL_PERCENT = 60;
 
 export type PressureLevel = "advisory" | "firm" | "urgent" | "critical";
-export type ReminderKind = PressureLevel | "handoff";
+export type ReminderKind = PressureLevel | "retention" | "handoff";
 
 const PRESSURE_LEVELS: PressureLevel[] = [
   "advisory",
@@ -55,6 +56,9 @@ export interface PressureState {
   latches: Partial<Record<PressureLevel, UsageBaseline>>;
   yields: YieldSample[];
   broaderPassPending: boolean;
+  urgentPending: boolean;
+  residualPending: boolean;
+  lastPostCollapsePercent: number | null;
   handoffCandidate: boolean;
   handoffSent: boolean;
 }
@@ -65,6 +69,10 @@ export interface PersistentPressureState {
   yields: YieldSample[];
   latches: Partial<Record<PressureLevel, UsageBaseline>>;
   broaderPassPending: boolean;
+  pendingBaseline?: boolean;
+  urgentPending?: boolean;
+  residualPending?: boolean;
+  lastPostCollapsePercent?: number;
   handoffCandidate: boolean;
   handoffSent: boolean;
 }
@@ -91,6 +99,9 @@ export function emptyPressureState(): PressureState {
     latches: {},
     yields: [],
     broaderPassPending: false,
+    urgentPending: false,
+    residualPending: false,
+    lastPostCollapsePercent: null,
     handoffCandidate: false,
     handoffSent: false,
   };
@@ -161,8 +172,23 @@ export function isPersistentPressureState(
     !snapshot.yields.every(isValidYieldSample) ||
     !validLatches(snapshot.latches) ||
     typeof snapshot.broaderPassPending !== "boolean" ||
+    (snapshot.pendingBaseline !== undefined &&
+      typeof snapshot.pendingBaseline !== "boolean") ||
+    (snapshot.urgentPending !== undefined &&
+      typeof snapshot.urgentPending !== "boolean") ||
+    (snapshot.residualPending !== undefined &&
+      typeof snapshot.residualPending !== "boolean") ||
+    (snapshot.lastPostCollapsePercent !== undefined &&
+      (!finite(snapshot.lastPostCollapsePercent) ||
+        snapshot.lastPostCollapsePercent < 0)) ||
     typeof snapshot.handoffCandidate !== "boolean" ||
     typeof snapshot.handoffSent !== "boolean"
+  )
+    return false;
+  if (snapshot.pendingBaseline && snapshot.residualPending) return false;
+  if (
+    snapshot.residualPending &&
+    (snapshot.lastPostCollapsePercent ?? 0) < HIGH_RESIDUAL_PERCENT
   )
     return false;
   if (snapshot.broaderPassPending && snapshot.handoffCandidate) return false;
@@ -205,6 +231,12 @@ export function persistentPressureState(
       .map((sample) => ({ ...sample })),
     latches: orderedLatches(state.latches),
     broaderPassPending: state.broaderPassPending,
+    pendingBaseline: state.pendingBaseline,
+    urgentPending: state.urgentPending,
+    residualPending: state.residualPending,
+    ...(state.lastPostCollapsePercent === null
+      ? {}
+      : { lastPostCollapsePercent: state.lastPostCollapsePercent }),
     handoffCandidate: state.handoffCandidate,
     handoffSent: state.handoffSent,
   };
@@ -231,18 +263,28 @@ export function restorePressureState(
     yields: snapshot.yields.map((sample) => ({ ...sample })),
     latches: orderedLatches(snapshot.latches),
     broaderPassPending: snapshot.broaderPassPending,
+    pendingBaseline: snapshot.pendingBaseline ?? false,
+    urgentPending: snapshot.urgentPending ?? false,
+    residualPending: snapshot.residualPending ?? false,
+    lastPostCollapsePercent: snapshot.lastPostCollapsePercent ?? null,
     handoffCandidate: snapshot.handoffCandidate,
     handoffSent: snapshot.handoffSent,
   };
 }
 
 /** Reset pressure gates while retaining session-local statistics and phase state. */
-export function resetPressure(state: PressureState): PressureState {
+export function resetPressure(
+  state: PressureState,
+  preservePending = false,
+): PressureState {
   return {
     ...emptyPressureState(),
     highWaterMark: state.highWaterMark,
     yields: state.yields.slice(-RECENT_YIELD_LIMIT),
     broaderPassPending: state.broaderPassPending,
+    pendingBaseline:
+      preservePending && (state.pendingBaseline || state.residualPending),
+    urgentPending: preservePending && state.urgentPending,
     handoffCandidate: state.handoffCandidate,
     handoffSent: state.handoffSent,
   };
@@ -342,6 +384,8 @@ export function observeUsage(
         interaction: observed.interactionActive ? current : null,
         pendingBaseline: false,
         cooldownUntilTokens: null,
+        residualPending: current.percent >= HIGH_RESIDUAL_PERCENT,
+        lastPostCollapsePercent: current.percent,
       },
       current,
     );
@@ -434,24 +478,29 @@ export function recordCollapse(
   currentTokens: number | null = null,
 ): PressureState {
   const broader = state.broaderPassPending;
+  const productive = sample.ok && sample.deltaTokens > 0;
   const recorded = broader ? { ...sample, broader: true } : sample;
   const yields = [...state.yields, recorded].slice(-RECENT_YIELD_LIMIT);
   const next: PressureState = {
     ...state,
     yields,
     broaderPassPending: broader ? false : state.broaderPassPending,
+    urgentPending: productive ? false : state.urgentPending,
+    residualPending: productive ? false : state.residualPending,
+    lastPostCollapsePercent: productive
+      ? null
+      : state.lastPostCollapsePercent,
     handoffCandidate: broader
       ? sample.percentagePoints < 3
       : state.handoffCandidate,
     handoffSent: broader ? false : state.handoffSent,
-    cooldownUntilTokens:
-      sample.ok && sample.deltaTokens > 0
+    cooldownUntilTokens: productive
+      ? state.cooldownUntilTokens
+      : currentTokens == null
         ? state.cooldownUntilTokens
-        : currentTokens == null
-          ? state.cooldownUntilTokens
-          : currentTokens + COLLAPSE_COOLDOWN_TOKENS,
+        : currentTokens + COLLAPSE_COOLDOWN_TOKENS,
   };
-  return sample.ok && sample.deltaTokens > 0
+  return productive
     ? { ...next, pendingBaseline: true, cooldownUntilTokens: null }
     : reconcilePhase(next);
 }
@@ -544,12 +593,66 @@ export function evaluatePressure(
     }
   }
 
-  if (critical && !next.latches.critical) {
-    next = { ...next, latches: { ...next.latches, critical: current } };
+  if (next.handoffSent && next.urgentPending) {
+    const broader = latestBroaderSample(next);
+    return {
+      state: next,
+      decision: {
+        ...decision("handoff", current, maintenance, interaction, next.yields),
+        ...(broader ? { broaderYield: broader.percentagePoints } : {}),
+      },
+    };
+  }
+
+  if (critical) {
+    if (
+      !next.latches.critical ||
+      next.urgentPending ||
+      next.residualPending
+    ) {
+      next = {
+        ...next,
+        latches: { ...next.latches, critical: current },
+        urgentPending: true,
+        residualPending: false,
+      };
+      return {
+        state: next,
+        decision: decision(
+          "critical",
+          current,
+          maintenance,
+          interaction,
+          next.yields,
+        ),
+      };
+    }
+    return { state: next };
+  }
+
+  if (next.urgentPending) {
+    return {
+      state: next,
+      decision: {
+        ...decision("urgent", current, maintenance, interaction, next.yields),
+        ...(next.broaderPassPending
+          ? {
+              broaderYield: next.yields.reduce(
+                (sum, sample) => sum + sample.percentagePoints,
+                0,
+              ),
+            }
+          : {}),
+      },
+    };
+  }
+
+  if (next.residualPending) {
+    next = { ...next, residualPending: false };
     return {
       state: next,
       decision: decision(
-        "critical",
+        "retention",
         current,
         maintenance,
         interaction,
@@ -557,6 +660,7 @@ export function evaluatePressure(
       ),
     };
   }
+
   if (next.latches.critical) return { state: next };
 
   if (urgent && !next.latches.urgent) {
@@ -565,6 +669,7 @@ export function evaluatePressure(
       ...next,
       latches: { ...next.latches, urgent: current },
       broaderPassPending: next.broaderPassPending || broader,
+      urgentPending: true,
       handoffSent: broader ? false : next.handoffSent,
     };
     return {

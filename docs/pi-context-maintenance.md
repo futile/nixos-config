@@ -439,6 +439,21 @@ rule is:
    remains urgent should the agent prepare a resume-quality handoff and advise
    replacing the session.
 
+Collapse yield and remaining pressure are separate signals. After any
+positive-net collapse, the first fresh usage reading at or above `60%` requests
+one more aggressive safe collapse or a short visible retention notice naming
+the indispensable working set and a concrete next checkpoint. The notice goes
+to the user for a foreground agent and to `main` for a child. This path does not
+reinterpret a useful 12--20 pp collapse as low-yield merely because substantial
+active context remains.
+
+An urgent or critical maintenance request remains pending across subsequent
+tool turns, model selection, and session restore. `context_map`, unrelated
+tools, and failed or zero-yield collapse attempts do not satisfy it. A
+positive-net collapse clears the pending request. A final response or handoff
+stops reminder delivery because the continuing tool loop ends; if the same
+session later resumes without maintenance, the pending request remains.
+
 "Broader" means batching more completed or superseded ranges. It never means
 folding active evidence, unresolved errors, the user request, or governing
 instructions merely to hit a target. Without adding another tool or protocol,
@@ -462,8 +477,9 @@ headroom checks because the same percentage means different token counts on
 | --- | --- | --- |
 | Advisory | at least `60%` and either `24k` growth since positive maintenance or `8 pp` interaction growth | no-op-capable assessment; prefer piggy-backing |
 | Firm | at least `75%` and `5 pp` growth since positive maintenance | ask for `context_map` before broadening exploration |
-| Urgent | at least `80%`, one-shot | request one meaningful batched sweep if safe |
-| Critical | remaining window at most configured reserve plus about `8k` tokens | stop token-chasing; handoff if the post-escalation yield is still low |
+| Urgent | at least `80%` | stop other work and request one aggressive batched sweep; repeat while tool work continues until productive maintenance or handoff |
+| Post-collapse residual | first fresh reading at least `60%` after a positive collapse | request one more aggressive safe collapse or a specific retention notice with a concrete checkpoint |
+| Critical | remaining window at most configured reserve plus about `8k` tokens | stop token-chasing; finish or hand off immediately |
 
 The critical trigger should use Pi's effective compaction reserve when that
 becomes directly available. For v1, expose a local constant defaulting to Pi's
@@ -479,10 +495,18 @@ reminder without waking an idle agent solely for maintenance.
 
 Use one latch per level. Re-arm a level only after usage falls at least `5 pp`
 below it, or after another `15k`--`25k` tokens of growth following its reminder.
-A positive-net collapse establishes a pending baseline; take the fresh baseline
-from the next valid usage reading because the immediate reading still lags the
-fold. Reset pressure baselines on model change and Pi compaction, but retain the
-historical yield samples with their original windows.
+Urgent and critical additionally carry a persistent pending-maintenance flag so
+the ordinary one-shot latch cannot silence an ignored request. A positive-net
+collapse clears that flag and establishes a pending baseline; take the fresh
+baseline from the next valid usage reading because the immediate reading still
+lags the fold. Reset pressure baselines on model change and Pi compaction, but
+retain the historical yield samples with their original windows. Model changes
+preserve an unresolved urgent request and remeasure an unresolved post-collapse
+reading in the new window; Pi compaction clears both because it is maintenance.
+
+`/context-status` exposes `urgent pending`, the latest `post-fold N%` reading
+(with `high` at or above 60%), and retention reminder counts under the expanded
+`A/F/U/R/H/C` legend.
 
 ### Reminder text
 
@@ -503,10 +527,22 @@ Urgent with yield history:
 
 ```text
 <context-maintenance urgent>
-Context 82%. Recent collapse yields: 5.8, 1.7, 0.6 pp. Before broadening the
-work, do one broader safe sweep of completed phases, superseded reads/logs, and
-dead ends. Preserve the request, instructions, open loops, unresolved errors,
-and active evidence.
+Context 82%. Recent collapse yields: 5.8, 1.7, 0.6 pp. STOP other work now and
+do one aggressive, broader safe sweep of completed phases, superseded
+reads/logs, and dead ends. Preserve the request, instructions, open loops,
+unresolved errors, and active evidence.
+</context-maintenance>
+```
+
+High residual after productive maintenance:
+
+```text
+<context-maintenance urgent>
+Context 64% after productive maintenance is still high. STOP and either do one
+more aggressive safe collapse now, or send one short visible notice:
+"Retaining context because: [specific indispensable working set]. Next
+checkpoint: [concrete phase/event]." Main agents tell the user; child agents
+send_message main.
 </context-maintenance>
 ```
 
@@ -515,9 +551,8 @@ Critical after a low-yield broader pass:
 ```text
 <context-maintenance critical>
 Context headroom is near Pi compaction reserve; the broader pass saved 1.4 pp.
-Stop repeated tiny folds. Finish or preserve a resume-quality handoff and
-recommend a fresh session after the current safe stopping point. Do not discard
-active evidence to force a lower percentage.
+STOP now. Preserve a resume-quality handoff and recommend a fresh session. Do
+not run more diagnostics or discard active evidence to force a lower percentage.
 </context-maintenance>
 ```
 
@@ -815,11 +850,17 @@ and tuning work.
    details contract or context window is invalid.
 6. Treat a collapse as positive maintenance only when its result reports
    `action === "collapse"`, `ok === true`, and `deltaTokens > 0`; establish a
-   fresh usage baseline on the next valid reading.
-7. Escalate low yields only under high pressure, require one explicitly broader
+   fresh usage baseline on the next valid reading and independently flag a
+   post-collapse reading that remains at or above 60%.
+7. Keep urgent maintenance pending until a positive collapse. Stop delivering
+   while the agent is final or handed off, but retain the pending state if the
+   same session resumes without maintenance. If positive maintenance leaves
+   high residual pressure, require another aggressive safe pass or a specific,
+   visible retention notice with a concrete next checkpoint.
+8. Escalate low yields only under high pressure, require one explicitly broader
    pass before recommending a new session, and never replace automatically.
-8. Use one-shot pressure latches with hysteresis and a short post-attempt
-   cooldown; critical headroom uses Pi's reserve plus 8,000 tokens.
+   Ordinary pressure latches retain hysteresis and a short post-attempt cooldown;
+   critical headroom still uses Pi's reserve plus 8,000 tokens.
 9. Log trigger cause, reminder/map/result sizes, yield samples, whether a
    collapse followed, future call count, and reported input/cache/output token
    categories. Compare those categories with Codex credits or direct API costs

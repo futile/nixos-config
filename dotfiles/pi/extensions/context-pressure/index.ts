@@ -9,6 +9,7 @@ import {
   type PressureState,
   type ReminderKind,
   type YieldSample,
+  HIGH_RESIDUAL_PERCENT,
   beginInteraction,
   emptyPressureState,
   endInteraction,
@@ -34,6 +35,7 @@ const REMINDER_KINDS: ReminderKind[] = [
   "advisory",
   "firm",
   "urgent",
+  "retention",
   "handoff",
   "critical",
 ];
@@ -57,7 +59,8 @@ interface ContextStatusSnapshot {
   highWaterPercent?: number;
   reminders: ReminderSummary;
   collapses: CollapseSummary;
-  phase?: "broader pending" | "handoff pending" | "handoff sent";
+  lastPostCollapsePercent?: number;
+  phases: string[];
 }
 
 interface ContextStatusSource {
@@ -88,6 +91,7 @@ function emptyReminderCounts(): Record<ReminderKind, number> {
     advisory: 0,
     firm: 0,
     urgent: 0,
+    retention: 0,
     handoff: 0,
     critical: 0,
   };
@@ -149,13 +153,13 @@ function statusSnapshot(
   const sessionId = ctx.sessionManager.getSessionId();
   const name =
     ctx.sessionManager.getSessionName()?.trim() || sessionId.slice(0, 8);
-  const phase = state.broaderPassPending
-    ? "broader pending"
-    : state.handoffCandidate
-      ? "handoff pending"
-      : state.handoffSent
-        ? "handoff sent"
-        : undefined;
+  const phases = [
+    ...(state.urgentPending ? ["urgent pending"] : []),
+    ...(state.residualPending ? ["retention pending"] : []),
+    ...(state.broaderPassPending ? ["broader pending"] : []),
+    ...(state.handoffCandidate ? ["handoff pending"] : []),
+    ...(state.handoffSent ? ["handoff sent"] : []),
+  ];
   const usage = normalizeUsage(
     ctx.getContextUsage() as ContextUsage | undefined,
   );
@@ -169,7 +173,10 @@ function statusSnapshot(
     usage,
     ...(Number.isFinite(highWaterPercent) ? { highWaterPercent } : {}),
     ...branchStats(ctx),
-    ...(phase ? { phase } : {}),
+    ...(state.lastPostCollapsePercent === null
+      ? {}
+      : { lastPostCollapsePercent: state.lastPostCollapsePercent }),
+    phases,
   };
 }
 
@@ -212,10 +219,17 @@ function formatStatus(
     const folds = snapshot.collapses.attempts
       ? `folds ${snapshot.collapses.productive}/${snapshot.collapses.attempts}, ${compactTokens(snapshot.collapses.savedTokens)} saved`
       : "folds 0";
-    return `${label} · ${context} · ${reminders}${latest} · ${folds}${snapshot.phase ? ` · ${snapshot.phase}` : ""}`;
+    const postCollapse =
+      snapshot.lastPostCollapsePercent === undefined
+        ? ""
+        : ` · post-fold ${Math.round(snapshot.lastPostCollapsePercent)}%${snapshot.lastPostCollapsePercent >= HIGH_RESIDUAL_PERCENT ? " high" : ""}`;
+    const phases = snapshot.phases.length
+      ? ` · ${snapshot.phases.join(", ")}`
+      : "";
+    return `${label} · ${context} · ${reminders}${latest} · ${folds}${postCollapse}${phases}`;
   });
   return [
-    `Context pressure · ${ordered.length} live · current branches · A/F/U/H/C`,
+    `Context pressure · ${ordered.length} live · current branches · A/F/U/R/H/C`,
     ...lines,
   ].join("\n");
 }
@@ -255,16 +269,23 @@ function reminderText(decision: PressureDecision): string {
     case "advisory":
       return `<context-maintenance>\n${context} (+${Math.round(decision.growthTokens).toLocaleString()} tokens since maintenance; +${points(decision.interactionGrowthPoints)} interaction). If a meaningful completed/superseded batch and more work remain, piggy-back context_map + batched context_collapse; otherwise continue (no-op valid).\n</context-maintenance>`;
     case "firm":
-      return `<context-maintenance firm>\n${context}. Use context_map before broadening; collapse only safe completed/superseded material. Preserve active evidence and open loops.\n</context-maintenance>`;
+      return `<context-maintenance firm>\n${context}. STOP before broadening. Run context_map now, then collapse only safe completed/superseded material. Preserve active evidence and open loops.\n</context-maintenance>`;
     case "urgent":
       if (decision.broaderYield !== undefined) {
-        return `<context-maintenance urgent>\n${context}; recent yields: ${yieldList(decision)}. Do one broader safe sweep of completed/superseded material. Breadth is unverified; report what you checked. Preserve request, instructions, open loops, errors, and active evidence.\n</context-maintenance>`;
+        return `<context-maintenance urgent>\n${context}; recent yields: ${yieldList(decision)}. STOP other work now and do one aggressive, broader safe sweep of completed/superseded material. Breadth is unverified; report what you checked. Preserve request, instructions, open loops, errors, and active evidence. This remains pending until productive maintenance or handoff; context_map and unrelated tools do not satisfy it.\n</context-maintenance>`;
       }
-      return `<context-maintenance urgent>\n${context}. Do one meaningful batched safe sweep if work continues; preserve active evidence, instructions, open loops, and unresolved errors.\n</context-maintenance>`;
-    case "handoff":
-      return `<context-maintenance critical>\n${context} remains urgent; the reported broader pass saved ${points(decision.broaderYield ?? 0)}. Stop tiny folds; preserve a resume-quality handoff and recommend a fresh session. Do not discard active evidence. If you are a child agent, send_message main with this recommendation.\n</context-maintenance>`;
+      return `<context-maintenance urgent>\n${context}. STOP other work now. Run context_map, then do one aggressive, meaningful batched safe collapse. Preserve active evidence, instructions, open loops, and unresolved errors. This remains pending until productive maintenance or handoff; context_map and unrelated tools do not satisfy it.\n</context-maintenance>`;
+    case "retention":
+      return `<context-maintenance urgent>\n${context} after productive maintenance is still high. STOP and either do one more aggressive safe collapse now, or send one short visible retention notice: "Retaining context because: [specific indispensable working set]. Next checkpoint: [concrete phase/event]." Main agents tell the user; child agents send_message main. Generic claims that context is needed do not satisfy this notice.\n</context-maintenance>`;
+    case "handoff": {
+      const result =
+        decision.broaderYield === undefined
+          ? "the prior broader pass did not resolve pressure"
+          : `the reported broader pass saved ${points(decision.broaderYield)}`;
+      return `<context-maintenance critical>\n${context} remains urgent; ${result}. STOP now; preserve a resume-quality handoff and recommend a fresh session. Do not run more diagnostics or discard active evidence. If you are a child agent, send_message main with this recommendation now.\n</context-maintenance>`;
+    }
     case "critical":
-      return `<context-maintenance critical>\n${context}; about ${Math.round(decision.headroomTokens).toLocaleString()} tokens remain near Pi's reserve. Stop token-chasing; finish or preserve a handoff at a safe stopping point. Do not discard active evidence. If you are a child agent, send_message main with this critical warning.\n</context-maintenance>`;
+      return `<context-maintenance critical>\n${context}; about ${Math.round(decision.headroomTokens).toLocaleString()} tokens remain near Pi's reserve. STOP now. Do not run more diagnostics. Finish immediately or preserve a handoff at a safe stopping point. Do not discard active evidence. If you are a child agent, send_message main with this critical warning now.\n</context-maintenance>`;
   }
 }
 
@@ -331,10 +352,10 @@ export default function contextPressure(pi: ExtensionAPI): void {
     const restored = snapshot
       ? restorePressureState(snapshot)
       : emptyPressureState();
-    const observed = observeUsage(
-      restored,
-      ctx.getContextUsage() as ContextUsage | undefined,
-    );
+    const usage = ctx.getContextUsage() as ContextUsage | undefined;
+    const observed = restored.pendingBaseline
+      ? observeHighWaterMark(restored, usage)
+      : observeUsage(restored, usage);
     state = restored;
     commit(observed);
     collapseInCurrentTurn = false;
@@ -359,7 +380,7 @@ export default function contextPressure(pi: ExtensionAPI): void {
   });
 
   pi.on("model_select", (_event, _ctx) => {
-    commit(resetPressure(state));
+    commit(resetPressure(state, true));
     collapseInCurrentTurn = false;
   });
 
