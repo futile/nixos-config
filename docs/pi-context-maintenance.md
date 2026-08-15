@@ -505,8 +505,9 @@ preserve an unresolved urgent request and remeasure an unresolved post-collapse
 reading in the new window; Pi compaction clears both because it is maintenance.
 
 `/context-status` exposes `urgent pending`, the latest `post-fold N%` reading
-(with `high` at or above 60%), and retention reminder counts under the expanded
-`A/F/U/R/H/C` legend.
+(with `high` at or above 60%), and retention reminder counts. Its reminder-level
+legend expands each count prefix: `A=Advisory`, `F=Firm`, `U=Urgent`,
+`R=Retention`, `H=Handoff`, and `C=Critical`.
 
 ### Reminder text
 
