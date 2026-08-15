@@ -506,8 +506,8 @@ reading in the new window; Pi compaction clears both because it is maintenance.
 
 `/context-status` exposes `urgent pending`, the latest `post-fold N%` reading
 (with `high` at or above 60%), and retention reminder counts. Its reminder-level
-legend expands each count prefix: `A=Advisory`, `F=Firm`, `U=Urgent`,
-`R=Retention`, `H=Handoff`, and `C=Critical`.
+header expands each count prefix compactly as
+`(A)dvisory/(F)irm/(U)rgent/(R)etention/(H)andoff/(C)ritical`.
 
 ### Reminder text
 

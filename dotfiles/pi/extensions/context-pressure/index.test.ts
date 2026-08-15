@@ -147,7 +147,7 @@ test("context-status reports branch-local stats for main and live children", asy
   assert.match(main.notifications[0].message, /2 live/);
   assert.match(
     main.notifications[0].message,
-    /Reminder levels · A=Advisory · F=Firm · U=Urgent · R=Retention · H=Handoff · C=Critical/,
+    /current branches · \(A\)dvisory\/\(F\)irm\/\(U\)rgent\/\(R\)etention\/\(H\)andoff\/\(C\)ritical/,
   );
   assert.match(
     main.notifications[0].message,

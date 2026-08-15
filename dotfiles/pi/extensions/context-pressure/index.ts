@@ -229,8 +229,7 @@ function formatStatus(
     return `${label} · ${context} · ${reminders}${latest} · ${folds}${postCollapse}${phases}`;
   });
   return [
-    `Context pressure · ${ordered.length} live · current branches`,
-    "Reminder levels · A=Advisory · F=Firm · U=Urgent · R=Retention · H=Handoff · C=Critical",
+    `Context pressure · ${ordered.length} live · current branches · (A)dvisory/(F)irm/(U)rgent/(R)etention/(H)andoff/(C)ritical`,
     ...lines,
   ].join("\n");
 }
