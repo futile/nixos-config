@@ -59,7 +59,9 @@
     noctalia = {
       # 2026-07-12 need to pin because `main` is broken currently
       # 2026-07-21 updated the pin, gonna keep it pinned to tags maybe 🤔🤷
-      url = "github:noctalia-dev/noctalia-shell/v5.0.0-beta.6";
+      url = "github:noctalia-dev/noctalia-shell/v5.0.1";
+      # 2026-09-04 not pinning nixpkgs so we hopefully get cached artifacts
+      # - nope, actually didn't trigger cached artifacts (maybe not present yet though)
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
