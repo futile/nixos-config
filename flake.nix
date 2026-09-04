@@ -264,13 +264,7 @@
               # for calendar support, see https://docs.noctalia.dev/getting-started/nixos/#calendar-events-support
               services.gnome.evolution-data-server.enable = true;
 
-              environment.systemPackages = [
-                (flake-inputs.noctalia.packages.${system}.default.override {
-                  # 2026-06-13 option no longer exists, gonna try without,
-                  # let's see (couldn't find out what happened to it)
-                  # calendarSupport = true;
-                })
-              ];
+              environment.systemPackages = [ pkgs.noctalia ];
             }
           )
 
