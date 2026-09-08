@@ -1,0 +1,26 @@
+diff --git a/index.ts b/index.ts
+index d2bf54d..d34b837 100644
+--- a/index.ts
++++ b/index.ts
+@@ -165,3 +165,5 @@ function agentSystemPrompt(name: string, systemPrompt: string, spawnedBy: string
+-		"Event-driven — do NOT poll or busy-wait: you run only when a message arrives. After you",
+-		"act, END YOUR TURN and go idle; you are automatically re-woken the moment another agent",
+-		"messages you. Never poll list_agents in a loop or try to 'wait' for a subagent to finish",
++		// KISS: idling prevents busy-waiting but must not block unrelated work.
++		"Event-driven — do NOT poll or busy-wait: when no independent work remains and you need",
++		"another agent's reply, END YOUR TURN and go idle; you are automatically re-woken when it",
++		"messages you. Continue independent work while replies are outstanding. Never poll",
++		"list_agents in a loop or try to 'wait' for a subagent to finish",
+@@ -400,2 +402,3 @@ export default function subagents(pi: ExtensionAPI) {
+-				"Event-driven & fire-and-forget: after spawning, END YOUR TURN — you are automatically re-woken when an agent " +
+-				"messages you back. Do NOT poll list_agents or wait in a loop for completion; it wastes turns. Inspect " +
++				"Event-driven & fire-and-forget: continue independent work after spawning. When no independent work remains " +
++				"and you need the agent's reply, END YOUR TURN; you are automatically re-woken when it messages you. Do NOT " +
++				"poll list_agents or wait in a loop for completion; it wastes turns. Inspect " +
+@@ -449,3 +452,3 @@ export default function subagents(pi: ExtensionAPI) {
+-				"Fire-and-forget message to a list of agents (e.g. [\"main\"]). Returns immediately. After sending, " +
+-				"END YOUR TURN — you are automatically re-woken if a reply arrives. Do NOT poll or wait in a loop; inspect only " +
+-				"if you suspect a problem.",
++				"Fire-and-forget message to a list of agents (e.g. [\"main\"]). Returns immediately. Continue independent work " +
++				"after sending. When no independent work remains and you need a reply, END YOUR TURN; you are automatically " +
++				"re-woken if it arrives. Do NOT poll or wait in a loop; inspect only if you suspect a problem.",
