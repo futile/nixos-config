@@ -192,6 +192,7 @@ in
           cargo-binstall
           cargo-cache
           cargo-watch
+          cargo-dist
           sccache
 
           # misc
