@@ -215,8 +215,6 @@ show_value = false
 type = "sysmon"
 
 [widget.sysmon_disk]
-show_value = false
-stat = "disk_used_pct"
 type = "sysmon"
 
 [widget.sysmon_ram]
