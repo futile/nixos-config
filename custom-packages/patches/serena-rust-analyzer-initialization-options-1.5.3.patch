@@ -74,7 +74,7 @@ new file mode 100644
 index 0000000..767961b
 --- /dev/null
 +++ b/test/solidlsp/rust/test_rust_analyzer_settings.py
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,67 @@
 +from solidlsp.language_servers.rust_analyzer import RustAnalyzer
 +
 +
@@ -96,7 +96,7 @@ index 0000000..767961b
 +                "experimental": {"enable": True},
 +            },
 +            "procMacro": {
-+                "ignored": {"async-trait": {}},
++                "ignored": {"async-trait": []},
 +            },
 +        },
 +    )
@@ -108,7 +108,7 @@ index 0000000..767961b
 +    assert options["check"]["command"] == "clippy"
 +    assert options["check"]["extraArgs"] == ["--no-deps"]
 +    assert options["diagnostics"]["experimental"]["enable"] is True
-+    assert options["procMacro"]["ignored"] == {"async-trait": {}}
++    assert options["procMacro"]["ignored"] == {"async-trait": []}
 +
 +
 +def test_rust_analyzer_initialization_options_replace_lists() -> None:

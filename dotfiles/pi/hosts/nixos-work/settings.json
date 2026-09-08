@@ -17,5 +17,9 @@
   "hideThinkingBlock": false,
   "followUpMode": "all",
   "showCacheMissNotices": true,
-  "tuiMode": "regular"
+  "tuiMode": "regular",
+  "enabledModels": [
+    "openai-codex/gpt-6-astra",
+    "openai-codex/gpt-5.6-sol"
+  ]
 }

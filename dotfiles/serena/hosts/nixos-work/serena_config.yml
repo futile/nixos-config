@@ -103,7 +103,7 @@ ls_specific_settings:
           enable: true
       procMacro:
         ignored:
-          async-trait: {}
+          async-trait: []
       files:
         exclude:
         - .direnv
