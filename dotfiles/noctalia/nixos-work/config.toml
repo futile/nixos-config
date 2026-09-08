@@ -1,6 +1,9 @@
+config_version = 14
+
 [bar.default]
 end = [
   "tray",
+  "screenshot",
   "notifications",
   "clipboard",
   "network",
@@ -47,10 +50,17 @@ visible = true
 
 [desktop_widgets.widget]
 
+[hot_corners]
+enabled = true
+
+[hot_corners.top_left]
+action = "launcher"
+
 [location]
 auto_locate = true
 
 [lockscreen_widgets]
+enabled = false
 schema_version = 2
 widget_order = ["lockscreen-login-box@HDMI-A-1", "lockscreen-login-box@eDP-1"]
 
@@ -60,11 +70,13 @@ major_interval = 4
 visible = true
 
 [lockscreen_widgets.widget."lockscreen-login-box@HDMI-A-1"]
-box_height = 0.0
-box_width = 0.0
+box_height = 196.0
+box_width = 810.0
 cx = 1280.0
 cy = 1317.0
 output = "HDMI-A-1"
+placement_height = 1440.0
+placement_width = 2560.0
 rotation = 0.0
 type = "login_box"
 
@@ -72,16 +84,26 @@ type = "login_box"
 background_color = "surface_variant"
 background_opacity = 0.88
 background_radius = 12.0
+center_password_text = false
 input_opacity = 1.0
 input_radius = 6.0
+layout = "regular"
+show_caps_lock = true
+show_keyboard_layout = true
 show_login_button = true
+show_media = true
+show_session_buttons = true
+show_unlock_hint = true
+show_weather = true
 
 [lockscreen_widgets.widget."lockscreen-login-box@eDP-1"]
-box_height = 0.0
-box_width = 0.0
+box_height = 196.0
+box_width = 810.0
 cx = 768.0
 cy = 837.0
 output = "eDP-1"
+placement_height = 960.0
+placement_width = 1536.0
 rotation = 0.0
 type = "login_box"
 
@@ -89,22 +111,38 @@ type = "login_box"
 background_color = "surface_variant"
 background_opacity = 0.88
 background_radius = 12.0
+center_password_text = false
 input_opacity = 1.0
 input_radius = 6.0
+layout = "regular"
+show_caps_lock = true
+show_keyboard_layout = true
 show_login_button = true
+show_media = true
+show_session_buttons = true
+show_unlock_hint = true
+show_weather = true
+
+[notification]
+blacklist = ["Razer"]
+
+[osd.kinds]
+media = false
 
 [shell]
 polkit_agent = true
 telemetry_enabled = true
 
 [shell.panel]
-launcher_session_search = true
 open_near_click_control_center = true
+
+[shell.launcher.providers.session]
+global = true
 
 [theme]
 builtin = "Rosé Pine"
 community_palette = "Oxocarbon"
-mode = "light"
+mode = "dark"
 source = "builtin"
 wallpaper_scheme = "m3-content"
 
@@ -120,13 +158,12 @@ builtin_ids = [
   "wezterm",
 ]
 community_ids = [
-  "neovim",
+  "discord",
+  "telegram",
   "obsidian",
   "vscode",
-  "rofi",
-  "discord",
   "steam",
-  "telegram",
+  "rofi",
   "yazi",
 ]
 
@@ -163,29 +200,32 @@ show_label = false
 [widget.notifications]
 capsule = true
 
+[widget.screenshot]
+capsule = true
+
 [widget.session]
 capsule = true
 
 [widget.sysmon]
-show_label = false
+show_value = false
 stat = "cpu_temp"
 
 [widget.sysmon_cpu]
-show_label = false
+show_value = false
 type = "sysmon"
 
 [widget.sysmon_disk]
-show_label = false
-stat = "disk_pct"
+show_value = false
+stat = "disk_used_pct"
 type = "sysmon"
 
 [widget.sysmon_ram]
-show_label = false
+show_value = false
 stat = "ram_pct"
 type = "sysmon"
 
 [widget.sysmon_temp]
-show_label = false
+show_value = false
 stat = "cpu_temp"
 type = "sysmon"
 
