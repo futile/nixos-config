@@ -193,6 +193,7 @@ in
           cargo-cache
           cargo-watch
           cargo-dist
+          cargo-release
           sccache
 
           # misc
