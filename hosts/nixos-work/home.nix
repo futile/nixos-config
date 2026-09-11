@@ -206,6 +206,9 @@ in
           nixpkgs-unstable.process-compose
           my-custom-packages.mgba-xcb
 
+          # gaming (/gamedev)
+          itch
+
           # hardware stuff
           # v4l-utils # webcam utils
           radeontop
