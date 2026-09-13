@@ -8,20 +8,19 @@
 }:
 let
   cfg = config.my.pi;
-  upstreamExtensions = "${flake-inputs.fdietze-dotfiles}/modules/home-manager/profiles/ai-agents/pi-extensions";
-  patchedSubagents = pkgs.runCommand "fdietze-pi-subagents" { } ''
+  patchedInfiniteContext = pkgs.runCommand "pi-infinite-context" { } ''
     mkdir -p "$out"
-    cp -R "${upstreamExtensions}/subagents/." "$out/"
+    cp -R "${flake-inputs.pi-infinite-context}/." "$out/"
     chmod -R u+w "$out"
 
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-bind-errors.patch}
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-independent-work.patch}
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-model-routing.patch}
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-remove-redundant-model-refresh.patch}
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-engine-reset.patch}
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-activity.patch}
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-fast.patch}
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/fdietze-pi-subagents-session-names.patch}
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-infinite-context-enable-nudges.patch}
+  '';
+  patchedActorSubagents = pkgs.runCommand "pi-actor-subagents" { } ''
+    mkdir -p "$out"
+    cp -R "${flake-inputs.pi-actor-subagents}/." "$out/"
+    chmod -R u+w "$out"
+
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-local.patch}
   '';
 in
 {
@@ -55,23 +54,29 @@ in
         force = true;
       };
 
-      ".pi/agent/extensions/subagents".source = patchedSubagents;
-      ".pi/agent/extensions/context-prune".source = "${upstreamExtensions}/context-prune";
+      ".pi/agent/extensions/infinite-context".source =
+        "${patchedInfiniteContext}/extensions/infinite-context";
+      ".pi/agent/extensions/infinite-context.json".text = builtins.toJSON {
+        enableNudges = false;
+      };
+      ".pi/agent/extensions/actor-subagents".source =
+        "${patchedActorSubagents}/extensions/actor-subagents";
+      ".pi/agent/actor-subagents/settings.json".text = builtins.toJSON {
+        maxAgents = 8;
+        maxSpawnDepth = 3;
+        childExtensions = [
+          "npm:pi-mcp-adapter@2.17.0"
+          "npm:@juicesharp/rpiv-web-tools@2.3.1"
+          "git:github.com/DietrichGebert/ponytail"
+          "${config.home.homeDirectory}/.pi/agent/extensions/infinite-context"
+          "${config.home.homeDirectory}/.pi/agent/extensions/context-pressure"
+          "${config.home.homeDirectory}/.pi/agent/extensions/codex-fast"
+        ];
+      };
       ".pi/agent/extensions/context-pressure".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/context-pressure";
       ".pi/agent/extensions/codex-fast".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/codex-fast";
-    };
-
-    xdg.configFile."pi/subagents/child-extensions.json".text = builtins.toJSON {
-      extensions = [
-        "npm:pi-mcp-adapter@2.17.0"
-        "npm:@juicesharp/rpiv-web-tools@2.3.1"
-        "git:github.com/DietrichGebert/ponytail"
-        "${config.home.homeDirectory}/.pi/agent/extensions/context-prune"
-        "${config.home.homeDirectory}/.pi/agent/extensions/context-pressure"
-        "${config.home.homeDirectory}/.pi/agent/extensions/codex-fast"
-      ];
     };
 
     home.sessionVariables = {

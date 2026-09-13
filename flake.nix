@@ -80,8 +80,13 @@
       flake = false;
     };
 
-    fdietze-dotfiles = {
-      url = "git+https://github.com/fdietze/dotfiles?rev=262fb764dedc2678b1522a21cbbd8818622be56c";
+    pi-infinite-context = {
+      url = "git+https://github.com/fdietze/pi-infinite-context?rev=f51891521ed9baf232133d6e507bb718e6a43023";
+      flake = false;
+    };
+
+    pi-actor-subagents = {
+      url = "git+https://github.com/fdietze/pi-actor-subagents?rev=1e8533f6ddfb83401257a31ee6356b0f48ce2167";
       flake = false;
     };
 

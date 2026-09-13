@@ -20,23 +20,6 @@
         "type": "github"
       }
     },
-    "fdietze-dotfiles": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1785788204,
-        "narHash": "sha256-S3Z5LraFZg7llukw3WVqvRjFmPtDAcEp/IhyRPrQx9I=",
-        "ref": "refs/heads/master",
-        "rev": "262fb764dedc2678b1522a21cbbd8818622be56c",
-        "revCount": 1792,
-        "type": "git",
-        "url": "https://github.com/fdietze/dotfiles"
-      },
-      "original": {
-        "rev": "262fb764dedc2678b1522a21cbbd8818622be56c",
-        "type": "git",
-        "url": "https://github.com/fdietze/dotfiles"
-      }
-    },
     "fish-foreign-env": {
       "flake": false,
       "locked": {
@@ -319,6 +302,40 @@
         "type": "github"
       }
     },
+    "pi-actor-subagents": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789171528,
+        "narHash": "sha256-ambM/60vknh/wsGwv7m6N4GMFftt+msVJnzgrTRh9Uo=",
+        "ref": "refs/heads/main",
+        "rev": "1e8533f6ddfb83401257a31ee6356b0f48ce2167",
+        "revCount": 33,
+        "type": "git",
+        "url": "https://github.com/fdietze/pi-actor-subagents"
+      },
+      "original": {
+        "rev": "1e8533f6ddfb83401257a31ee6356b0f48ce2167",
+        "type": "git",
+        "url": "https://github.com/fdietze/pi-actor-subagents"
+      }
+    },
+    "pi-infinite-context": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789235248,
+        "narHash": "sha256-tbU/PtFkqISCQ8/11HuklIsYsGDPeEZwAT2YpQhgPlY=",
+        "ref": "refs/heads/main",
+        "rev": "f51891521ed9baf232133d6e507bb718e6a43023",
+        "revCount": 13,
+        "type": "git",
+        "url": "https://github.com/fdietze/pi-infinite-context"
+      },
+      "original": {
+        "rev": "f51891521ed9baf232133d6e507bb718e6a43023",
+        "type": "git",
+        "url": "https://github.com/fdietze/pi-infinite-context"
+      }
+    },
     "pyproject-build-systems": {
       "inputs": {
         "nixpkgs": [
@@ -422,7 +439,6 @@
     "root": {
       "inputs": {
         "codebase-memory-mcp": "codebase-memory-mcp",
-        "fdietze-dotfiles": "fdietze-dotfiles",
         "fish-foreign-env": "fish-foreign-env",
         "fish-puffer-fish": "fish-puffer-fish",
         "fish-tide": "fish-tide",
@@ -434,6 +450,8 @@
         "nixpkgs": "nixpkgs_3",
         "nixpkgs-pkgs-unstable": "nixpkgs-pkgs-unstable",
         "noctalia": "noctalia",
+        "pi-actor-subagents": "pi-actor-subagents",
+        "pi-infinite-context": "pi-infinite-context",
         "serena": "serena",
         "wezterm-embark": "wezterm-embark"
       }

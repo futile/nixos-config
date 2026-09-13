@@ -159,7 +159,7 @@ test("each latch can legitimately retrigger after its five-point rearm", () => {
 test("reset preserves samples but first interaction captures its fresh maintenance baseline", () => {
   const beforeReset = ready(70_000, 70);
   const recorded = makeYieldSample(
-    { action: "collapse", ok: false, deltaTokens: 0 },
+    { action: "fold", ok: false, deltaTokens: 0 },
     100_000,
     1,
   );
@@ -174,7 +174,7 @@ test("reset preserves samples but first interaction captures its fresh maintenan
   assert.equal(firstInteraction.yields.length, 1);
 
   const positive = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 10_000 },
+    { action: "fold", ok: true, deltaTokens: 10_000 },
     100_000,
     1,
   );
@@ -196,7 +196,7 @@ test("model resets preserve unresolved maintenance but remeasure residual pressu
   assert.equal(resetPressure(state).urgentPending, false);
 
   const sample = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 200_000 },
+    { action: "fold", ok: true, deltaTokens: 200_000 },
     1_000_000,
     1,
   );
@@ -227,7 +227,7 @@ test("high-water mark tracks peak context percentage and survives resets and res
 });
 
 test("invalid context windows never create yield samples", () => {
-  const details = { action: "collapse", ok: true, deltaTokens: 100 };
+  const details = { action: "fold", ok: true, deltaTokens: 100 };
   for (const contextWindow of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
     assert.equal(makeYieldSample(details, contextWindow), null);
   }
@@ -236,17 +236,17 @@ test("invalid context windows never create yield samples", () => {
 test("failed, no-op, and saving collapse attempts populate a three-sample ring", () => {
   let state = emptyPressureState();
   const failed = makeYieldSample(
-    { action: "collapse", ok: false, deltaTokens: 90_000 },
+    { action: "fold", ok: false, deltaTokens: 90_000 },
     100_000,
     1,
   );
   const noop = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 0 },
+    { action: "fold", ok: true, deltaTokens: 0 },
     100_000,
     2,
   );
   const saved = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 10_000 },
+    { action: "fold", ok: true, deltaTokens: 10_000 },
     100_000,
     3,
   );
@@ -260,7 +260,7 @@ test("failed, no-op, and saving collapse attempts populate a three-sample ring",
   );
   assert.equal(state.pendingBaseline, true);
   assert.equal(
-    makeYieldSample({ action: "expand", ok: true, deltaTokens: 1 }, 100_000),
+    makeYieldSample({ action: "unfold", ok: true, deltaTokens: 1 }, 100_000),
     null,
   );
 });
@@ -280,7 +280,7 @@ test("tiny positive maintenance retains urgent latch, while a five-point drop re
   assert.equal(result.decision?.kind, "urgent");
   state = result.state;
   const tiny = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 10_000 },
+    { action: "fold", ok: true, deltaTokens: 10_000 },
     1_000_000,
     1,
   );
@@ -293,7 +293,7 @@ test("tiny positive maintenance retains urgent latch, while a five-point drop re
   assert.equal(result.decision, undefined, "the urgent latch remains armed");
 
   const larger = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 10_000 },
+    { action: "fold", ok: true, deltaTokens: 10_000 },
     1_000_000,
     2,
   );
@@ -312,13 +312,13 @@ test("tiny positive maintenance retains urgent latch, while a five-point drop re
 test("a completed broader sample ages out after three newer ordinary samples", () => {
   let { state } = ready(800_000, 80, 1_000_000);
   const broad = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 1_000 },
+    { action: "fold", ok: true, deltaTokens: 1_000 },
     1_000_000,
     1,
     true,
   );
   const ordinary = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 0 },
+    { action: "fold", ok: true, deltaTokens: 0 },
     1_000_000,
     2,
   );
@@ -341,7 +341,7 @@ test("urgent low-yield escalation requests one broader pass, then handoff on its
   let { state } = ready(800_000, 80, 1_000_000);
   for (let i = 0; i < 3; i++) {
     const sample = makeYieldSample(
-      { action: "collapse", ok: true, deltaTokens: 0 },
+      { action: "fold", ok: true, deltaTokens: 0 },
       1_000_000,
       i,
     );
@@ -353,7 +353,7 @@ test("urgent low-yield escalation requests one broader pass, then handoff on its
   assert.equal(result.decision?.broaderYield, 0);
   state = result.state;
   const broader = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 1_000 },
+    { action: "fold", ok: true, deltaTokens: 1_000 },
     1_000_000,
     4,
   );
@@ -372,7 +372,7 @@ test("urgent low-yield escalation requests one broader pass, then handoff on its
 test("a failed broader pass repeats handoff instead of downgrading to urgent", () => {
   let { state } = ready(800_000, 80, 1_000_000);
   const noop = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 0 },
+    { action: "fold", ok: true, deltaTokens: 0 },
     1_000_000,
     1,
   );
@@ -381,7 +381,7 @@ test("a failed broader pass repeats handoff instead of downgrading to urgent", (
   state = evaluatePressure(state, usage(800_000, 80, 1_000_000)).state;
 
   const failed = makeYieldSample(
-    { action: "collapse", ok: false, deltaTokens: 0 },
+    { action: "fold", ok: false, deltaTokens: 0 },
     1_000_000,
     2,
   );
@@ -410,7 +410,7 @@ test("urgent survives failed maintenance and clears only after a productive coll
   state = result.state;
 
   const failed = makeYieldSample(
-    { action: "collapse", ok: false, deltaTokens: 0 },
+    { action: "fold", ok: false, deltaTokens: 0 },
     1_000_000,
     1,
   );
@@ -420,7 +420,7 @@ test("urgent survives failed maintenance and clears only after a productive coll
   assert.equal(result.decision?.kind, "urgent");
 
   const productive = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 250_000 },
+    { action: "fold", ok: true, deltaTokens: 250_000 },
     1_000_000,
     2,
   );
@@ -437,7 +437,7 @@ test("high post-collapse utilization is independent of a large yield", () => {
   let { state } = ready(800_000, 80, 1_000_000);
   state = evaluatePressure(state, usage(800_000, 80, 1_000_000)).state;
   const large = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 200_000 },
+    { action: "fold", ok: true, deltaTokens: 200_000 },
     1_000_000,
     1,
   );
@@ -456,7 +456,7 @@ test("high post-collapse utilization is independent of a large yield", () => {
 test("a positive collapse waits for a fresh reading, and reset retains yields", () => {
   const prepared = ready(70_000, 70);
   const sample = makeYieldSample(
-    { action: "collapse", ok: true, deltaTokens: 10_000 },
+    { action: "fold", ok: true, deltaTokens: 10_000 },
     100_000,
     1,
   );

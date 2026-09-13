@@ -1,0 +1,384 @@
+--- a/dotfiles/codex/AGENTS.md
++++ b/dotfiles/codex/AGENTS.md
+@@ -20,7 +20,8 @@
+ 
+ - Delegate independent, bounded work when parallel execution or context isolation is likely to save time or improve quality after coordination and verification costs. Keep small, tightly coupled work in the main thread or use deterministic tools.
+ - In Pi, pass provider-qualified subagent model IDs: use `openai-codex/gpt-5.6-luna` at `xhigh` for bounded, low-risk scanning, extraction, triage, and routine review; use `openai-codex/gpt-6-astra` for subtle, cross-cutting, consequential, or high-risk work, inheriting the main thread's effective reasoning effort (use `low` instead of `off` or `minimal`). The provider is `openai-codex`, not `openai`. Preserve explicit model and reasoning requests; report unsupported settings rather than silently substituting.
+-- Always include the initial task in `spawn_agent.message`. A system prompt alone only defines the role; without a first message the agent starts idle and does no work. After the agent acknowledges the task and asks clarifying questions, send an explicit go-ahead with answers or reasonable defaults.
++- `spawn_subagent.message` is required and must carry the initial task. After the subagent acknowledges the task and asks clarifying questions, send an explicit go-ahead with answers or reasonable defaults.
++- Use `list_subagents`, `subagent_history`, `kill_subagent`, and `resume_subagents` for the corresponding actor operations; use `/subagents`, `/subagents-pause`, `/subagents-resume`, and `/subagents-kill` for their interactive commands. `spawn_subagent` and `send_message` wait only for a bounded receiver reaction, not task completion; do not poll for completion.
+ - Main thread owns final decisions and verification. Reuse agents only for the same role and scope.
+ - Prompts state goal, scope, constraints, expected evidence/output, and stop condition.
+ 
+@@ -47,6 +48,7 @@
+ - A checkpoint requires judgment, not necessarily a `context_map` call or a fold. Material being safe to fold is not by itself enough reason to fold it, and a no-op assessment satisfies the checkpoint _if_ there is not enough worth folding.
+ - Fold when there is meaningful completed or superseded bulk and either enough subsequent model/tool work is likely to reuse the smaller context, or context-window or quality pressure justifies immediate maintenance.
+ - Prefer to piggy-back maintenance on an already-required tool loop.
+-- When maintenance is worthwhile, orient with `context_map` and batch-collapse bulky reads, logs, compiler or test output, rejected approaches, and completed details after capturing their conclusions in a resume-quality summary. Prefer one useful batch over folding small items individually.
++- When maintenance is worthwhile, orient with `context_map` and batch-fold bulky reads, logs, compiler or test output, rejected approaches, and completed details after capturing their conclusions in a resume-quality summary. Prefer one useful batch over folding small items individually.
+ - Keep governing instructions, the active user request, unresolved errors, active evidence, open decisions, and information needed verbatim for upcoming work live.
+-- A recent successful maintenance pass satisfies later phase-end checkpoints unless substantial new foldable bulk has accumulated. Interpret “collapse immediately once a topic closes” as “assess promptly and batch-collapse when worthwhile,” not as a requirement to fold every completed item.
++- A recent successful maintenance pass satisfies later phase-end checkpoints unless substantial new foldable bulk has accumulated. Interpret “fold immediately once a topic closes” as “assess promptly and batch-fold when worthwhile,” not as a requirement to fold every completed item.
++- Use `context_fold`/`context_unfold` to maintain completed or superseded context. `context_search` takes direct JavaScript regular-expression `patterns`; escape metacharacters when seeking literal text, and let invalid-pattern errors surface. Fold stubs have no inline IDs; obtain IDs from `context_map` and fold/unfold tool results.
+--- a/dotfiles/pi/extensions/context-pressure/index.ts
++++ b/dotfiles/pi/extensions/context-pressure/index.ts
+@@ -131,7 +131,7 @@
+     if (
+       entry.type !== "message" ||
+       entry.message.role !== "toolResult" ||
+-      entry.message.toolName !== "context_collapse" ||
++      entry.message.toolName !== "context_fold" ||
+       !isCollapseDetails(entry.message.details)
+     )
+       continue;
+@@ -285,16 +285,16 @@
+   const context = `Context ${percent(decision.percent)}`;
+   switch (decision.kind) {
+     case "advisory":
+-      return `<context-maintenance>\n${context} (+${Math.round(decision.growthTokens).toLocaleString()} tokens since maintenance; +${points(decision.interactionGrowthPoints)} interaction). If a meaningful completed/superseded batch and more work remain, piggy-back context_map + batched context_collapse; otherwise continue (no-op valid).\n</context-maintenance>`;
++      return `<context-maintenance>\n${context} (+${Math.round(decision.growthTokens).toLocaleString()} tokens since maintenance; +${points(decision.interactionGrowthPoints)} interaction). If a meaningful completed/superseded batch and more work remain, piggy-back context_map + batched context_fold; otherwise continue (no-op valid).\n</context-maintenance>`;
+     case "firm":
+-      return `<context-maintenance firm>\n${context}. STOP before broadening. Run context_map now, then collapse only safe completed/superseded material. Preserve active evidence and open loops.\n</context-maintenance>`;
++      return `<context-maintenance firm>\n${context}. STOP before broadening. Run context_map now, then fold only safe completed/superseded material. Preserve active evidence and open loops.\n</context-maintenance>`;
+     case "urgent":
+       if (decision.broaderYield !== undefined) {
+         return `<context-maintenance urgent>\n${context}; recent yields: ${yieldList(decision)}. STOP other work now and do one aggressive, broader safe sweep of completed/superseded material. Breadth is unverified; report what you checked. Preserve request, instructions, open loops, errors, and active evidence. This remains pending until productive maintenance or handoff; context_map and unrelated tools do not satisfy it.\n</context-maintenance>`;
+       }
+-      return `<context-maintenance urgent>\n${context}. STOP other work now. Run context_map, then do one aggressive, meaningful batched safe collapse. Preserve active evidence, instructions, open loops, and unresolved errors. This remains pending until productive maintenance or handoff; context_map and unrelated tools do not satisfy it.\n</context-maintenance>`;
++      return `<context-maintenance urgent>\n${context}. STOP other work now. Run context_map, then do one aggressive, meaningful batched safe fold. Preserve active evidence, instructions, open loops, and unresolved errors. This remains pending until productive maintenance or handoff; context_map and unrelated tools do not satisfy it.\n</context-maintenance>`;
+     case "retention":
+-      return `<context-maintenance urgent>\n${context} after productive maintenance is still high. STOP and either do one more aggressive safe collapse now, or send one short visible retention notice: "Retaining context because: [specific indispensable working set]. Next checkpoint: [concrete phase/event]." Main agents tell the user; child agents send_message main. Generic claims that context is needed do not satisfy this notice.\n</context-maintenance>`;
++      return `<context-maintenance urgent>\n${context} after productive maintenance is still high. STOP and either do one more aggressive safe fold now, or send one short visible retention notice: "Retaining context because: [specific indispensable working set]. Next checkpoint: [concrete phase/event]." Main agents tell the user; child agents send_message main. Generic claims that context is needed do not satisfy this notice.\n</context-maintenance>`;
+     case "handoff": {
+       const result =
+         decision.broaderYield === undefined
+@@ -420,12 +420,12 @@
+   });
+ 
+   pi.on("tool_result", (event, ctx) => {
+-    if (event.toolName !== "context_collapse") return;
++    if (event.toolName !== "context_fold") return;
+     const details = event.details;
+     if (!isCollapseDetails(details)) {
+       if (!warnedMalformed) {
+         console.warn(
+-          "[context-pressure] ignored malformed context_collapse details",
++          "[context-pressure] ignored malformed context_fold details",
+         );
+         warnedMalformed = true;
+       }
+@@ -440,7 +440,7 @@
+     ) {
+       if (!warnedInvalidWindow) {
+         console.warn(
+-          "[context-pressure] ignored context_collapse result without a valid context window",
++          "[context-pressure] ignored context_fold result without a valid context window",
+         );
+         warnedInvalidWindow = true;
+       }
+--- a/dotfiles/pi/extensions/context-pressure/index.test.ts
++++ b/dotfiles/pi/extensions/context-pressure/index.test.ts
+@@ -108,16 +108,16 @@
+       type: "message",
+       message: {
+         role: "toolResult",
+-        toolName: "context_collapse",
+-        details: { action: "collapse", ok: true, deltaTokens: 12_000 },
++        toolName: "context_fold",
++        details: { action: "fold", ok: true, deltaTokens: 12_000 },
+       },
+     },
+     {
+       type: "message",
+       message: {
+         role: "toolResult",
+-        toolName: "context_collapse",
+-        details: { action: "collapse", ok: false, deltaTokens: 0 },
++        toolName: "context_fold",
++        details: { action: "fold", ok: false, deltaTokens: 0 },
+       },
+     },
+   ];
+@@ -404,8 +404,8 @@
+     "tool_result",
+     {
+       type: "tool_result",
+-      toolName: "context_collapse",
+-      details: { action: "collapse", ok: false, deltaTokens: 0 },
++      toolName: "context_fold",
++      details: { action: "fold", ok: false, deltaTokens: 0 },
+     },
+     session.ctx,
+   );
+@@ -527,10 +527,10 @@
+   tinySession.setUsage(810_000, 81);
+   await tiny.emit("turn_end", turn, tinySession.ctx);
+   await tiny.emit("turn_end", turn, tinySession.ctx);
+-  const tinySample = { action: "collapse", ok: true, deltaTokens: 10_000 };
++  const tinySample = { action: "fold", ok: true, deltaTokens: 10_000 };
+   await tiny.emit(
+     "tool_result",
+-    { type: "tool_result", toolName: "context_collapse", details: tinySample },
++    { type: "tool_result", toolName: "context_fold", details: tinySample },
+     tinySession.ctx,
+   );
+   const restoredTiny = new FakePi();
+@@ -754,8 +754,8 @@
+     "tool_result",
+     {
+       type: "tool_result",
+-      toolName: "context_collapse",
+-      details: { action: "collapse", ok: true, deltaTokens: 260_000 },
++      toolName: "context_fold",
++      details: { action: "fold", ok: true, deltaTokens: 260_000 },
+     },
+     session.ctx,
+   );
+@@ -781,8 +781,8 @@
+     "tool_result",
+     {
+       type: "tool_result",
+-      toolName: "context_collapse",
+-      details: { action: "collapse", ok: true, deltaTokens: 200_000 },
++      toolName: "context_fold",
++      details: { action: "fold", ok: true, deltaTokens: 200_000 },
+     },
+     session.ctx,
+   );
+@@ -824,8 +824,8 @@
+         "tool_result",
+         {
+           type: "tool_result",
+-          toolName: "context_collapse",
+-          details: { action: "collapse", ok: true, deltaTokens: 10 },
++          toolName: "context_fold",
++          details: { action: "fold", ok: true, deltaTokens: 10 },
+         },
+         session.ctx,
+       );
+@@ -852,8 +852,8 @@
+     "tool_result",
+     {
+       type: "tool_result",
+-      toolName: "context_collapse",
+-      details: { action: "collapse", ok: false, deltaTokens: 10 },
++      toolName: "context_fold",
++      details: { action: "fold", ok: false, deltaTokens: 10 },
+     },
+     session.ctx,
+   );
+@@ -865,8 +865,8 @@
+     "tool_result",
+     {
+       type: "tool_result",
+-      toolName: "context_collapse",
+-      details: { action: "collapse" },
++      toolName: "context_fold",
++      details: { action: "fold" },
+     },
+     session.ctx,
+   );
+--- a/dotfiles/pi/extensions/context-pressure/policy.ts
++++ b/dotfiles/pi/extensions/context-pressure/policy.ts
+@@ -436,7 +436,7 @@
+   if (value === null || typeof value !== "object") return false;
+   const details = value as Record<string, unknown>;
+   return (
+-    details.action === "collapse" &&
++    details.action === "fold" &&
+     typeof details.ok === "boolean" &&
+     finite(details.deltaTokens)
+   );
+--- a/dotfiles/pi/extensions/context-pressure/policy.test.ts
++++ b/dotfiles/pi/extensions/context-pressure/policy.test.ts
+@@ -159,7 +159,7 @@
+ test("reset preserves samples but first interaction captures its fresh maintenance baseline", () => {
+   const beforeReset = ready(70_000, 70);
+   const recorded = makeYieldSample(
+-    { action: "collapse", ok: false, deltaTokens: 0 },
++    { action: "fold", ok: false, deltaTokens: 0 },
+     100_000,
+     1,
+   );
+@@ -174,7 +174,7 @@
+   assert.equal(firstInteraction.yields.length, 1);
+ 
+   const positive = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 10_000 },
++    { action: "fold", ok: true, deltaTokens: 10_000 },
+     100_000,
+     1,
+   );
+@@ -196,7 +196,7 @@
+   assert.equal(resetPressure(state).urgentPending, false);
+ 
+   const sample = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 200_000 },
++    { action: "fold", ok: true, deltaTokens: 200_000 },
+     1_000_000,
+     1,
+   );
+@@ -227,7 +227,7 @@
+ });
+ 
+ test("invalid context windows never create yield samples", () => {
+-  const details = { action: "collapse", ok: true, deltaTokens: 100 };
++  const details = { action: "fold", ok: true, deltaTokens: 100 };
+   for (const contextWindow of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+     assert.equal(makeYieldSample(details, contextWindow), null);
+   }
+@@ -236,17 +236,17 @@
+ test("failed, no-op, and saving collapse attempts populate a three-sample ring", () => {
+   let state = emptyPressureState();
+   const failed = makeYieldSample(
+-    { action: "collapse", ok: false, deltaTokens: 90_000 },
++    { action: "fold", ok: false, deltaTokens: 90_000 },
+     100_000,
+     1,
+   );
+   const noop = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 0 },
++    { action: "fold", ok: true, deltaTokens: 0 },
+     100_000,
+     2,
+   );
+   const saved = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 10_000 },
++    { action: "fold", ok: true, deltaTokens: 10_000 },
+     100_000,
+     3,
+   );
+@@ -260,7 +260,7 @@
+   );
+   assert.equal(state.pendingBaseline, true);
+   assert.equal(
+-    makeYieldSample({ action: "expand", ok: true, deltaTokens: 1 }, 100_000),
++    makeYieldSample({ action: "unfold", ok: true, deltaTokens: 1 }, 100_000),
+     null,
+   );
+ });
+@@ -280,7 +280,7 @@
+   assert.equal(result.decision?.kind, "urgent");
+   state = result.state;
+   const tiny = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 10_000 },
++    { action: "fold", ok: true, deltaTokens: 10_000 },
+     1_000_000,
+     1,
+   );
+@@ -293,7 +293,7 @@
+   assert.equal(result.decision, undefined, "the urgent latch remains armed");
+ 
+   const larger = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 10_000 },
++    { action: "fold", ok: true, deltaTokens: 10_000 },
+     1_000_000,
+     2,
+   );
+@@ -312,13 +312,13 @@
+ test("a completed broader sample ages out after three newer ordinary samples", () => {
+   let { state } = ready(800_000, 80, 1_000_000);
+   const broad = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 1_000 },
++    { action: "fold", ok: true, deltaTokens: 1_000 },
+     1_000_000,
+     1,
+     true,
+   );
+   const ordinary = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 0 },
++    { action: "fold", ok: true, deltaTokens: 0 },
+     1_000_000,
+     2,
+   );
+@@ -341,7 +341,7 @@
+   let { state } = ready(800_000, 80, 1_000_000);
+   for (let i = 0; i < 3; i++) {
+     const sample = makeYieldSample(
+-      { action: "collapse", ok: true, deltaTokens: 0 },
++      { action: "fold", ok: true, deltaTokens: 0 },
+       1_000_000,
+       i,
+     );
+@@ -353,7 +353,7 @@
+   assert.equal(result.decision?.broaderYield, 0);
+   state = result.state;
+   const broader = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 1_000 },
++    { action: "fold", ok: true, deltaTokens: 1_000 },
+     1_000_000,
+     4,
+   );
+@@ -372,7 +372,7 @@
+ test("a failed broader pass repeats handoff instead of downgrading to urgent", () => {
+   let { state } = ready(800_000, 80, 1_000_000);
+   const noop = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 0 },
++    { action: "fold", ok: true, deltaTokens: 0 },
+     1_000_000,
+     1,
+   );
+@@ -381,7 +381,7 @@
+   state = evaluatePressure(state, usage(800_000, 80, 1_000_000)).state;
+ 
+   const failed = makeYieldSample(
+-    { action: "collapse", ok: false, deltaTokens: 0 },
++    { action: "fold", ok: false, deltaTokens: 0 },
+     1_000_000,
+     2,
+   );
+@@ -410,7 +410,7 @@
+   state = result.state;
+ 
+   const failed = makeYieldSample(
+-    { action: "collapse", ok: false, deltaTokens: 0 },
++    { action: "fold", ok: false, deltaTokens: 0 },
+     1_000_000,
+     1,
+   );
+@@ -420,7 +420,7 @@
+   assert.equal(result.decision?.kind, "urgent");
+ 
+   const productive = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 250_000 },
++    { action: "fold", ok: true, deltaTokens: 250_000 },
+     1_000_000,
+     2,
+   );
+@@ -437,7 +437,7 @@
+   let { state } = ready(800_000, 80, 1_000_000);
+   state = evaluatePressure(state, usage(800_000, 80, 1_000_000)).state;
+   const large = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 200_000 },
++    { action: "fold", ok: true, deltaTokens: 200_000 },
+     1_000_000,
+     1,
+   );
+@@ -456,7 +456,7 @@
+ test("a positive collapse waits for a fresh reading, and reset retains yields", () => {
+   const prepared = ready(70_000, 70);
+   const sample = makeYieldSample(
+-    { action: "collapse", ok: true, deltaTokens: 10_000 },
++    { action: "fold", ok: true, deltaTokens: 10_000 },
+     100_000,
+     1,
+   );
+--- a/dotfiles/pi/hosts/nixos-work/settings.json
++++ b/dotfiles/pi/hosts/nixos-work/settings.json
+@@ -8,7 +8,8 @@
+     "npm:pi-mcp-adapter@2.17.0",
+     "npm:@juicesharp/rpiv-web-tools@2.3.1",
+     "git:github.com/futile/pi-statusline@02a95ec7aae9848d8970a5cea26b50532cb18500",
+-    "git:github.com/DietrichGebert/ponytail"
++    "git:github.com/DietrichGebert/ponytail",
++    "git:github.com/fdietze/pi-session-name@89dafe1dc48968f20d414ac0c922b3fd6cb88347"
+   ],
+   "steeringMode": "all",
+   "terminal": {
+@@ -22,4 +23,4 @@
+     "openai-codex/gpt-6-astra",
+     "openai-codex/gpt-5.6-sol"
+   ]
+-}
+\ No newline at end of file
++}

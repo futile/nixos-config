@@ -436,7 +436,7 @@ export function isCollapseDetails(value: unknown): value is CollapseDetails {
   if (value === null || typeof value !== "object") return false;
   const details = value as Record<string, unknown>;
   return (
-    details.action === "collapse" &&
+    details.action === "fold" &&
     typeof details.ok === "boolean" &&
     finite(details.deltaTokens)
   );

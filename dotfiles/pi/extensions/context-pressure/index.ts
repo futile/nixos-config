@@ -131,7 +131,7 @@ function branchStats(ctx: ExtensionContext): {
     if (
       entry.type !== "message" ||
       entry.message.role !== "toolResult" ||
-      entry.message.toolName !== "context_collapse" ||
+      entry.message.toolName !== "context_fold" ||
       !isCollapseDetails(entry.message.details)
     )
       continue;
@@ -285,16 +285,16 @@ function reminderText(decision: PressureDecision): string {
   const context = `Context ${percent(decision.percent)}`;
   switch (decision.kind) {
     case "advisory":
-      return `<context-maintenance>\n${context} (+${Math.round(decision.growthTokens).toLocaleString()} tokens since maintenance; +${points(decision.interactionGrowthPoints)} interaction). If a meaningful completed/superseded batch and more work remain, piggy-back context_map + batched context_collapse; otherwise continue (no-op valid).\n</context-maintenance>`;
+      return `<context-maintenance>\n${context} (+${Math.round(decision.growthTokens).toLocaleString()} tokens since maintenance; +${points(decision.interactionGrowthPoints)} interaction). If a meaningful completed/superseded batch and more work remain, piggy-back context_map + batched context_fold; otherwise continue (no-op valid).\n</context-maintenance>`;
     case "firm":
-      return `<context-maintenance firm>\n${context}. STOP before broadening. Run context_map now, then collapse only safe completed/superseded material. Preserve active evidence and open loops.\n</context-maintenance>`;
+      return `<context-maintenance firm>\n${context}. STOP before broadening. Run context_map now, then fold only safe completed/superseded material. Preserve active evidence and open loops.\n</context-maintenance>`;
     case "urgent":
       if (decision.broaderYield !== undefined) {
         return `<context-maintenance urgent>\n${context}; recent yields: ${yieldList(decision)}. STOP other work now and do one aggressive, broader safe sweep of completed/superseded material. Breadth is unverified; report what you checked. Preserve request, instructions, open loops, errors, and active evidence. This remains pending until productive maintenance or handoff; context_map and unrelated tools do not satisfy it.\n</context-maintenance>`;
       }
-      return `<context-maintenance urgent>\n${context}. STOP other work now. Run context_map, then do one aggressive, meaningful batched safe collapse. Preserve active evidence, instructions, open loops, and unresolved errors. This remains pending until productive maintenance or handoff; context_map and unrelated tools do not satisfy it.\n</context-maintenance>`;
+      return `<context-maintenance urgent>\n${context}. STOP other work now. Run context_map, then do one aggressive, meaningful batched safe fold. Preserve active evidence, instructions, open loops, and unresolved errors. This remains pending until productive maintenance or handoff; context_map and unrelated tools do not satisfy it.\n</context-maintenance>`;
     case "retention":
-      return `<context-maintenance urgent>\n${context} after productive maintenance is still high. STOP and either do one more aggressive safe collapse now, or send one short visible retention notice: "Retaining context because: [specific indispensable working set]. Next checkpoint: [concrete phase/event]." Main agents tell the user; child agents send_message main. Generic claims that context is needed do not satisfy this notice.\n</context-maintenance>`;
+      return `<context-maintenance urgent>\n${context} after productive maintenance is still high. STOP and either do one more aggressive safe fold now, or send one short visible retention notice: "Retaining context because: [specific indispensable working set]. Next checkpoint: [concrete phase/event]." Main agents tell the user; child agents send_message main. Generic claims that context is needed do not satisfy this notice.\n</context-maintenance>`;
     case "handoff": {
       const result =
         decision.broaderYield === undefined
@@ -420,12 +420,12 @@ export default function contextPressure(pi: ExtensionAPI): void {
   });
 
   pi.on("tool_result", (event, ctx) => {
-    if (event.toolName !== "context_collapse") return;
+    if (event.toolName !== "context_fold") return;
     const details = event.details;
     if (!isCollapseDetails(details)) {
       if (!warnedMalformed) {
         console.warn(
-          "[context-pressure] ignored malformed context_collapse details",
+          "[context-pressure] ignored malformed context_fold details",
         );
         warnedMalformed = true;
       }
@@ -440,7 +440,7 @@ export default function contextPressure(pi: ExtensionAPI): void {
     ) {
       if (!warnedInvalidWindow) {
         console.warn(
-          "[context-pressure] ignored context_collapse result without a valid context window",
+          "[context-pressure] ignored context_fold result without a valid context window",
         );
         warnedInvalidWindow = true;
       }

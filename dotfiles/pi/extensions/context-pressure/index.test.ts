@@ -108,16 +108,16 @@ test("context-status reports branch-local stats for main and live children", asy
       type: "message",
       message: {
         role: "toolResult",
-        toolName: "context_collapse",
-        details: { action: "collapse", ok: true, deltaTokens: 12_000 },
+        toolName: "context_fold",
+        details: { action: "fold", ok: true, deltaTokens: 12_000 },
       },
     },
     {
       type: "message",
       message: {
         role: "toolResult",
-        toolName: "context_collapse",
-        details: { action: "collapse", ok: false, deltaTokens: 0 },
+        toolName: "context_fold",
+        details: { action: "fold", ok: false, deltaTokens: 0 },
       },
     },
   ];
@@ -404,8 +404,8 @@ test("a pending broader phase restores across restart and is consumed by the nex
     "tool_result",
     {
       type: "tool_result",
-      toolName: "context_collapse",
-      details: { action: "collapse", ok: false, deltaTokens: 0 },
+      toolName: "context_fold",
+      details: { action: "fold", ok: false, deltaTokens: 0 },
     },
     session.ctx,
   );
@@ -527,10 +527,10 @@ test("restored tiny positive fold retains urgent latch and restored handoff stay
   tinySession.setUsage(810_000, 81);
   await tiny.emit("turn_end", turn, tinySession.ctx);
   await tiny.emit("turn_end", turn, tinySession.ctx);
-  const tinySample = { action: "collapse", ok: true, deltaTokens: 10_000 };
+  const tinySample = { action: "fold", ok: true, deltaTokens: 10_000 };
   await tiny.emit(
     "tool_result",
-    { type: "tool_result", toolName: "context_collapse", details: tinySample },
+    { type: "tool_result", toolName: "context_fold", details: tinySample },
     tinySession.ctx,
   );
   const restoredTiny = new FakePi();
@@ -754,8 +754,8 @@ test("urgent repeats through unrelated work and clears after productive maintena
     "tool_result",
     {
       type: "tool_result",
-      toolName: "context_collapse",
-      details: { action: "collapse", ok: true, deltaTokens: 260_000 },
+      toolName: "context_fold",
+      details: { action: "fold", ok: true, deltaTokens: 260_000 },
     },
     session.ctx,
   );
@@ -781,8 +781,8 @@ test("high residual pressure emits a retention choice and appears in context-sta
     "tool_result",
     {
       type: "tool_result",
-      toolName: "context_collapse",
-      details: { action: "collapse", ok: true, deltaTokens: 200_000 },
+      toolName: "context_fold",
+      details: { action: "fold", ok: true, deltaTokens: 200_000 },
     },
     session.ctx,
   );
@@ -824,8 +824,8 @@ test("invalid context windows skip persistence and warn only once", async () => 
         "tool_result",
         {
           type: "tool_result",
-          toolName: "context_collapse",
-          details: { action: "collapse", ok: true, deltaTokens: 10 },
+          toolName: "context_fold",
+          details: { action: "fold", ok: true, deltaTokens: 10 },
         },
         session.ctx,
       );
@@ -852,8 +852,8 @@ test("valid collapse results persist a zero-yield attempt and malformed details 
     "tool_result",
     {
       type: "tool_result",
-      toolName: "context_collapse",
-      details: { action: "collapse", ok: false, deltaTokens: 10 },
+      toolName: "context_fold",
+      details: { action: "fold", ok: false, deltaTokens: 10 },
     },
     session.ctx,
   );
@@ -865,8 +865,8 @@ test("valid collapse results persist a zero-yield attempt and malformed details 
     "tool_result",
     {
       type: "tool_result",
-      toolName: "context_collapse",
-      details: { action: "collapse" },
+      toolName: "context_fold",
+      details: { action: "fold" },
     },
     session.ctx,
   );
