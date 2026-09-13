@@ -62,7 +62,7 @@ in
       ".pi/agent/extensions/actor-subagents".source =
         "${patchedActorSubagents}/extensions/actor-subagents";
       ".pi/agent/actor-subagents/settings.json".text = builtins.toJSON {
-        maxAgents = 8;
+        maxAgents = 16;
         maxSpawnDepth = 3;
         childExtensions = [
           "npm:pi-mcp-adapter@2.17.0"
