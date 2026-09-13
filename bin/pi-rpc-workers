@@ -1,0 +1,447 @@
+#!/usr/bin/env python3
+"""Small, local Pi RPC supervisor. No sandbox, shell-command guards, or auto-retries."""
+import argparse
+from contextlib import suppress
+import json
+import os
+from pathlib import Path
+import queue
+import re
+import select
+import signal
+import socket
+import socketserver
+import subprocess
+import sys
+import threading
+import time
+import uuid
+
+
+def encoded(value):
+    return (json.dumps(value, ensure_ascii=True) + "\n").encode()
+
+
+def startup_packet(error=None):
+    # Keep the ready-pipe write below PIPE_BUF. Full snapshots/errors live in
+    # the socket status/controller log, not this atomic startup signal.
+    return encoded({"ok": error is None, **({"error": str(error)[:256]} if error is not None else {})})
+
+
+def delivery(message, mode):
+    if mode not in ("prompt", "steer", "follow_up"):
+        raise ValueError("invalid delivery mode")
+    command = {"type": "prompt", "message": message}
+    if mode != "prompt":
+        command["streamingBehavior"] = "steer" if mode == "steer" else "followUp"
+    return command
+
+
+def text(message):
+    return "\n".join(c.get("text", "") for c in message.get("content", []) if c.get("type") == "text")
+
+
+class Worker:
+    def __init__(self, spec, root, command=None):
+        self.spec = spec
+        self.root = root / spec["name"]
+        self.root.mkdir(mode=0o700)
+        self.events = (self.root / "events.jsonl").open("xb", buffering=0)
+        self.output = (self.root / "output.log").open("x", buffering=1)
+        self.stderr = (self.root / "stderr.log").open("xb", buffering=0)
+        self.lock = threading.RLock()
+        self.write_lock = threading.Lock()
+        self.changed = threading.Condition(self.lock)
+        self.pending = {}
+        self.actor_ready = False
+        self.state = {"name": spec["name"], "cwd": spec["cwd"], "phase": "starting", "settled": 0, "last_text": "", "last_event": time.time()}
+        env = os.environ.copy()
+        (self.root / "tmp").mkdir(mode=0o700)
+        env["TMPDIR"] = str(self.root / "tmp")
+        # Do not misidentify nested sessions with the launching shell's metadata.
+        for key in ("PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"):
+            env.pop(key, None)
+        if command is None:
+            command = ["pi", "--offline", "--mode", "rpc", "--provider", spec["provider"],
+                       "--model", spec["model"], "--thinking", spec["thinking"],
+                       "--name", "upstream-" + spec["name"], "--session-dir", str(self.root / "sessions"),
+                       "--append-system-prompt", Path(spec["policy"]).read_text()]
+        self.proc = subprocess.Popen(command, cwd=spec["cwd"], env=env, stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE, stderr=self.stderr, start_new_session=True)
+        self.state["pid"] = self.proc.pid
+        os.set_blocking(self.proc.stdin.fileno(), False)
+        self.reader = threading.Thread(target=self.read_events, daemon=True)
+        self.reader.start()
+
+    def terminate(self):
+        if self.proc.poll() is None:
+            with suppress(ProcessLookupError):
+                self.proc.terminate()
+            try:
+                self.proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                with suppress(ProcessLookupError):
+                    self.proc.kill()
+                self.proc.wait()
+
+    def write(self, command, timeout=10):
+        payload = encoded(command)
+        if len(payload) > 1_000_000:
+            raise ValueError("RPC request exceeds 1 MB")
+        deadline = time.monotonic() + timeout
+        if not self.write_lock.acquire(timeout=timeout):
+            raise TimeoutError("RPC writer busy; NOT retried")
+        try:
+            with self.lock:
+                if self.proc.poll() is not None or self.state["phase"] in ("error", "disconnected"):
+                    raise RuntimeError("worker process is not connected")
+            fd = self.proc.stdin.fileno()
+            while payload:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or not select.select([], [fd], [], remaining)[1]:
+                    # A partial JSON record cannot safely be retried or followed by another.
+                    self.terminate()
+                    raise TimeoutError("RPC pipe write timed out; worker stopped; NOT retried")
+                try:
+                    payload = payload[os.write(fd, payload):]
+                except BlockingIOError:
+                    continue
+        finally:
+            self.write_lock.release()
+
+    def rpc(self, command, timeout=60):
+        request = dict(command, id=uuid.uuid4().hex)
+        replies = queue.Queue(maxsize=1)
+        with self.lock:
+            self.pending[request["id"]] = replies
+        deadline = time.monotonic() + timeout
+        try:
+            self.write(request, timeout=timeout)
+            try:
+                response = replies.get(timeout=max(0, deadline - time.monotonic()))
+            except queue.Empty:
+                raise TimeoutError(f"{request['type']} not acknowledged; NOT retried") from None
+            if not response.get("success"):
+                raise RuntimeError(response.get("error", "RPC command failed"))
+            return response.get("data")
+        finally:
+            with self.lock:
+                self.pending.pop(request["id"], None)
+
+    def read_events(self):
+        try:
+            # Binary iteration splits on LF only, not Unicode separators in JSON strings.
+            for line in self.proc.stdout:
+                self.events.write(line)
+                event = json.loads(line)
+                self.handle(event)
+        except Exception as error:
+            with self.changed:
+                self.state["error"] = f"RPC reader failed: {error}"
+                self.state["phase"] = "error"
+                self.changed.notify_all()
+            self.output.write(f"\n[ERROR] {error}\n")
+            self.terminate()
+        finally:
+            # EOF without process exit is also loss of supervision, not a usable worker.
+            if self.proc.poll() is None:
+                try:
+                    self.proc.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    self.terminate()
+            with self.changed:
+                for replies in self.pending.values():
+                    if replies.empty():
+                        replies.put({"success": False, "error": "RPC output closed"})
+                self.state["phase"] = "disconnected"
+                self.changed.notify_all()
+
+    def handle(self, event):
+        kind = event.get("type")
+        ui_reply = None
+        startup_dialog = False
+        with self.changed:
+            self.state["last_event"] = time.time()
+            if kind == "response":
+                replies = self.pending.get(event.get("id"))
+                if replies is not None and replies.empty():
+                    replies.put(event)
+            elif kind == "agent_start":
+                self.state["phase"] = "running"
+            elif kind == "agent_settled":
+                self.state["settled"] += 1
+                self.state["phase"] = "settled"
+                self.output.write("\n[settled]\n")
+            elif kind == "message_end" and event.get("message", {}).get("role") == "assistant":
+                message = event["message"]
+                self.state["last_text"] = text(message)
+                self.state["stop_reason"] = message.get("stopReason")
+                if message.get("errorMessage"):
+                    self.state["error"] = message["errorMessage"]
+                    self.output.write(f"\n[ERROR] {message['errorMessage']}\n")
+            elif kind == "message_update":
+                delta = event.get("assistantMessageEvent", {})
+                if delta.get("type") == "text_delta":
+                    self.output.write(delta.get("delta", ""))
+            elif kind == "tool_execution_start":
+                self.output.write(f"\n[tool {event.get('toolName')}] {json.dumps(event.get('args'), ensure_ascii=True)}\n")
+            elif kind == "tool_execution_end":
+                self.output.write(f"\n[tool complete; error={event.get('isError', False)}]\n")
+            elif kind == "extension_ui_request" and event.get("method") in ("select", "confirm", "input", "editor"):
+                # Never grant unattended consent or invent a human response.
+                self.state["ui_cancelled"] = event
+                self.output.write(f"\n[UI CANCELLED; human review needed] {json.dumps(event, ensure_ascii=True)}\n")
+                ui_reply = {"type": "extension_ui_response", "id": event["id"], "cancelled": True}
+                startup_dialog = self.state["phase"] == "starting"
+                if startup_dialog:
+                    self.state["error"] = "dialog before RPC readiness"
+            elif kind == "extension_error":
+                self.state["error"] = event.get("error", "extension error")
+                self.output.write(f"\n[EXTENSION ERROR] {json.dumps(event, ensure_ascii=True)}\n")
+            self.changed.notify_all()
+        if startup_dialog:
+            # Startup hooks can ask before Pi starts reading stdin. A cancellation
+            # cannot unblock that case; fail without waiting for a human response.
+            self.terminate()
+        elif ui_reply:
+            self.write(ui_reply)
+
+    def verify(self):
+        state = self.rpc({"type": "get_state"}, timeout=120)
+        model = state.get("model") or {}
+        actual = (model.get("provider"), model.get("id"), state.get("thinkingLevel"))
+        expected = (self.spec["provider"], self.spec["model"], self.spec["thinking"])
+        if actual != expected:
+            raise RuntimeError(f"{self.spec['name']}: model mismatch: {actual} != {expected}")
+        if state.get("isStreaming") or state.get("isCompacting") or state.get("pendingMessageCount", 0):
+            raise RuntimeError("new worker is unexpectedly busy")
+        commands = self.rpc({"type": "get_commands"})
+        names = {cmd["name"] for cmd in commands.get("commands", [])}
+        if "subagents-pause" not in names:
+            raise RuntimeError(f"{self.spec['name']}: required actor-subagents extension not loaded")
+        with self.lock:
+            if (self.state.get("ui_cancelled") or self.state.get("error")
+                    or self.state["phase"] != "starting" or self.proc.poll() is not None):
+                raise RuntimeError(f"{self.spec['name']}: startup needs review: {self.state}")
+            self.state.update(model=model.get("id"), provider=model.get("provider"),
+                              thinking=state.get("thinkingLevel"), session_file=state.get("sessionFile"),
+                              startup_stderr=(self.root / "stderr.log").read_text(errors="replace")[-4000:], phase="ready")
+            self.actor_ready = True
+
+    def snapshot(self):
+        with self.lock:
+            return dict(self.state, exit_code=self.proc.poll())
+
+    def wait(self, after, timeout):
+        with self.changed:
+            completed = self.changed.wait_for(
+                lambda: (self.state["settled"] > after and self.state["phase"] == "settled")
+                or self.state["phase"] in ("error", "disconnected"), timeout)
+            return dict(self.snapshot(), wait_timed_out=not completed)
+
+    def abort(self):
+        errors = []
+        commands = [{"type": "clear_queue"}]
+        if self.actor_ready:
+            commands.append({"type": "prompt", "message": "/subagents-pause"})
+        commands.extend([{"type": "abort_bash"}, {"type": "abort"}])
+        for command in commands:
+            try:
+                self.rpc(command, timeout=10)
+            except (RuntimeError, TimeoutError, OSError) as error:
+                errors.append(f"{command['type']}: {error}")
+        if errors:
+            raise RuntimeError("partial abort; inspect worker state: " + "; ".join(errors))
+
+    def close(self):
+        if self.proc.poll() is None:
+            try:
+                self.abort()
+            except (RuntimeError, TimeoutError, OSError):
+                pass
+            with suppress(OSError):
+                self.proc.stdin.close()  # EOF triggers session_shutdown and actor disposal.
+            try:
+                self.proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.terminate()
+        self.reader.join(timeout=5)
+        with suppress(OSError):
+            self.proc.stdin.close()
+        if not self.reader.is_alive():
+            self.proc.stdout.close()
+            self.events.close()
+            self.output.close()
+        self.stderr.close()
+
+
+def load_manifest(path):
+    manifest = json.loads(path.read_text())
+    names = set()
+    for spec in manifest["workers"]:
+        name = spec["name"]
+        if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", name) or name in names:
+            raise ValueError("worker names must be unique simple names")
+        names.add(name)
+        cwd = Path(spec["cwd"])
+        if not cwd.is_absolute() or cwd.resolve() != cwd or not cwd.is_dir():
+            raise ValueError(f"cwd must be an existing canonical absolute directory: {cwd}")
+        root = subprocess.check_output(["git", "-C", str(cwd), "rev-parse", "--show-toplevel"], text=True).strip()
+        branch = subprocess.check_output(["git", "-C", str(cwd), "branch", "--show-current"], text=True).strip()
+        dirty = subprocess.check_output(["git", "-C", str(cwd), "status", "--porcelain"], text=True)
+        if Path(root) != cwd or branch != spec["branch"] or dirty:
+            raise ValueError(f"{name}: wrong worktree/branch or dirty working tree")
+        for key in ("policy", "brief"):
+            if not Path(spec[key]).is_absolute() or not Path(spec[key]).is_file():
+                raise ValueError(f"{name}: {key} must name an existing absolute file")
+    if not names:
+        raise ValueError("no workers configured")
+    return manifest
+
+
+def serve(manifest_path, ready_fd):
+    root = manifest_path.parent / "runtime"
+    workers = {}
+    server = None
+    try:
+        manifest = load_manifest(manifest_path)
+        for spec in manifest["workers"]:
+            worker = Worker(spec, root)
+            workers[spec["name"]] = worker
+            worker.verify()
+
+        class Handler(socketserver.StreamRequestHandler):
+            def handle(self):
+                self.connection.settimeout(10)
+                try:
+                    request = json.loads(self.rfile.readline(1_000_001))
+                    action = request["action"]
+                    if action == "status":
+                        result = {name: w.snapshot() for name, w in workers.items()}
+                    elif action == "stop":
+                        result = {"stopping": True}
+                        threading.Thread(target=server.shutdown, daemon=True).start()
+                    else:
+                        worker = workers[request["worker"]]
+                        if action == "send":
+                            before = worker.snapshot()["settled"]
+                            mode = request.get("mode", "follow_up")
+                            worker.rpc(delivery(request["message"], mode))
+                            result = {"accepted": True, "settled_before": before}
+                        elif action == "wait":
+                            result = worker.wait(request["after"], min(float(request.get("timeout", 300)), 3600))
+                        elif action == "abort":
+                            worker.abort()
+                            result = {"abort_requested": True}
+                        else:
+                            raise ValueError("unknown action")
+                    response = {"ok": True, "result": result}
+                except Exception as error:
+                    response = {"ok": False, "error": str(error)}
+                self.wfile.write(encoded(response))
+
+        if any(w.snapshot()["phase"] != "ready" or w.proc.poll() is not None for w in workers.values()):
+            raise RuntimeError("a worker exited before combined readiness")
+        server = socketserver.ThreadingUnixStreamServer(str(root / "control.sock"), Handler)
+        server.daemon_threads = True
+        os.write(ready_fd, startup_packet())
+        os.close(ready_fd)
+        ready_fd = None
+        server.serve_forever()
+    except Exception as error:
+        if ready_fd is not None:
+            os.write(ready_fd, startup_packet(error))
+        raise
+    finally:
+        if server:
+            server.server_close()
+        for worker in workers.values():
+            try:
+                worker.close()
+            except Exception as error:
+                print(f"cleanup failed for {worker.spec['name']}: {error}", file=sys.stderr)
+                with suppress(Exception):
+                    worker.terminate()
+
+
+def call(root, request, timeout=70):
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as conn:
+        conn.settimeout(timeout)
+        conn.connect(str(root / "runtime" / "control.sock"))
+        conn.sendall(encoded(request))
+        with conn.makefile("rb") as stream:
+            response = json.loads(stream.readline())
+    if not response["ok"]:
+        raise RuntimeError(response["error"])
+    return response["result"]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="action", required=True)
+    start = sub.add_parser("start", help="start workers; does not send prompts")
+    start.add_argument("manifest", type=Path)
+    daemon = sub.add_parser("_serve", help=argparse.SUPPRESS)
+    daemon.add_argument("manifest", type=Path)
+    daemon.add_argument("ready_fd", type=int)
+    for action in ("status", "send", "wait", "abort", "stop", "watch"):
+        cmd = sub.add_parser(action)
+        cmd.add_argument("run", type=Path)
+        if action in ("send", "wait", "abort", "watch"):
+            cmd.add_argument("worker")
+        if action == "send":
+            message = cmd.add_mutually_exclusive_group(required=True)
+            message.add_argument("--text")
+            message.add_argument("--file", type=Path)
+            cmd.add_argument("--mode", choices=("prompt", "steer", "follow_up"), default="follow_up")
+        if action == "wait":
+            cmd.add_argument("--after", type=int, required=True)
+            cmd.add_argument("--timeout", type=float, default=300)
+    args = parser.parse_args()
+    os.umask(0o077)
+    if args.action == "_serve":
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+        serve(args.manifest, args.ready_fd)
+        return
+    if args.action == "start":
+        manifest = args.manifest.resolve()
+        load_manifest(manifest)
+        root = manifest.parent / "runtime"
+        root.mkdir(mode=0o700)  # Refuse reuse; never overwrite a live or historical run.
+        read_fd, write_fd = os.pipe()
+        with (root / "controller.log").open("xb") as log:
+            proc = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "_serve", str(manifest), str(write_fd)],
+                                    stdin=subprocess.DEVNULL, stdout=log, stderr=log, pass_fds=(write_fd,), start_new_session=True)
+        os.close(write_fd)
+        (root / "controller.pid").write_text(str(proc.pid) + "\n")
+        try:
+            if not select.select([read_fd], [], [], 300)[0]:
+                proc.terminate()
+                raise TimeoutError("startup timed out; inspect controller.log; no prompts were sent")
+            response = json.loads(os.read(read_fd, 65536))
+            if not response["ok"]:
+                raise RuntimeError(response["error"])
+            result = call(manifest.parent, {"action": "status"})
+        finally:
+            os.close(read_fd)
+    elif args.action == "watch":
+        if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", args.worker):
+            raise ValueError("invalid worker name")
+        os.execvp("tail", ["tail", "-n", "80", "-F", "--", str(args.run.resolve() / "runtime" / args.worker / "output.log")])
+    else:
+        request = {"action": args.action}
+        if hasattr(args, "worker"):
+            request["worker"] = args.worker
+        if args.action == "send":
+            request.update(message=args.file.read_text() if args.file else args.text, mode=args.mode)
+        if args.action == "wait":
+            request.update(after=args.after, timeout=args.timeout)
+        result = call(args.run.resolve(), request, timeout=args.timeout + 10 if args.action == "wait" else 70)
+    print(json.dumps(result, indent=2, ensure_ascii=True))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (OSError, ValueError, RuntimeError, TimeoutError) as error:
+        sys.exit(str(error))
