@@ -1,5 +1,10 @@
 # Pi per-session Codex Fast mode and adaptable statusline
 
+Historical design snapshot: the Pi versions, upstream inputs, actor tool names,
+and child-policy paths below describe that deployment. For current context
+extension wiring and the v2 fresh-session boundary, see
+[Pi upstream integration](pi-upstream-migration.md#current-infinite-context-v2-preparation-2026-09-15).
+
 Status: implemented, deployed, and validated on `nixos-work`
 
 Last checked: 2026-08-10

@@ -1,8 +1,40 @@
 # Pi context maintenance: triggers, economics, and reminder design
 
-Status: v1 extension implemented in `dotfiles/pi/extensions/context-pressure/`; this document retains the design evidence and tuning notes.
+Current integration (2026-09-15): `dotfiles/pi/extensions/context-pressure/`
+supports infinite-context v2 on Pi 0.85.1. See
+[the v2 preparation and fresh-session procedure](pi-upstream-migration.md#current-infinite-context-v2-preparation-2026-09-15).
+This is build/check preparation, not activation.
 
-Last checked: 2026-08-12 against Pi 0.84.1
+Both maintenance tools feed the unchanged pressure policy: v2 `context_fold`
+returns `{ids: string[], deltaTokens: number}` and `context_summary` returns
+`{id: string, deltaTokens: number}`. Their delta is **after minus before**;
+negative means space freed. One normalization boundary converts both to the
+policy's positive-means-saved convention for live results and branch-history
+statistics. Errors, no-ops and growth are not productive maintenance. V1 result
+support is retained for staging, not for migrating old fold metadata.
+`/context-status` labels these combined attempts `maintenance` and reports
+estimated gross savings; tool output and subsequent context growth are not
+subtracted from that total.
+
+V2 uses `context_map` for visible roots/direct children (1-based pages),
+`context_peek` for one message or summary `id`, `context_search` for regex
+`patterns`, `context_fold` for contiguous visible roots with explicit summaries,
+and `context_summary` for replacing/clearing a visible root fold summary.
+There is no unfold tool. All native compaction is blocked. Start fresh after
+activation; old snapshots and native-compacted sessions are unsupported.
+The local patch disables upstream nudges so pressure reminders are not doubled.
+Actor child configuration now lives at `~/.pi/agent/actor-subagents/settings.json`.
+
+Run `scripts/test-pi-context.sh` for the upstream and local regression suites
+with the pinned development dependencies, without loading live extensions.
+
+## Historical policy design and tuning evidence
+
+The remainder records the original pressure-policy design, last checked on
+2026-08-12 against Pi 0.84.1. Its context-prune/collapse/expand names, v1 result
+shapes and old configuration paths are historical, not current v2 API or
+activation instructions. “V1 implementation” below names that original local
+pressure policy, not the currently configured upstream archive format.
 
 Tracking issues: `nixos-kmc` (original research), `nixos-ghl` (adaptive design)
 

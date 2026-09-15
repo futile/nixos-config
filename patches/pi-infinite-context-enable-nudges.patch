@@ -1,11 +1,10 @@
 diff --git a/README.md b/README.md
-index 5f954d5..cb9d568 100644
 --- a/README.md
 +++ b/README.md
-@@ -15,6 +15,23 @@ This turns out to work surprisingly well with claude-opus-4/5 and gpt-5.6-sol mo
- pi install git:github.com/fdietze/pi-infinite-context
- ```
- 
+@@ -32,6 +32,25 @@
+
+ The reminder does not fold anything itself. The agent chooses what to fold and writes the summaries.
+
 +## Configuration
 +
 +Automatic context-maintenance nudges are enabled by default. To disable them,
@@ -18,256 +17,211 @@ index 5f954d5..cb9d568 100644
 +}
 +```
 +
-+The setting is global and is read when a session starts. It only disables the
-+agent-facing `turn_end` nudge; folding tools, tool results/errors, and the
-+human-facing auto-compaction warning are unchanged. Missing or invalid config
-+uses the default (`true`).
++The global setting is read at session start (or the first turn in headless hosts
++that omit that event). It only disables the agent-facing reminder. All five
++tools, their results/errors, and native-compaction blocking and warnings for
++manual, threshold, and overflow compaction remain unchanged. Missing or invalid
++config defaults to enabled. Disable these nudges when another extension such as
++`context-pressure` owns reminders.
 +
- ## Prior Art
- 
- - [Opencode-DCP/opencode-dynamic-context-pruning](https://github.com/Opencode-DCP/opencode-dynamic-context-pruning)
-diff --git a/extensions/infinite-context/index.test.ts b/extensions/infinite-context/index.test.ts
-new file mode 100644
-index 0000000..364bb66
---- /dev/null
-+++ b/extensions/infinite-context/index.test.ts
-@@ -0,0 +1,148 @@
-+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-+import { join } from "node:path";
-+import { tmpdir } from "node:os";
-+import { test } from "node:test";
-+import assert from "node:assert/strict";
-+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-+import extension from "./index.ts";
-+
-+type Handler = (...args: unknown[]) => unknown;
-+
-+interface FakePi {
-+  handlers: Map<string, Handler[]>;
-+  sent: unknown[];
-+}
-+
-+function fakePi(): FakePi {
-+  const pi = {
-+    handlers: new Map<string, Handler[]>(),
-+    sent: [] as unknown[],
-+    on(event: string, handler: Handler) {
-+      const handlers = this.handlers.get(event) ?? [];
-+      handlers.push(handler);
-+      this.handlers.set(event, handlers);
-+    },
-+    registerTool() {},
-+    appendEntry() {},
-+    sendMessage(message: unknown) {
-+      this.sent.push(message);
-+    },
-+  };
-+  extension(pi as unknown as ExtensionAPI);
-+  return pi;
-+}
-+
-+function fakeContext(): ExtensionContext {
-+  return {
-+    sessionManager: {
-+      buildContextEntries: () => [],
-+      getBranch: () => [],
-+    },
-+    getContextUsage: () => ({
-+      contextWindow: 1_000,
-+      tokens: 750,
-+      percent: 75,
-+    }),
-+  } as unknown as ExtensionContext;
-+}
-+
-+async function emit(pi: FakePi, event: string, ...args: unknown[]): Promise<void> {
-+  for (const handler of pi.handlers.get(event) ?? []) await handler(...args);
-+}
-+
-+function configFile(agentDir: string, value: string): void {
-+  const extensionsDir = join(agentDir, "extensions");
-+  mkdirSync(extensionsDir, { recursive: true });
-+  writeFileSync(join(extensionsDir, "infinite-context.json"), value);
-+}
-+
-+async function startAndContinue(pi: FakePi): Promise<void> {
-+  const ctx = fakeContext();
-+  await emit(pi, "session_start", {}, ctx);
-+  await emit(
-+    pi,
-+    "turn_end",
-+    { message: { stopReason: "toolUse" }, toolResults: [{}] },
-+    ctx,
-+  );
-+}
-+
-+test("default config sends a nudge at the threshold", async () => {
-+  const previous = process.env.PI_CODING_AGENT_DIR;
-+  const agentDir = mkdtempSync(join(tmpdir(), "infinite-context-"));
-+  process.env.PI_CODING_AGENT_DIR = agentDir;
-+  try {
-+    const pi = fakePi();
-+    await startAndContinue(pi);
-+    assert.equal(pi.sent.length, 1);
-+  } finally {
-+    if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
-+    else process.env.PI_CODING_AGENT_DIR = previous;
-+    rmSync(agentDir, { recursive: true, force: true });
-+  }
-+});
-+
-+test("enableNudges false suppresses automatic notices", async () => {
-+  const previous = process.env.PI_CODING_AGENT_DIR;
-+  const agentDir = mkdtempSync(join(tmpdir(), "infinite-context-"));
-+  process.env.PI_CODING_AGENT_DIR = agentDir;
-+  configFile(agentDir, '{"enableNudges":false}');
-+  try {
-+    const pi = fakePi();
-+    await startAndContinue(pi);
-+    assert.equal(pi.sent.length, 0);
-+  } finally {
-+    if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
-+    else process.env.PI_CODING_AGENT_DIR = previous;
-+    rmSync(agentDir, { recursive: true, force: true });
-+  }
-+});
-+
-+test("invalid config warns and falls back to enabled", async () => {
-+  const previous = process.env.PI_CODING_AGENT_DIR;
-+  const agentDir = mkdtempSync(join(tmpdir(), "infinite-context-"));
-+  process.env.PI_CODING_AGENT_DIR = agentDir;
-+  configFile(agentDir, '{"enableNudges":"no"}');
-+  const warnings: unknown[][] = [];
-+  const originalWarn = console.warn;
-+  console.warn = (...args: unknown[]) => warnings.push(args);
-+  try {
-+    const pi = fakePi();
-+    await startAndContinue(pi);
-+    assert.equal(pi.sent.length, 1);
-+
-+    configFile(agentDir, "{invalid");
-+    const malformed = fakePi();
-+    await startAndContinue(malformed);
-+    assert.equal(malformed.sent.length, 1);
-+
-+    assert.equal(warnings.length, 2);
-+    assert.match(String(warnings[0][0]), /invalid config/);
-+    assert.match(String(warnings[1][0]), /invalid config/);
-+  } finally {
-+    console.warn = originalWarn;
-+    if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
-+    else process.env.PI_CODING_AGENT_DIR = previous;
-+    rmSync(agentDir, { recursive: true, force: true });
-+  }
-+});
-+
-+test("session_start reloads the global setting", async () => {
-+  const previous = process.env.PI_CODING_AGENT_DIR;
-+  const agentDir = mkdtempSync(join(tmpdir(), "infinite-context-"));
-+  process.env.PI_CODING_AGENT_DIR = agentDir;
-+  configFile(agentDir, '{"enableNudges":false}');
-+  try {
-+    const pi = fakePi();
-+    await startAndContinue(pi);
-+    assert.equal(pi.sent.length, 0);
-+
-+    configFile(agentDir, '{"enableNudges":true}');
-+    await startAndContinue(pi);
-+    assert.equal(pi.sent.length, 1);
-+  } finally {
-+    if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
-+    else process.env.PI_CODING_AGENT_DIR = previous;
-+    rmSync(agentDir, { recursive: true, force: true });
-+  }
-+});
+ ## Limits
+
+ This extension does not enlarge the model's context window. Summaries can leave out details; the agent may need to find them in the archive later.
 diff --git a/extensions/infinite-context/index.ts b/extensions/infinite-context/index.ts
-index 32d7981..47d877c 100644
 --- a/extensions/infinite-context/index.ts
 +++ b/extensions/infinite-context/index.ts
-@@ -46,12 +46,15 @@
-  *       docs/session-format.md (entry/message types, getBranch, ids).
-  */
- 
+@@ -1,8 +1,11 @@
+ import { randomUUID } from "node:crypto";
 -import type {
 -  ExtensionAPI,
 -  ExtensionContext,
--  Theme,
--  ThemeColor,
--  ToolRenderResultOptions,
+-  SessionEntry,
 +import { readFileSync } from "node:fs";
 +import { join } from "node:path";
 +import {
 +  getAgentDir,
 +  type ExtensionAPI,
 +  type ExtensionContext,
-+  type Theme,
-+  type ThemeColor,
-+  type ToolRenderResultOptions,
++  type SessionEntry,
  } from "@earendil-works/pi-coding-agent";
- import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
-@@ -86,6 +89,36 @@ import {
- // `#5` and `5` resolve identically; core only ever sees bare ids.
- const bareId = (id: string) => id.replace(/^#/, "");
- 
-+const DEFAULT_ENABLE_NUDGES = true;
-+const NUDGE_CONFIG_FILE = "infinite-context.json";
-+
-+/**
-+ * Read the global extension config. Pi has no settings-read API for
-+ * extensions, so this follows the extension-owned config convention used by
-+ * the upstream examples (`<agent dir>/extensions/<name>.json`).
-+ */
+ import {
+@@ -44,6 +47,24 @@
+   searchArchive,
+ } from "./search.ts";
+
++/** Extension-owned global config; missing or invalid settings preserve upstream defaults. */
 +function loadNudgesEnabled(): boolean {
-+  const path = join(getAgentDir(), "extensions", NUDGE_CONFIG_FILE);
++  const path = join(getAgentDir(), "extensions", "infinite-context.json");
 +  try {
 +    const value: unknown = JSON.parse(readFileSync(path, "utf8"));
-+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
++    if (typeof value !== "object" || value === null || Array.isArray(value))
 +      throw new Error("config must be an object");
-+    }
 +    const enabled = (value as { enableNudges?: unknown }).enableNudges;
-+    if (enabled !== undefined && typeof enabled !== "boolean") {
++    if (enabled !== undefined && typeof enabled !== "boolean")
 +      throw new Error('"enableNudges" must be a boolean');
-+    }
-+    return enabled ?? DEFAULT_ENABLE_NUDGES;
++    return enabled ?? true;
 +  } catch (error) {
-+    if ((error as NodeJS.ErrnoException).code === "ENOENT")
-+      return DEFAULT_ENABLE_NUDGES;
-+    console.warn(
-+      `[infinite-context] ignored invalid config ${path}: ${(error as Error).message}`,
-+    );
-+    return DEFAULT_ENABLE_NUDGES;
++    if ((error as NodeJS.ErrnoException).code !== "ENOENT")
++      console.warn(`[infinite-context] ignored invalid config ${path}: ${(error as Error).message}`);
++    return true;
 +  }
 +}
 +
- // --- preview formatting helpers (TUI only) -------------------------------
- const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
- // All numeric sizes in this extension are TOKEN estimates (chars/4). The `tok`
-@@ -172,6 +205,7 @@ function renderMutate(
- export default function (pi: ExtensionAPI) {
-   // In-memory source of truth, reconstructed from the session.
-   let spans: Span[] = [];
-+  let enableNudges = DEFAULT_ENABLE_NUDGES;
- 
-   const persist = () => pi.appendEntry(INFINITE_CONTEXT_ENTRY, { spans });
-   // Active context entries (native compaction applied) as addressable messages.
-@@ -196,7 +230,10 @@ export default function (pi: ExtensionAPI) {
-     reconcile(activeMsgs(ctx));
+ const MAX_ID_LENGTH = 128;
+ const MAX_PATTERN_LENGTH = 4096;
+ const MAX_SUMMARY_LENGTH = 12_000;
+@@ -119,6 +140,7 @@
+   let stateError: Error | undefined;
+   let loaded = false;
+   let lastNudgedBand = 0;
++  let enableNudges: boolean | undefined;
+
+   const branch = (ctx: ExtensionContext): SessionEntry[] =>
+     ctx.sessionManager.getBranch();
+@@ -174,7 +196,10 @@
+     pi.appendEntry(INFINITE_CONTEXT_ENTRY, snapshot(roots));
    };
- 
--  pi.on("session_start", async (_event, ctx) => reconstruct(ctx));
+
+-  pi.on("session_start", async (_event, ctx) => load(ctx));
 +  pi.on("session_start", async (_event, ctx) => {
 +    enableNudges = loadNudgesEnabled();
-+    reconstruct(ctx);
++    load(ctx);
 +  });
-   pi.on("session_tree", async (_event, ctx) => reconstruct(ctx));
- 
-   // Nudge the agent to fold before it runs out of context. On each turn we read
-@@ -217,6 +254,7 @@ export default function (pi: ExtensionAPI) {
-     const message = event.message as { stopReason?: string };
-     const continuing =
-       message.stopReason === "toolUse" && event.toolResults.length > 0;
+   pi.on("session_tree", async (_event, ctx) => load(ctx));
+
+   pi.on("context", async (event, ctx) => {
+@@ -194,6 +219,9 @@
+   });
+
+   pi.on("turn_end", async (event, ctx) => {
++    // Headless hosts may omit session_start; still honor the global setting.
++    enableNudges ??= loadNudgesEnabled();
 +    if (!enableNudges) return;
-     const { nudge, band } = planNudge(percent, lastNudgedBand, continuing);
-     lastNudgedBand = band;
-     if (!nudge) return;
+     const usage = ctx.getContextUsage();
+     const window = usage?.contextWindow ?? 0;
+     const tokens = usage?.tokens ?? null;
+diff --git a/extensions/infinite-context/nudges-config.test.ts b/extensions/infinite-context/nudges-config.test.ts
+new file mode 100644
+--- /dev/null
++++ b/extensions/infinite-context/nudges-config.test.ts
+@@ -0,0 +1,119 @@
++import assert from "node:assert/strict";
++import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { test, type TestContext } from "node:test";
++import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
++import infiniteContext from "./index.ts";
++import { messageEntry, userMessage } from "./pi-test-fixtures.ts";
++
++type Handler = (event: Record<string, unknown>, ctx: ExtensionContext) => unknown;
++type Tool = Parameters<ExtensionAPI["registerTool"]>[0];
++
++function harness(t: TestContext, config?: string) {
++  const previous = process.env.PI_CODING_AGENT_DIR;
++  const dir = mkdtempSync(join(tmpdir(), "infinite-context-nudges-"));
++  process.env.PI_CODING_AGENT_DIR = dir;
++  t.after(() => {
++    if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
++    else process.env.PI_CODING_AGENT_DIR = previous;
++  });
++  mkdirSync(join(dir, "extensions"));
++  const setConfig = (value: string) => writeFileSync(join(dir, "extensions/infinite-context.json"), value);
++  if (config !== undefined) setConfig(config);
++  const handlers = new Map<string, Handler>();
++  const tools = new Map<string, Tool>();
++  const sent: unknown[] = [];
++  const notifications: string[] = [];
++  const entries: SessionEntry[] = [messageEntry("u1", userMessage("original ".repeat(100), 1))];
++  let tokens = 0;
++  const ctx = {
++    sessionManager: { getBranch: () => entries },
++    getContextUsage: () => ({ tokens, contextWindow: 100, percent: tokens }),
++    ui: { notify: (text: string) => notifications.push(text) },
++  } as unknown as ExtensionContext;
++  infiniteContext({
++    on: (name: string, handler: Handler) => handlers.set(name, handler),
++    registerTool: (tool: Tool) => tools.set(tool.name, tool),
++    sendMessage: (message: unknown) => sent.push(message),
++    appendEntry: (customType: string, data: unknown) => entries.push({
++      type: "custom", id: `state-${entries.length}`, parentId: entries.at(-1)!.id,
++      timestamp: new Date().toISOString(), customType, data,
++    }),
++  } as unknown as ExtensionAPI);
++  const emit = async (name: string, event: Record<string, unknown> = {}) => handlers.get(name)?.(event, ctx);
++  return {
++    tools, sent, notifications, entries, setConfig, emit,
++    execute: (name: string, params: Record<string, unknown>) => tools.get(name)!.execute("call", params, undefined, undefined, ctx),
++    async continueAt(percent: number) {
++      tokens = percent;
++      await emit("turn_end", { message: { stopReason: "toolUse" }, toolResults: [{}] });
++    },
++  };
++}
++
++for (const config of [undefined, "{}", '{"enableNudges":true}']) {
++  test(`enabled/default nudges preserve 75% and 5-point bands: ${config}`, async (t) => {
++    const h = harness(t, config);
++    await h.emit("session_start");
++    await h.continueAt(74);
++    assert.equal(h.sent.length, 0);
++    await h.continueAt(75);
++    await h.continueAt(79);
++    assert.equal(h.sent.length, 1);
++    await h.continueAt(80);
++    assert.equal(h.sent.length, 2);
++  });
++}
++
++test("disabled nudges retain all tools, folding, summary edits and every compaction block", async (t) => {
++  const h = harness(t, '{"enableNudges":false}');
++  await h.emit("session_start");
++  for (const percent of [75, 80, 99]) await h.continueAt(percent);
++  assert.equal(h.sent.length, 0);
++  assert.equal(h.tools.size, 5);
++  assert.equal(h.tools.has("context_unfold"), false);
++  assert.match((await h.execute("context_map", {})).content[0].type, /text/);
++  const fold = await h.execute("context_fold", { items: [{ from: "u1", summary: "short summary" }] });
++  const { ids, deltaTokens } = fold.details as { ids: string[]; deltaTokens: number };
++  assert.ok(deltaTokens < 0);
++  const summary = await h.execute("context_summary", { id: ids[0], summary: "" });
++  assert.equal((summary.details as { id: string }).id, ids[0]);
++  assert.ok((await h.execute("context_peek", { id: "u1" })).content.length);
++  assert.ok((await h.execute("context_search", { patterns: ["original"] })).content.length);
++  await assert.rejects(h.execute("context_summary", { id: "missing", summary: "" }));
++  const persisted = h.entries.length;
++  for (const reason of ["manual", "threshold", "overflow"]) {
++    assert.deepEqual(await h.emit("session_before_compact", { reason }), { cancel: true });
++    assert.match(h.notifications.at(-1)!, new RegExp(`blocked ${reason} compaction`));
++  }
++  assert.equal(h.entries.length, persisted);
++  assert.equal(h.sent.length, 0);
++});
++
++for (const config of ['{"enableNudges":"no"}', "{invalid", "null", "[]"]) {
++  test(`invalid config warns and defaults to enabled: ${config}`, async (t) => {
++    const h = harness(t, config);
++    const warnings: unknown[] = [];
++    t.mock.method(console, "warn", (message: unknown) => warnings.push(message));
++    await h.emit("session_start");
++    await h.continueAt(75);
++    assert.equal(h.sent.length, 1);
++    assert.equal(warnings.length, 1);
++    assert.match(String(warnings[0]), /invalid config/);
++  });
++}
++
++test("headless startup honors disabled config and session_start rereads it", async (t) => {
++  const h = harness(t, '{"enableNudges":false}');
++  await h.continueAt(80);
++  assert.equal(h.sent.length, 0);
++  h.setConfig('{"enableNudges":true}');
++  await h.emit("session_start");
++  await h.continueAt(80);
++  assert.equal(h.sent.length, 1);
++  h.setConfig('{"enableNudges":false}');
++  await h.emit("session_start");
++  await h.continueAt(90);
++  assert.equal(h.sent.length, 1);
++});

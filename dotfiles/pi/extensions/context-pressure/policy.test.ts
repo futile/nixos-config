@@ -7,6 +7,7 @@ import {
   endInteraction,
   evaluatePressure,
   makeYieldSample,
+  normalizeMaintenanceResult,
   noteToolTurn,
   observeUsage,
   persistentPressureState,
@@ -224,6 +225,51 @@ test("high-water mark tracks peak context percentage and survives resets and res
     persistentPressureState(resetPressure(state)),
   );
   assert.deepEqual(restored.highWaterMark, state.highWaterMark);
+});
+
+test("maintenance normalization preserves v1 and reverses v2 signed deltas", () => {
+  const legacy = { action: "fold", ok: true, deltaTokens: 100, msgs: 2 };
+  assert.deepEqual(normalizeMaintenanceResult("context_fold", legacy), legacy);
+  assert.deepEqual(
+    normalizeMaintenanceResult("context_fold", { ...legacy, ok: false }),
+    { ...legacy, ok: false },
+  );
+  for (const toolName of ["context_fold", "context_summary"]) {
+    const target = toolName === "context_fold" ? { ids: ["fold-a"] } : { id: "fold-a" };
+    for (const deltaTokens of [-100, 0, 100]) {
+      const normalized = normalizeMaintenanceResult(toolName, { ...target, deltaTokens });
+      assert.deepEqual(normalized, { action: "fold", ok: true, deltaTokens: -deltaTokens || 0 });
+      assert.equal(makeYieldSample(normalized!, 1_000)?.percentagePoints, deltaTokens < 0 ? 10 : 0);
+    }
+    for (const details of [undefined, {}, { ...target, deltaTokens: -100 }, legacy]) {
+      assert.deepEqual(normalizeMaintenanceResult(toolName, details, true), {
+        action: "fold", ok: false, deltaTokens: 0,
+      });
+    }
+  }
+});
+
+test("maintenance normalization rejects malformed and unrelated results", () => {
+  for (const toolName of ["context_fold", "context_summary"]) {
+    for (const details of [
+      undefined, null, [], {},
+      { deltaTokens: 1 },
+      { ids: [], id: "", deltaTokens: -1 },
+      { ids: [1], id: 1, deltaTokens: -1 },
+      { ids: [" "], id: " ", deltaTokens: -1 },
+      { ids: ["f"], id: "f", deltaTokens: Number.NaN },
+      { ids: ["f"], id: "f", deltaTokens: Infinity },
+      { ids: ["f"], id: "f", deltaTokens: "-1" },
+      { ids: ["f"], id: "f", action: "fold", deltaTokens: -1 },
+      { ids: ["f"], id: "f", ok: false, deltaTokens: -1 },
+      { ids: ["f"], id: "f", ok: true, deltaTokens: -1 },
+    ]) assert.equal(normalizeMaintenanceResult(toolName, details), null);
+  }
+  assert.equal(normalizeMaintenanceResult("context_fold", { id: "f", deltaTokens: -1 }), null);
+  assert.equal(normalizeMaintenanceResult("context_summary", { ids: ["f"], deltaTokens: -1 }), null);
+  assert.equal(normalizeMaintenanceResult("context_summary", { action: "fold", ok: true, deltaTokens: 1 }), null);
+  for (const isError of [false, true])
+    assert.equal(normalizeMaintenanceResult("context_map", { ids: ["f"], deltaTokens: -1 }, isError), null);
 });
 
 test("invalid context windows never create yield samples", () => {

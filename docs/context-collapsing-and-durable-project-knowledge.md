@@ -1,5 +1,10 @@
 # Context collapsing and durable project knowledge
 
+Historical decision record: context-prune/collapse/expand terminology below
+predates infinite-context v2. The separation from durable project knowledge
+still applies, but v2 has no unfold operation. See the
+[current tool surface and fresh-session procedure](pi-upstream-migration.md#current-infinite-context-v2-preparation-2026-09-15).
+
 Status: decision record; `knowledge-distill` prototype retired
 
 Last checked: 2026-08-11

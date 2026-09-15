@@ -442,6 +442,35 @@ export function isCollapseDetails(value: unknown): value is CollapseDetails {
   );
 }
 
+/** Normalize tool results to the policy's positive-means-saved convention. */
+export function normalizeMaintenanceResult(
+  toolName: string,
+  value: unknown,
+  isError = false,
+): CollapseDetails | null {
+  if (toolName !== "context_fold" && toolName !== "context_summary") return null;
+  // Pi reports thrown tool errors without details. Never credit apparent savings
+  // on an error, even if another extension supplied success-shaped details.
+  if (isError) return { action: "fold", ok: false, deltaTokens: 0 };
+  // Keep v1 results usable during staged rollout; this does not migrate snapshots.
+  if (toolName === "context_fold" && isCollapseDetails(value)) return value;
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return null;
+  const details = value as Record<string, unknown>;
+  if ("action" in details || "ok" in details || !finite(details.deltaTokens))
+    return null;
+  const validId = (id: unknown) => typeof id === "string" && id.trim().length > 0;
+  const validTarget =
+    toolName === "context_fold"
+      ? Array.isArray(details.ids) &&
+        details.ids.length > 0 &&
+        details.ids.every(validId)
+      : validId(details.id);
+  if (!validTarget) return null;
+  // V2 delta = AFTER - BEFORE, including zero-yield edits and context growth.
+  return { action: "fold", ok: true, deltaTokens: -details.deltaTokens || 0 };
+}
+
 export function makeYieldSample(
   details: CollapseDetails,
   contextWindow: number,

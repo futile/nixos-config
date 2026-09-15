@@ -1,11 +1,86 @@
 # Pi standalone upstream migration
 
-Status: migration and coordinated cutover completed and verified on
+## Current: infinite-context v2 preparation (2026-09-15)
+
+The configured pin is
+[`639c8f5e5a77319a4423d238bf48b984424d74ac`](https://github.com/fdietze/pi-infinite-context/tree/639c8f5e5a77319a4423d238bf48b984424d74ac),
+verified against Pi **0.85.1**. This preparation is **build/check only, not
+activation**. The older v1 cutover record below is historical, not a procedure
+for this upgrade. PRs #2/#3 were superseded by v2; none of their commits are
+ported here.
+
+V2 stores `{version:2, roots:[...]}`. `context_fold` wraps contiguous visible
+roots with an explicit summary; earlier folds remain unchanged children.
+`context_summary` replaces or clears one visible root fold's summary.
+`context_map` lists roots or one fold's direct children with 1-based pagination;
+`context_peek` reads one singular `id` with 1-based line windows.
+`context_search` still takes JavaScript regex `patterns`. There is no unfold
+operation, and reads never restore archived context.
+
+The refreshed local nudge patch retains `enableNudges=false` in
+`home-modules/pi.nix`. Only `context-pressure` supplies automatic reminders;
+all five folding tools and **manual, threshold, and overflow native-compaction
+blocking** remain enabled. Missing/invalid config defaults to upstream nudges
+(enabled at 75%, then 5-point bands). Config is read at session start, or the
+first turn if a headless host omits that event.
+
+Both `context_fold` (`{ids, deltaTokens}`) and `context_summary`
+(`{id, deltaTokens}`) report **after minus before** estimates: negative frees
+space. The pressure extension normalizes both to its existing positive-savings
+policy in live events and branch statistics. Errors count as failed attempts;
+zero-yield and growth results do not satisfy productive maintenance. Cheap v1
+result support remains for staged rollout; this is **not snapshot migration**.
+`/context-status` reports combined maintenance attempts and estimated savings,
+not net session savings including later tool output.
+
+The installed extension path, `enableNudges=false`, and `context-pressure`
+remain wired together. Actor settings stay `maxAgents=16`, `maxSpawnDepth=3`,
+with the existing child-extension list unchanged. Do not duplicate these
+managed extensions through `pi install`.
+
+### Verification and later manual activation
+
+Run `scripts/test-pi-context.sh` from this checkout for the locked upstream
+suite, local nudge tests, and pressure tests/typecheck/lint. It needs Nix and
+network/cache access, installs only the locked development dependencies in a
+fresh scratch directory, retains artifacts, and never loads a live extension.
+For Nix changes also run `nice -n 19 just format`,
+`nice -n 19 just format-check`, `nice -n 19 just check`, and `just build` (the
+recipe already lowers Nix priority).
+
+When you deliberately choose to activate later on `nixos-work`:
+
+1. Preserve a short handoff and finish/exit active Pi sessions and their child
+   agents normally. Do not reload an active v1 session across this upgrade.
+2. From `/home/felix/nixos`, run `nice -n 19 just switch` after reviewing the
+   build. This is the activation step; none was performed during preparation.
+3. Launch `pi` for a **fresh session**, without `--continue`/`--resume` or
+   `/resume`. Keep historical JSONL files untouched. V1 fold snapshots and
+   sessions containing native compaction are unsupported; do not run the old
+   metadata migrator below, fork/clone the old session as a migration, or use
+   `/compact` as a workaround.
+4. In the new session, check the five-tool surface (including
+   `context_summary`, no unfold), `/context-status`, and the managed
+   `extensions/infinite-context.json` setting. Pi CLI is profile-owned and
+   already 0.85.1; this pin update does not upgrade or restart it.
+
+The guidance and pressure extension are repository-linked; editing their files
+does not reload already-running extension instances. New sessions/processes
+can see those source edits even before a system switch, which is why v1 result
+support remains and the instructions defer to exposed schemas during staging.
+
+## Historical v1 standalone cutover (not v2 instructions)
+
+Everything below records the earlier v1 integration and its then-current
+versions. In particular, the old patch commands and metadata migration are
+**obsolete for v2; do not run them for this upgrade**.
+
+Historical status: migration and coordinated cutover completed and verified on
 `nixos-work`. The dedicated upstreams, migrated session metadata, foreground
 session-name package, and live-linked repository changes are active. Issues
 `nixos-8ss` and `nixos-eo2` are closed.
 
-## Sources and current setup
+## Sources and setup at the v1 cutover
 
 | Source                                                                                                              | Audited revision                           |
 | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
@@ -276,7 +351,7 @@ The patch was applied during the completed offline cutover. Do not reapply it
 on this migrated checkout. Its reviewed SHA-256 is
 `92b28b94b0a47d5caf764172e186c59a162a68f540e25d38bc804615fe889baa`.
 
-## Offline session metadata migration
+## Historical v1 metadata migration (obsolete; do not run for v2)
 
 `scripts/migrate-pi-infinite-context-sessions.py` recursively scans one or
 more session roots. It defaults to read-only dry-run and reports aggregates,

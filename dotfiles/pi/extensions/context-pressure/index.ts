@@ -8,13 +8,12 @@ import {
   type PressureDecision,
   type PressureState,
   type ReminderKind,
-  type YieldSample,
   HIGH_RESIDUAL_PERCENT,
   beginInteraction,
   emptyPressureState,
   endInteraction,
   evaluatePressure,
-  isCollapseDetails,
+  normalizeMaintenanceResult,
   isPersistentPressureState,
   makeYieldSample,
   normalizeUsage,
@@ -130,14 +129,18 @@ function branchStats(ctx: ExtensionContext): {
     }
     if (
       entry.type !== "message" ||
-      entry.message.role !== "toolResult" ||
-      entry.message.toolName !== "context_fold" ||
-      !isCollapseDetails(entry.message.details)
+      entry.message.role !== "toolResult"
     )
       continue;
+    const details = normalizeMaintenanceResult(
+      entry.message.toolName,
+      entry.message.details,
+      entry.message.isError,
+    );
+    if (!details) continue;
     attempts += 1;
-    const deltaTokens = entry.message.details.deltaTokens as number;
-    if (entry.message.details.ok && deltaTokens > 0) {
+    const deltaTokens = details.deltaTokens as number;
+    if (details.ok && deltaTokens > 0) {
       productive += 1;
       savedTokens += deltaTokens;
     }
@@ -235,12 +238,12 @@ function formatStatus(
       ? ` · last ${last.kind[0].toUpperCase()}${last.percent === undefined ? "" : `@${Math.round(last.percent)}%`}`
       : "";
     const folds = snapshot.collapses.attempts
-      ? `folds ${snapshot.collapses.productive}/${snapshot.collapses.attempts}, ${compactTokens(snapshot.collapses.savedTokens)} saved`
-      : "folds 0";
+      ? `maintenance ${snapshot.collapses.productive}/${snapshot.collapses.attempts}, ~${compactTokens(snapshot.collapses.savedTokens)} saved`
+      : "maintenance 0";
     const postCollapse =
       snapshot.lastPostCollapsePercent === undefined
         ? ""
-        : ` · post-fold ${Math.round(snapshot.lastPostCollapsePercent)}%${snapshot.lastPostCollapsePercent >= HIGH_RESIDUAL_PERCENT ? " high" : ""}`;
+        : ` · post-maintenance ${Math.round(snapshot.lastPostCollapsePercent)}%${snapshot.lastPostCollapsePercent >= HIGH_RESIDUAL_PERCENT ? " high" : ""}`;
     const phases = snapshot.phases?.length
       ? ` · ${snapshot.phases.join(", ")}`
       : "";
@@ -420,12 +423,12 @@ export default function contextPressure(pi: ExtensionAPI): void {
   });
 
   pi.on("tool_result", (event, ctx) => {
-    if (event.toolName !== "context_fold") return;
-    const details = event.details;
-    if (!isCollapseDetails(details)) {
+    if (event.toolName !== "context_fold" && event.toolName !== "context_summary") return;
+    const details = normalizeMaintenanceResult(event.toolName, event.details, event.isError);
+    if (!details) {
       if (!warnedMalformed) {
         console.warn(
-          "[context-pressure] ignored malformed context_fold details",
+          `[context-pressure] ignored malformed ${event.toolName} details`,
         );
         warnedMalformed = true;
       }
@@ -440,7 +443,7 @@ export default function contextPressure(pi: ExtensionAPI): void {
     ) {
       if (!warnedInvalidWindow) {
         console.warn(
-          "[context-pressure] ignored context_fold result without a valid context window",
+          `[context-pressure] ignored ${event.toolName} result without a valid context window`,
         );
         warnedInvalidWindow = true;
       }

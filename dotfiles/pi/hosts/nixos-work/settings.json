@@ -1,7 +1,7 @@
 {
   "defaultModel": "gpt-6-astra",
   "defaultProvider": "openai-codex",
-  "lastChangelogVersion": "0.84.4",
+  "lastChangelogVersion": "0.85.1",
   "theme": "light/dark",
   "defaultThinkingLevel": "medium",
   "packages": [

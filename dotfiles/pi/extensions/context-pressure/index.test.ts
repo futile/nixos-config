@@ -151,11 +151,11 @@ test("context-status reports branch-local stats for main and live children", asy
   );
   assert.match(
     main.notifications[0].message,
-    /main · ctx 60% · HWM 72% · headroom 40k · reminders 2 \(A1 U1\) · last U@81% · folds 1\/2, 12k saved/,
+    /main · ctx 60% · HWM 72% · headroom 40k · reminders 2 \(A1 U1\) · last U@81% · maintenance 1\/2, ~12k saved/,
   );
   assert.match(
     main.notifications[0].message,
-    /scan · ctx 63% · HWM 63% · headroom 74k · reminders 0 · folds 0/,
+    /scan · ctx 63% · HWM 63% · headroom 74k · reminders 0 · maintenance 0/,
   );
 
   await childPi.emit(
@@ -173,6 +173,97 @@ test("context-status reports branch-local stats for main and live children", asy
     main.ctx,
   );
 });
+
+test("context-status reconstructs mixed maintenance results on resume and tree navigation", async () => {
+  const result = (toolName: string, details: unknown, isError = false) => ({
+    type: "message", message: { role: "toolResult", toolName, details, isError },
+  });
+  const branch = [
+    result("context_fold", { action: "fold", ok: true, deltaTokens: 12_000 }),
+    result("context_fold", { action: "fold", ok: false, deltaTokens: 99_000 }),
+    result("context_fold", { ids: ["f"], deltaTokens: -8_000 }),
+    result("context_summary", { id: "f", deltaTokens: -2_000 }),
+    result("context_summary", { id: "f", deltaTokens: 0 }),
+    result("context_fold", { ids: ["g"], deltaTokens: 5_000 }),
+    result("context_summary", { id: "f", deltaTokens: 1_000 }),
+    result("context_fold", undefined, true),
+    result("context_summary", undefined, true),
+    result("context_fold", { action: "fold", ok: true, deltaTokens: 99_000 }, true),
+    result("context_summary", { id: "f", deltaTokens: -99_000 }, true),
+    result("context_fold", { deltaTokens: -99_000 }),
+    result("context_map", { ids: ["f"], deltaTokens: -99_000 }),
+  ];
+  const pi = new FakePi();
+  contextPressure(pi as unknown as ExtensionAPI);
+  const session = fakeContext(true, branch, 1_000_000, "mixed-history");
+  try {
+    await pi.emit("session_start", { reason: "resume" }, session.ctx);
+    await pi.commands.get("context-status")!.handler("", session.ctx);
+    assert.match(session.notifications.at(-1).message, /maintenance 3\/11, ~22k saved/);
+    branch.splice(0, branch.length, result("context_summary", { id: "other", deltaTokens: -4_000 }));
+    await pi.emit("session_tree", {}, session.ctx);
+    await pi.commands.get("context-status")!.handler("", session.ctx);
+    assert.match(session.notifications.at(-1).message, /maintenance 1\/1, ~4k saved/);
+  } finally {
+    await pi.emit("session_shutdown", {}, session.ctx);
+  }
+});
+
+for (const toolName of ["context_fold", "context_summary"]) {
+  const target = toolName === "context_fold" ? { ids: ["f"] } : { id: "f" };
+  test(`${toolName} v2 savings satisfy urgent maintenance and defer the usage baseline`, async () => {
+    const pi = new FakePi();
+    contextPressure(pi as unknown as ExtensionAPI);
+    const session = fakeContext(false, [], 1_000_000);
+    await pi.emit("session_start", {}, session.ctx);
+    await pi.emit("agent_start", {}, session.ctx);
+    session.setUsage(810_000);
+    await pi.emit("turn_end", turn, session.ctx);
+    assert.equal(pi.sent.at(-1).message.details.kind, "urgent");
+    await pi.emit("tool_result", { toolName, details: { ...target, deltaTokens: -260_000 }, isError: false }, session.ctx);
+    const state = pi.entries.at(-1).data;
+    assert.equal(state.yields.at(-1).deltaTokens, 260_000);
+    assert.equal(state.yields.at(-1).percentagePoints, 26);
+    assert.equal(state.urgentPending, false);
+    assert.equal(state.pendingBaseline, true);
+    // Same-turn usage can be stale; do not establish the baseline here.
+    await pi.emit("turn_end", turn, session.ctx);
+    assert.equal(pi.entries.at(-1).data.pendingBaseline, true);
+    session.setUsage(550_000);
+    await pi.emit("turn_end", turn, session.ctx);
+    assert.equal(pi.entries.at(-1).data.pendingBaseline, false);
+    assert.equal(pi.sent.length, 1);
+    await pi.emit("session_shutdown", {}, session.ctx);
+  });
+
+  test(`${toolName} failures, no-ops and growth do not satisfy urgent maintenance`, async () => {
+    const pi = new FakePi();
+    contextPressure(pi as unknown as ExtensionAPI);
+    const session = fakeContext(false, [], 1_000_000);
+    await pi.emit("session_start", {}, session.ctx);
+    await pi.emit("agent_start", {}, session.ctx);
+    session.setUsage(810_000);
+    await pi.emit("turn_end", turn, session.ctx);
+    for (const [details, isError, expectedDelta] of [
+      [undefined, true, 0],
+      [{ ...target, deltaTokens: -260_000 }, true, 0],
+      [{ ...target, deltaTokens: 0 }, false, 0],
+      [{ ...target, deltaTokens: 10_000 }, false, -10_000],
+    ] as const) {
+      await pi.emit("tool_result", { toolName, details, isError }, session.ctx);
+      const state = pi.entries.at(-1).data;
+      assert.equal(state.yields.at(-1).ok, !isError);
+      assert.equal(state.yields.at(-1).deltaTokens, expectedDelta);
+      assert.equal(state.yields.at(-1).percentagePoints, 0);
+      assert.equal(state.urgentPending, true);
+      assert.equal(state.pendingBaseline, false);
+      await pi.emit("turn_end", turn, session.ctx);
+      assert.equal(pi.sent.at(-1).message.details.kind, "urgent");
+    }
+    assert.equal(pi.sent.length, 5);
+    await pi.emit("session_shutdown", {}, session.ctx);
+  });
+}
 
 test("context-status tolerates pre-reload sources without phase metadata", async () => {
   const pi = new FakePi();
@@ -794,7 +885,7 @@ test("high residual pressure emits a retention choice and appears in context-sta
   assert.match(pi.sent.at(-1)?.message.content ?? "", /child agents send_message main/);
 
   await pi.commands.get("context-status")?.handler("", session.ctx);
-  assert.match(session.notifications[0].message, /post-fold 65% high/);
+  assert.match(session.notifications[0].message, /post-maintenance 65% high/);
   assert.doesNotMatch(session.notifications[0].message, /urgent pending/);
 });
 
