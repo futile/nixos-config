@@ -22,17 +22,6 @@
       ],
       "url": "path:/nix/store/zrfsqn9i68kwvb6idjdfk5nhdbdcf6xk-source?lastModified=1761236834&narHash=sha256-%2Bpthv6hrL5VLW2UqPdISGuLiUZ6SnAXdd2DdUE%2BfV2Q%3D&rev=d5faa84122bc0a1fd5d378492efce4e289f8eac1"
     },
-    "agentsview": {
-      "active": true,
-      "attrPath": "packages.x86_64-linux.agentsview",
-      "originalUrl": "github:numtide/llm-agents.nix",
-      "outputs": null,
-      "priority": 5,
-      "storePaths": [
-        "/nix/store/lqgnp1857y2nsmb4j430yvw3qkrh6gdg-agentsview-0.33.1"
-      ],
-      "url": "github:numtide/llm-agents.nix/c2660eaf3d895e95ccb8bd63e2eab5a6fedae1ab?narHash=sha256-Ab3xpGclxkEmGcfVNj5v6NFfF/QObraikmBH2nSBjyg%3D"
-    },
     "ast-grep": {
       "active": true,
       "attrPath": "legacyPackages.x86_64-linux.ast-grep",
@@ -55,17 +44,6 @@
       ],
       "url": "path:/nix/store/620xykwgxg0a2hzn1sc48nwxylvyql6a-source?lastModified=1780246643&narHash=sha256-4T1KWX7xWGQMs9hNZ24IOY3aYOi8D6%2B5WtkNRBSttB8%3D&rev=3109eaae18e09d0b8aef23dc2579e7d94b8d4b4e"
     },
-    "beads_viewer": {
-      "active": true,
-      "attrPath": "packages.x86_64-linux.default",
-      "originalUrl": "github:Dicklesworthstone/beads_viewer",
-      "outputs": null,
-      "priority": 5,
-      "storePaths": [
-        "/nix/store/q2yljhyb02x9fl0c8dlxnixf8h4ph89w-bv-0.16.1"
-      ],
-      "url": "github:Dicklesworthstone/beads_viewer/b472166565c27b43aa9c2d736511e3891adacdb8?narHash=sha256-yBySx7ERaEGuvVoY8WF5hYOyVxbhpB9/2DqdT96EvNU%3D"
-    },
     "codex": {
       "active": true,
       "attrPath": "packages.x86_64-linux.codex",
@@ -84,20 +62,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/drnv6j70ajhvznb70wcclz6z008shgy7-gh-2.83.1"
+        "/nix/store/8q6jczz4f4llbzn3ji6cfp7z4bhny5za-gh-2.100.0"
       ],
-      "url": "path:/nix/store/hhyjq4dr4w4dwssm8vzq4cfjzxixhanp-source?lastModified=1763618868&narHash=sha256-v5afmLjn/uyD9EQuPBn7nZuaZVV9r%2BJerayK/4wvdWA%3D&rev=a8d610af3f1a5fb71e23e08434d8d61a466fc942"
-    },
-    "hunk": {
-      "active": true,
-      "attrPath": "packages.x86_64-linux.hunk",
-      "originalUrl": "github:numtide/llm-agents.nix",
-      "outputs": null,
-      "priority": 5,
-      "storePaths": [
-        "/nix/store/818y1j8bgp12i64ljqxsjmvm2kyr5mf5-hunk-0.17.6"
-      ],
-      "url": "github:numtide/llm-agents.nix/d4a6e87fd4b9d7f551b0d2aba1514213617502a5?narHash=sha256-n1PgEKstIBdMxilWJpqagnWNF3roP/Fucvdms1DpEFQ%3D"
+      "url": "path:/nix/store/9vb5g7arhwk5zp01lac716qq9b7z7yqg-source?lastModified=1788922888&narHash=sha256-QMX3uerxnW2R5dHcWpIQILHDltOZnon3x3Spq7EzBFI%3D&rev=a391f95d4557d685fd8e5dc0d4b1f9271aa2f342"
     },
     "hydra-check": {
       "active": true,
@@ -164,17 +131,6 @@
         "/nix/store/1dp98a4mcph9wmb2jmc20h8qvjbnryys-pi-0.85.1"
       ],
       "url": "github:numtide/llm-agents.nix/c234ae54bc7d1d677b35ac37b17d8ea18092eb60?narHash=sha256-ETp1o4gjbxAaCUUtZpjtaFG6jM4Kw2omeTsIkUiNYsY%3D"
-    },
-    "skills": {
-      "active": true,
-      "attrPath": "legacyPackages.x86_64-linux.skills",
-      "originalUrl": "flake:unstable",
-      "outputs": null,
-      "priority": 5,
-      "storePaths": [
-        "/nix/store/k3mimi9i6mwn2ndknl3827i9qwcmgw8f-skills-1.4.6"
-      ],
-      "url": "path:/nix/store/i2gsp87gqp16whm9mw0ybk9n84zir01x-source?lastModified=1776329215&narHash=sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw%3D&rev=b86751bc4085f48661017fa226dee99fab6c651b"
     },
     "yarn": {
       "active": true,
