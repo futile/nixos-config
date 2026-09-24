@@ -77,6 +77,8 @@ in
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/context-pressure";
       ".pi/agent/extensions/codex-fast".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/codex-fast";
+      ".pi/agent/extensions/static-working-indicator".source =
+        config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/static-working-indicator";
     };
 
     home.sessionVariables = {
