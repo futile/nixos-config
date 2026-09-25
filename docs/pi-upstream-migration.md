@@ -1,10 +1,10 @@
 # Pi standalone upstream migration
 
-## Current: infinite-context v2 preparation (2026-09-15)
+## Current: infinite-context v2 preparation (2026-09-25)
 
 The configured pin is
-[`639c8f5e5a77319a4423d238bf48b984424d74ac`](https://github.com/fdietze/pi-infinite-context/tree/639c8f5e5a77319a4423d238bf48b984424d74ac),
-verified against Pi **0.85.1**. This preparation is **build/check only, not
+[`8d22a3d151c160bbe01b8ce28c9938534e3b6290`](https://github.com/fdietze/pi-infinite-context/tree/8d22a3d151c160bbe01b8ce28c9938534e3b6290),
+verified against Pi **0.87.0**. This preparation is **build/check only, not
 activation**. The older v1 cutover record below is historical, not a procedure
 for this upgrade. PRs #2/#3 were superseded by v2; none of their commits are
 ported here.
@@ -12,8 +12,12 @@ ported here.
 V2 stores `{version:2, roots:[...]}`. `context_fold` wraps contiguous visible
 roots with an explicit summary; earlier folds remain unchanged children.
 `context_summary` replaces or clears one visible root fold's summary.
-`context_map` lists roots or one fold's direct children with 1-based pagination;
-`context_peek` reads one singular `id` with 1-based line windows.
+`context_map` lists all roots or one fold's direct children in a single call,
+with compact previews (or bare IDs if needed); it no longer accepts `offset` or
+`limit`. `context_peek` reads one singular `id` with 1-based line windows and
+no longer clips a large line at a byte cap. Existing sessions continue using
+the previously loaded extension until activation/restart; follow the exposed
+tool schema during staging.
 `context_search` still takes JavaScript regex `patterns`. There is no unfold
 operation, and reads never restore archived context.
 
@@ -34,14 +38,21 @@ result support remains for staged rollout; this is **not snapshot migration**.
 not net session savings including later tool output.
 
 The installed extension path, `enableNudges=false`, and `context-pressure`
-remain wired together. Actor settings stay `maxAgents=16`, `maxSpawnDepth=3`,
-with the existing child-extension list unchanged. Do not duplicate these
+remain wired together. Actor-subagents is pinned to
+[`707496e93d78aac3d2be609aee69c2b7ffff6c33`](https://github.com/fdietze/pi-actor-subagents/tree/707496e93d78aac3d2be609aee69c2b7ffff6c33);
+its rebased local patch keeps Fast inheritance/control, activity reporting, and
+session naming while adopting upstream's spawn model/thinking arguments and
+subtree pause behavior. Its isolated upstream CI passed (262 tests); a live
+Pi/codex-fast interaction has not been exercised. Actor settings stay
+`maxAgents=16`, `maxSpawnDepth=3`, with the child-extension list unchanged.
+Pi-session-name remains at its unchanged upstream HEAD. Do not duplicate these
 managed extensions through `pi install`.
 
 ### Verification and later manual activation
 
 Run `scripts/test-pi-context.sh` from this checkout for the locked upstream
-suite, local nudge tests, and pressure tests/typecheck/lint. It needs Nix and
+suite, local nudge tests, and pressure tests/typecheck/lint. Also run upstream's
+separate `npm run e2e` in the scratch directory retained by that script. It needs Nix and
 network/cache access, installs only the locked development dependencies in a
 fresh scratch directory, retains artifacts, and never loads a live extension.
 For Nix changes also run `nice -n 19 just format`,
@@ -62,7 +73,7 @@ When you deliberately choose to activate later on `nixos-work`:
 4. In the new session, check the five-tool surface (including
    `context_summary`, no unfold), `/context-status`, and the managed
    `extensions/infinite-context.json` setting. Pi CLI is profile-owned and
-   already 0.85.1; this pin update does not upgrade or restart it.
+   already 0.87.0; this pin update does not upgrade or restart it.
 
 The guidance and pressure extension are repository-linked; editing their files
 does not reload already-running extension instances. New sessions/processes

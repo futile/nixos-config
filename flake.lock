@@ -305,16 +305,16 @@
     "pi-actor-subagents": {
       "flake": false,
       "locked": {
-        "lastModified": 1789171528,
-        "narHash": "sha256-ambM/60vknh/wsGwv7m6N4GMFftt+msVJnzgrTRh9Uo=",
+        "lastModified": 1790263030,
+        "narHash": "sha256-p0V/icznMlEyttHiw6lhfbydoe324JbyRFoA2TP2/aw=",
         "ref": "refs/heads/main",
-        "rev": "1e8533f6ddfb83401257a31ee6356b0f48ce2167",
-        "revCount": 33,
+        "rev": "707496e93d78aac3d2be609aee69c2b7ffff6c33",
+        "revCount": 51,
         "type": "git",
         "url": "https://github.com/fdietze/pi-actor-subagents"
       },
       "original": {
-        "rev": "1e8533f6ddfb83401257a31ee6356b0f48ce2167",
+        "rev": "707496e93d78aac3d2be609aee69c2b7ffff6c33",
         "type": "git",
         "url": "https://github.com/fdietze/pi-actor-subagents"
       }
@@ -322,16 +322,16 @@
     "pi-infinite-context": {
       "flake": false,
       "locked": {
-        "lastModified": 1789466404,
-        "narHash": "sha256-eUQiSEcJTD5AgJqgfqnX1yBFvZDTFpZQxgezSmBWpK0=",
+        "lastModified": 1790255837,
+        "narHash": "sha256-uy/iwTlMiESvTb9JhgOObYQSFEQQa4SnS+3iJCV04H4=",
         "ref": "refs/heads/main",
-        "rev": "639c8f5e5a77319a4423d238bf48b984424d74ac",
-        "revCount": 24,
+        "rev": "8d22a3d151c160bbe01b8ce28c9938534e3b6290",
+        "revCount": 38,
         "type": "git",
         "url": "https://github.com/fdietze/pi-infinite-context"
       },
       "original": {
-        "rev": "639c8f5e5a77319a4423d238bf48b984424d74ac",
+        "rev": "8d22a3d151c160bbe01b8ce28c9938534e3b6290",
         "type": "git",
         "url": "https://github.com/fdietze/pi-infinite-context"
       }

@@ -113,7 +113,7 @@ new file mode 100644
 +import { test, type TestContext } from "node:test";
 +import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 +import infiniteContext from "./index.ts";
-+import { messageEntry, userMessage } from "./pi-test-fixtures.ts";
++import { linkEntries, messageEntry, projectionOf, userMessage } from "./pi-test-fixtures.ts";
 +
 +type Handler = (event: Record<string, unknown>, ctx: ExtensionContext) => unknown;
 +type Tool = Parameters<ExtensionAPI["registerTool"]>[0];
@@ -136,7 +136,7 @@ new file mode 100644
 +  const entries: SessionEntry[] = [messageEntry("u1", userMessage("original ".repeat(100), 1))];
 +  let tokens = 0;
 +  const ctx = {
-+    sessionManager: { getBranch: () => entries },
++    sessionManager: { getBranch: () => linkEntries(entries), buildSessionProjection: () => projectionOf(entries) },
 +    getContextUsage: () => ({ tokens, contextWindow: 100, percent: tokens }),
 +    ui: { notify: (text: string) => notifications.push(text) },
 +  } as unknown as ExtensionContext;

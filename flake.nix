@@ -81,12 +81,12 @@
     };
 
     pi-infinite-context = {
-      url = "git+https://github.com/fdietze/pi-infinite-context?rev=639c8f5e5a77319a4423d238bf48b984424d74ac";
+      url = "git+https://github.com/fdietze/pi-infinite-context?rev=8d22a3d151c160bbe01b8ce28c9938534e3b6290";
       flake = false;
     };
 
     pi-actor-subagents = {
-      url = "git+https://github.com/fdietze/pi-actor-subagents?rev=1e8533f6ddfb83401257a31ee6356b0f48ce2167";
+      url = "git+https://github.com/fdietze/pi-actor-subagents?rev=707496e93d78aac3d2be609aee69c2b7ffff6c33";
       flake = false;
     };
 

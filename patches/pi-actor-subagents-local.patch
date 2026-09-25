@@ -1,929 +1,29 @@
-diff --git a/extensions/actor-subagents/agent-system-prompt.ts b/extensions/actor-subagents/agent-system-prompt.ts
-index 0ea3767..a880aed 100644
---- a/extensions/actor-subagents/agent-system-prompt.ts
-+++ b/extensions/actor-subagents/agent-system-prompt.ts
-@@ -16,10 +16,11 @@ export function agentSystemPrompt(
-     `You are agent "${name}" in a multi-agent system.`,
-     `You were spawned by "${spawnedBy}".`,
-     "You can talk to other agents with these tools:",
--    "- spawn_subagent({name, systemPrompt, overrideModel?, overrideThinkingLevel?, message}): create a subagent inside this session (message = its first task).",
-+    "- spawn_subagent({name, systemPrompt, overrideModel?, overrideThinkingLevel?, fast?, message}): create a subagent inside this session (message = its first task; omit fast unless the human operator explicitly requested an override; omission inherits your desired Fast state). Follow the active AGENTS.md model-routing policy when choosing model and thinking level; inheritance is only the fallback when no policy selects another route.",
-     '- send_message({to, content}): to is an array of agent names (multicast); fire-and-forget (e.g. ["main"]). It never waits for the reply, but it does report each receiver\'s state back to you.',
-     "- list_subagents(): see who exists.",
-     "- kill_subagent({name}): terminate agents by name array. Killing an agent also kills every agent it spawned (its whole subtree). You cannot kill 'main'.",
-+    "- set_fast({enabled, agent?}): change your Fast state or that of one directly owned child.",
-     "- set_status({status, etaMinutes?}): set your short status line (shown to others in list_subagents); empty string clears.",
-     "Messages you receive are prefixed with [message from <sender>].",
-     "",
-@@ -46,11 +47,11 @@ export function agentSystemPrompt(
-     "- If you are genuinely unsure (your task, a design decision, or a question another agent asked you), first try to resolve it yourself: explore the code, read docs, use your tools, or delegate to a peer/subagent.",
-     "- If it's a judgment only someone above you can make, escalate the question up to your spawner instead of fabricating an answer or a go-ahead. You cannot reach the user directly; uncertainty flows up the chain until it reaches someone (ultimately the user) who can decide.",
-     "",
--    "Event-driven — do NOT poll or busy-wait: you run only when a message arrives. After you",
--    "act, END YOUR TURN and go idle; you are automatically re-woken the moment another agent",
--    "messages you. Never poll list_subagents in a loop or try to 'wait' for a subagent to finish",
--    "— it wastes turns. If you spawned several agents, you are woken once per reply: track what",
--    "is still outstanding and finish only when all expected replies are in. Inspect",
-+    "Event-driven — do NOT poll or busy-wait: when no independent work remains and you need",
-+    "another agent's reply, END YOUR TURN and go idle; you are automatically re-woken when it",
-+    "messages you. Continue independent work while replies are outstanding. Never poll",
-+    "list_subagents in a loop or try to 'wait' for a subagent to finish — it wastes turns.",
-+    "If you spawned several agents, continue useful work while replies are outstanding; inspect",
-     "(list_subagents/subagent_history) only when you suspect a problem, not as a waiting mechanism.",
-     "",
-     systemPrompt,
-diff --git a/extensions/actor-subagents/agent-tools.ts b/extensions/actor-subagents/agent-tools.ts
-index 9e5389c..89a2dd6 100644
---- a/extensions/actor-subagents/agent-tools.ts
-+++ b/extensions/actor-subagents/agent-tools.ts
-@@ -18,6 +18,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
- import { Text } from "@earendil-works/pi-tui";
- import { Type } from "typebox";
- import { orderAgents } from "./agent-order.ts";
-+import { describeFastState, setOwnedAgentFast } from "./fast-control.ts";
- import type { Engine } from "./engine.ts";
- import {
-   formatKillResult,
-@@ -31,6 +32,7 @@ import type { AgentModelSetter } from "./set-agent-model.ts";
- import type { Spawner } from "./spawner.ts";
- import { collapseBlock, toolPreviewParts } from "./tool-preview.ts";
- import { THINKING_LEVELS } from "./thinking-level.ts";
-+import { notifyActivity } from "./activity.ts";
+diff --git a/AGENTS.md b/AGENTS.md
+index e49f695..fff4928 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -34,7 +34,7 @@ When the main session is file-backed, `persistence.ts` stores `roster.json` and
+ ## External interfaces
  
- // Tool-call preview that shows the FULL parameter content. Without a custom renderCall,
- // pi's fallback for registered tools shows only the tool name (see ToolExecutionComponent
-@@ -124,11 +126,14 @@ export function makeAgentTools(
-         "Create a subagent — a helper that runs inside your current session. Give it a system prompt and its first message (the task). " +
-         "It can then be messaged by name. The result briefly checks whether the new agent picked its task up and " +
-         "reports its state ('idle (no reaction)' means it received the task but did not start a turn). " +
--        "Event-driven & fire-and-forget: after spawning, END YOUR TURN — you are automatically re-woken when an agent " +
--        "messages you back. Do NOT poll list_subagents or wait in a loop for completion; it wastes turns. Inspect " +
-+        "Event-driven & fire-and-forget: continue independent work after spawning. When no independent work remains " +
-+        "and you need the agent's reply, END YOUR TURN; you are automatically re-woken when it messages you. Do NOT " +
-+        "poll list_subagents or wait in a loop for completion; it wastes turns. Inspect " +
-         "(list_subagents/subagent_history) only if you suspect something went wrong. The new agent's first reply will be " +
-         "its understanding of the task plus clarification questions, then it waits — reply using send_message " +
--        "(go-ahead + any corrections) to unblock its work." +
-+        "(go-ahead + any corrections) to unblock its work. Follow the active AGENTS.md model-routing policy when choosing " +
-+        "model and thinking level; inheritance is only the fallback when no policy selects another route." +
-+
-         // Only main can reach the human; subagents escalate uncertainty up their own chain instead.
-         (selfName === "main"
-           ? " If a spawned agent asks something you can't confidently answer yourself, ask the user rather than guessing."
-@@ -141,14 +146,21 @@ export function makeAgentTools(
-         overrideModel: Type.Optional(
-           Type.String({
-             description:
--              "Omit to inherit your current model (the default — almost always correct). Set 'provider/id' " +
--              "ONLY when the user explicitly named a specific model; a wrong value returns the available list.",
-+              "Omit to inherit when no active routing policy selects another model. Otherwise pass the 'provider/id' " +
-+              "selected by AGENTS.md or explicitly requested by the user; a wrong value returns the available list.",
-           }),
-         ),
-         overrideThinkingLevel: Type.Optional(
-           StringEnum(THINKING_LEVELS, {
-             description:
--              "often described as <model>@<thinking level>. Omit to inherit your current effective thinking level / effort.",
-+              "often described as <model>@<thinking level>. Omit to inherit the spawning agent's effective level. Otherwise " +
-+              "set the level selected by AGENTS.md or the user; Pi clamps it to the target model's capabilities.",
-+          }),
-+        ),
-+        fast: Type.Optional(
-+          Type.Boolean({
-+            description:
-+              "Omit unless the human operator explicitly requested an override; omission inherits this session's desired Fast state",
-           }),
-         ),
-         // Required, not optional: an agent that receives no message never gets a turn and
-@@ -166,6 +178,7 @@ export function makeAgentTools(
-             systemPrompt: args.systemPrompt,
-             model: args.overrideModel,
-             thinkingLevel: args.overrideThinkingLevel,
-+            fast: args.fast,
-             message: args.message,
-           },
-           selfName,
-@@ -190,8 +203,8 @@ export function makeAgentTools(
-         "reply, only briefly for the receiver to pick the message up, and then reports each receiver's state back: a " +
-         "working state (thinking/writing/tool) means it is running a turn, 'idle (no reaction)' means it took the " +
-         "message but did not start one, and buffered/gone mean it is paused or no longer exists. " +
--        "After sending, END YOUR TURN — you are automatically re-woken if a reply arrives. Do NOT poll or wait in a " +
--        "loop; inspect only if you suspect a problem.",
-+        "After sending, continue independent work. When no independent work remains and you need a reply, END YOUR TURN; " +
-+        "you are automatically re-woken if a reply arrives. Do NOT poll or wait in a loop; inspect only if you suspect a problem.",
-       parameters: Type.Object({
-         // Array-only, not a Union: weak models drop `to` entirely when the schema is
-         // anyOf(string, array). A flat array removes the choice and is type-honest.
-@@ -396,6 +409,37 @@ export function makeAgentTools(
-         return { content: [{ type: "text", text }], details: {} };
-       },
-     }),
-+    defineTool({
-+      name: "set_fast",
-+      label: "Set Fast",
-+      renderCall: (args, theme, context) =>
-+        renderToolArgs(
-+          "set_fast",
-+          args as Record<string, unknown>,
-+          theme as RenderTheme,
-+          context?.expanded ?? false,
-+        ),
-+      description:
-+        "Change Codex Fast mode for yourself, or for one directly owned child. " +
-+        "The change affects the target's next provider request, not a request already streaming.",
-+      parameters: Type.Object({
-+        enabled: Type.Boolean({ description: "Desired Fast state" }),
-+        agent: Type.Optional(
-+          Type.String({ description: "Directly owned child to change; omit to change yourself" }),
-+        ),
-+      }),
-+      execute: async (_id, args) => {
-+        const result = setOwnedAgentFast(engine.list(), selfName, args.agent, args.enabled);
-+        if (!result.ok) {
-+          return { content: [{ type: "text", text: `error: ${result.reason}` }], details: {} };
-+        }
-+        notifyActivity();
-+        return {
-+          content: [{ type: "text", text: `${result.agent}: ${describeFastState(result.state)}` }],
-+          details: {},
-+        };
-+      },
-+    }),
-     defineTool({
-       name: "set_status",
-       label: "Set Status",
-diff --git a/extensions/actor-subagents/engine.test.ts b/extensions/actor-subagents/engine.test.ts
-index 93d027f..b387bc4 100644
---- a/extensions/actor-subagents/engine.test.ts
-+++ b/extensions/actor-subagents/engine.test.ts
-@@ -403,6 +403,18 @@ test("shutdownAll closes background runtimes without recording explicit kills",
- 	assert.equal(e.events.filter((event) => event.type === "kill").length, killEventsBefore);
- });
+ - Pi package entry: `extensions/actor-subagents/index.ts`
+-- Agent tools (`agent-tools.ts`, shared by every agent; 'main' skips `set_status`): `spawn_subagent`, `send_message`, `set_subagent_model`, `list_subagents`, `subagent_history`, `set_status`, `pause_subagents`, `resume_subagents`, `kill_subagents`
++- Agent tools (`agent-tools.ts`, shared by every agent; 'main' skips `set_status`): `spawn_subagent`, `set_fast`, `send_message`, `set_subagent_model`, `list_subagents`, `subagent_history`, `set_status`, `pause_subagents`, `resume_subagents`, `kill_subagents`
+ - Commands: `/subagents`, `/subagents-pause`, `/subagents-resume`, `/subagents-kill`
+ - Custom message type and details shape: `agent-message.ts`
+ - Settings (caps and child capability policy): `<pi agent dir>/actor-subagents/settings.json`, the agent dir being the SDK's `getAgentDir()` (normally `~/.pi/agent`)
+diff --git a/README.md b/README.md
+index 61d5c4c..00676fa 100644
+--- a/README.md
++++ b/README.md
+@@ -10,7 +10,7 @@ pi install git:github.com/fdietze/pi-actor-subagents
  
-+test("shutdownAll resets restored pause before a new child generation", async () => {
-+	const e = new Engine({ maxAgents: 5, maxSpawnDepth: 2 });
-+	e.addAgent(mainRecord());
-+	e.pauseRestored();
-+	await e.shutdownAll();
-+
-+	e.reserve("fresh", "main");
-+	e.attach("fresh", { model: "test/m", handle: fakeHandle() });
-+	assert.equal(e.isPaused(), false);
-+	assert.deepEqual(e.recordTurnStart("fresh"), { abort: false });
-+});
-+
- test("getMessageMatrix counts edges; multicast counts one per target", async () => {
- 	const e = new Engine({ maxAgents: 8, maxSpawnDepth: 3 });
- 	e.addAgent(mainRecord());
-diff --git a/extensions/actor-subagents/engine.ts b/extensions/actor-subagents/engine.ts
-index 36c1253..85abb28 100644
---- a/extensions/actor-subagents/engine.ts
-+++ b/extensions/actor-subagents/engine.ts
-@@ -84,6 +84,8 @@ export interface AgentRecord {
- 	systemPrompt?: string;
- 	/** Absolute path of this agent's session JSONL on disk (undefined for 'main' + in-memory). */
- 	sessionFile?: string;
-+	/** Live Pi session UUID used to address in-memory extension controllers; never persisted. */
-+	sessionId?: string;
- 	/**
- 	 * Phase of the running turn (reasoning vs answer text vs tool run); undefined means no
- 	 * turn is running. Single field for "is it working" AND "at what": a separate streaming
-@@ -96,6 +98,8 @@ export interface AgentRecord {
- 	etaTs?: number;
- 	/** Tool name while `activity === "tool"`. */
- 	currentTool?: string;
-+	/** Context compaction remains active even while model streaming is idle. */
-+	compacting?: boolean;
- 	/** Terminal reason of the last finished turn; drives the idle-time status (error/truncated). Cleared when a new turn starts. */
- 	stopReason?: StopReason;
- 	/**
-@@ -316,6 +320,7 @@ export class Engine {
- 			reconfigure?: AgentRecord["reconfigure"];
- 			systemPrompt?: string;
- 			sessionFile?: string;
-+			sessionId?: string;
- 		},
- 	): void {
- 		const rec = this.agents.get(name);
-@@ -328,6 +333,7 @@ export class Engine {
- 		rec.reconfigure = opts.reconfigure;
- 		rec.systemPrompt = opts.systemPrompt;
- 		rec.sessionFile = opts.sessionFile;
-+		rec.sessionId = opts.sessionId;
- 		rec.pending = false;
- 		const buffered = rec.buffer ?? [];
- 		rec.buffer = undefined;
-@@ -434,6 +440,9 @@ export class Engine {
- 		const records = [...this.agents.values()].filter((rec) => rec.name !== "main");
- 		for (const rec of records) this.agents.delete(rec.name);
- 		await Promise.all(records.map((rec) => this.closeRecord(rec)));
-+		// shutdownAll is only for true foreground/session replacement (same-version reload keeps
-+		// this singleton and its children). A restored pause belongs to the old generation.
-+		this.restoredPause = false;
- 	}
+ ## Interface
  
- 	/** Background agents, optionally narrowed to the given names (unknown names are skipped). */
-diff --git a/extensions/actor-subagents/feed.ts b/extensions/actor-subagents/feed.ts
-index d32ecc7..088456e 100644
---- a/extensions/actor-subagents/feed.ts
-+++ b/extensions/actor-subagents/feed.ts
-@@ -5,6 +5,7 @@
- import { agentStatus, formatStatus } from "./agent-status.ts";
- import type { AgentRecord, PauseReason, Reaction } from "./engine.ts";
- import { formatCustomStatus } from "./eta.ts";
-+import { describeFastState, FAST_ROSTER_MARKER, readFastState } from "./fast-control.ts";
- import { formatModelThinking } from "./thinking-level.ts";
+-Every agent receives `spawn_subagent`, `send_message`, `set_subagent_model`, `list_subagents`, `subagent_history`, `set_status`, `pause_subagents`, `resume_subagents`, and `kill_subagents` (`set_status` is for background agents only). An agent pauses, resumes and kills only the agents it spawned and their descendants, and retunes those or itself; `main` owns them all. Messaging and inspection are open to everyone. Child agents receive the orchestration tools through pi's `customTools`; actor-subagents is not recursively loaded as a child extension.
++Every agent receives `spawn_subagent`, `set_fast`, `send_message`, `set_subagent_model`, `list_subagents`, `subagent_history`, `set_status`, `pause_subagents`, `resume_subagents`, and `kill_subagents` (`set_status` is for background agents only). An agent pauses, resumes and kills only the agents it spawned and their descendants, and retunes those or itself; `main` owns them all. Messaging and inspection are open to everyone. Child agents receive the orchestration tools through pi's `customTools`; actor-subagents is not recursively loaded as a child extension.
  
- /** Compact relative age: 3s / 4m / 2h. */
-@@ -68,6 +69,13 @@ export function formatSnapshot(
- 		const rel = relTo(a, viewer, viewerParent);
- 		const queued = a.pending && a.buffer && a.buffer.length > 0 ? `, ${a.buffer.length} queued` : "";
- 		const model = formatModelThinking(a.model, a.thinkingLevel);
-+		const fastState = readFastState(a.sessionId);
-+		const modelFast = `${model}${fastState?.effective ? ` ${FAST_ROSTER_MARKER}` : ""}`;
-+		const fastDetails = fastState
-+			? ` · ${describeFastState(fastState)}`
-+			: a.sessionId
-+				? " · Fast unavailable"
-+				: "";
- 		// The foreground agent's turns are pi's own, not this engine's, and it has no spawner —
- 		// printing "turns:0 (by main)" for it would state two things that are not true.
- 		const isMain = a.name === "main";
-@@ -76,7 +84,7 @@ export function formatSnapshot(
- 		return (
- 			`  ${fit(a.name, nameW)} ${rel.padEnd(6)} ${fit(status, statusW)} ` +
- 			`turns:${turns.padEnd(3)} ctx:${ctx.padEnd(4)} last ${formatAge(now - a.lastActivity).padEnd(4)} ` +
--			`${model}  ${origin}`
-+			`${modelFast}${fastDetails}  ${origin}`
- 		);
- 	});
- 	const scheduler = paused
-diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 3107ee6..2163004 100644
---- a/extensions/actor-subagents/index.ts
-+++ b/extensions/actor-subagents/index.ts
-@@ -16,7 +16,7 @@ import {
-   SessionManager,
-   SettingsManager,
- } from "@earendil-works/pi-coding-agent";
--import { truncateToWidth } from "@earendil-works/pi-tui";
-+import { sliceByColumn, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
- import { Type } from "typebox";
- import {
-   AGENT_MESSAGE_CUSTOM_TYPE,
-@@ -25,11 +25,13 @@ import {
-   type RoutedAgentMessage,
- } from "./agent-message.ts";
- import { renderAgentMessage } from "./agent-message-renderer.ts";
-+import { ActivityPublisher, AGENT_ACTIVITY_REQUEST_EVENT, AGENT_ACTIVITY_UPDATE_EVENT, hasActiveBackgroundAgent, installActivityNotifier, notifyActivity } from "./activity.ts";
- import { orderAgents } from "./agent-order.ts";
- import { agentStatus } from "./agent-status.ts";
- import { agentSystemPrompt } from "./agent-system-prompt.ts";
- import { makeAgentTools } from "./agent-tools.ts";
- import { Engine, type AgentHandle } from "./engine.ts";
-+import { readFastState, setFastDesired } from "./fast-control.ts";
- import { errorNotification } from "./error-notification.ts";
- import {
-   formatKillResult,
-@@ -153,6 +155,7 @@ const RESUME_NUDGE = (now: Date) => {
- //      pauseSwarm(reason) becomes pauseRestored(). A v23 instance would still stop the swarm on
- //      its own budget and expose methods this code no longer calls.
- const ENGINE_KEY = "__subagentsEngine_v24";
-+const AGENT_NAME_LOOKUP_KEY = Symbol.for("futile.pi.subagents.agent-name-lookup.v1");
+ The interactive UI shows a compact roster and provides:
  
- function getEngine(): Engine {
-   const g = globalThis as Record<string, unknown>;
-@@ -244,6 +247,9 @@ function disposeProcessHooks(dispose: () => void): void {
- 
- export default function subagents(pi: ExtensionAPI) {
-   const engine = getEngine();
-+  // Context-pressure resolves retained child session IDs through this live, reload-safe bridge.
-+  (globalThis as Record<symbol, unknown>)[AGENT_NAME_LOOKUP_KEY] = (sessionId: string) =>
-+    engine.list().find((agent) => agent.sessionId === sessionId)?.name;
- 
-   // The toolset acting as `selfName`. Deps are collected per call, so this stays independent
-   // of the order in which spawnAgent/updateStatus below are defined.
-@@ -281,12 +287,12 @@ export default function subagents(pi: ExtensionAPI) {
-   // ModelRuntime. ModelRuntime.create() with no args reads getAgentDir()/auth.json
-   // + models.json — the SAME credentials and models the foreground uses. subagents()
-   // is synchronous, so build asynchronously and expose the runtime via a promise;
--  // find()/getAvailable() below read the registry synchronously once refresh() lands
--  // (well before the first spawn), and guard against the brief pre-ready window.
-+  // ModelRuntime.create() initializes the local/cached model snapshot before resolving,
-+  // so find()/getAvailable() below can read the registry synchronously afterward and
-+  // guard against the brief pre-ready window.
-   let modelRegistry: ModelRegistry | undefined;
--  const modelRuntimeReady = ModelRuntime.create().then(async (runtime) => {
-+  const modelRuntimeReady = ModelRuntime.create().then((runtime) => {
-     modelRegistry = new ModelRegistry(runtime);
--    await modelRegistry.refresh();
-     return runtime;
-   });
- 
-@@ -396,6 +402,7 @@ export default function subagents(pi: ExtensionAPI) {
-           name: a.name,
-           model: a.model,
-           thinkingLevel: a.thinkingLevel,
-+          fastEffective: readFastState(a.sessionId)?.effective,
-           context: formatContext(a.view?.getContextUsage()),
-           status: agentStatus(a),
-           customStatus: a.customStatus,
-@@ -403,7 +410,7 @@ export default function subagents(pi: ExtensionAPI) {
-           targets: formatSendTargets(matrix, a.name, live),
-         })),
-         width,
--        { styleStatus: styler },
-+        { display: { visibleWidth, sliceByColumn }, styleStatus: styler },
-       ).map((line) => truncateToWidth(line, width));
-       const running = background.filter(
-         (a) => agentStatus(a).kind === "working",
-@@ -439,6 +446,24 @@ export default function subagents(pi: ExtensionAPI) {
-     }
-   };
- 
-+  // Publish one aggregate background source over Pi's shared foreground extension bus. Raw work
-+  // is independent from terminal OSC policy, which is refreshed while work remains active.
-+  const activityPublisher = new ActivityPublisher({
-+    readActive: () => hasActiveBackgroundAgent(engine.list()),
-+    readTerminalProgressEnabled: async () => {
-+      if (!settingsMgr) settingsMgr = SettingsManager.create(cwd, realAgentDir);
-+      await settingsMgr.reload();
-+      return settingsMgr.getShowTerminalProgress();
-+    },
-+    emit: (update) => pi.events.emit(AGENT_ACTIVITY_UPDATE_EVENT, update),
-+  });
-+  const updateActivitySource = (force = false) => activityPublisher.notify(force);
-+  const clearActivityNotifier = installActivityNotifier(() => {
-+    updateActivitySource();
-+    updateStatus();
-+  });
-+  const clearActivityRequest = pi.events.on(AGENT_ACTIVITY_REQUEST_EVENT, () => updateActivitySource(true));
-+
-   // Tell a parent that its child broke. The child owes its parent a message that a failed turn
-   // will never send, so without this the parent waits forever (see error-notification.ts for the
-   // decision, including who is deliberately not told).
-@@ -467,9 +492,10 @@ export default function subagents(pi: ExtensionAPI) {
-     });
-   };
- 
--  // Update the status on every engine event.
-+  // Update the status and aggregate activity on every engine event.
-   const unsubscribeEngine = engine.subscribe((e) => {
-     if (e.type === "error") notifyParentOfError(e);
-+    updateActivitySource();
-     updateStatus();
-   });
-   // The roster widget hands pi fully composed lines truncated to the width they were built at,
-@@ -482,6 +508,9 @@ export default function subagents(pi: ExtensionAPI) {
-   const disposeHooks = () => {
-     process.stdout.off("resize", updateStatus);
-     unsubscribeEngine();
-+    clearActivityRequest();
-+    activityPublisher.dispose();
-+    clearActivityNotifier();
-   };
-   installProcessHooks(disposeHooks);
- 
-@@ -524,6 +553,7 @@ export default function subagents(pi: ExtensionAPI) {
-       spawnedBy: string;
-       model: unknown;
-       thinkingLevel?: ThinkingLevel;
-+      fast?: boolean;
-     },
-     existingFile?: string,
-   ): Promise<{ session: SessionLike; sessionFile?: string }> => {
-@@ -568,19 +598,17 @@ export default function subagents(pi: ExtensionAPI) {
-     let sm: SessionManager;
-     if (existingFile) {
-       sm = SessionManager.open(existingFile);
-+      // A manually renamed restored child owns its label; only unnamed sessions get the
-+      // generated actor name. appendSessionInfo is the supported SDK metadata API.
-+      if (!sm.getSessionName()) sm.appendSessionInfo(spec.name);
-       reconcileDangling(sm);
-     } else if (subDir) {
-       fs.mkdirSync(subDir, { recursive: true });
-       sm = SessionManager.create(cwd, subDir);
--      try {
--        (sm as { setSessionName?: (n: string) => void }).setSessionName?.(
--          spec.name,
--        );
--      } catch {
--        /* display name is cosmetic; ignore if unsupported */
--      }
-+      sm.appendSessionInfo(spec.name);
-     } else {
-       sm = SessionManager.inMemory(cwd);
-+      sm.appendSessionInfo(spec.name);
-     }
- 
-     // Leave the built-in tool allowlist unset so the agent inherits the full default
-@@ -599,8 +627,31 @@ export default function subagents(pi: ExtensionAPI) {
-       settingsManager: childSettings,
-     });
-     // SDK sessions do not start extension lifecycles until the host explicitly binds them.
--    await session.bindExtensions({ mode: "print" });
-+    // Bind first so codex-fast can register this session, then apply the inherited/explicit state
-+    // before any first prompt is delivered. Missing control is a visible capability failure.
-+    try {
-+      await session.bindExtensions({
-+        mode: "print",
-+        onError: (error) => {
-+          console.error(`Subagent extension error (${error.extensionPath}): ${error.error}`);
-+        },
-+      });
-+      const applied = setFastDesired(sm.getSessionId(), spec.fast ?? false);
-+      if (!applied.ok) throw new Error(applied.reason);
-+    } catch (error) {
-+      try {
-+        const runner = session.extensionRunner;
-+        if (runner.hasHandlers("session_shutdown")) {
-+          await runner.emit({ type: "session_shutdown", reason: "quit" });
-+        }
-+      } catch {
-+        /* Preserve the primary bind/control error. */
-+      }
-+      session.dispose();
-+      throw error;
-+    }
-     const managedSession: SessionLike = {
-+      sessionId: sm.getSessionId(),
-       sendAgentMessage: (message, options) =>
-         session.sendCustomMessage(toCustomAgentMessage(message), {
-           triggerTurn: true,
-@@ -648,7 +699,8 @@ export default function subagents(pi: ExtensionAPI) {
-     engine,
-     resolveModel,
-     createSession,
--    onActivity: updateStatus,
-+    getFastState: (sessionId) => readFastState(sessionId),
-+    onActivity: notifyActivity,
-     listAvailableModels: listModels,
-   });
- 
-@@ -727,8 +779,10 @@ export default function subagents(pi: ExtensionAPI) {
-             deriveStatus(session.messages as RawMessage[]) === "pausedMidTurn",
-         });
-         restored++;
--      } catch {
--        /* skip an unrestorable agent */
-+      } catch (error) {
-+        console.error(
-+          `Failed to restore subagent '${entry.name}': ${error instanceof Error ? error.message : String(error)}`,
-+        );
-       }
-     }
-     // Present the restored swarm as paused: one resume_subagents()/`/subagents-resume` reactivates it.
-@@ -845,10 +899,11 @@ export default function subagents(pi: ExtensionAPI) {
-       (s) => `${s.model.provider}/${s.model.id}`,
-     );
-     // Locate this main session's subagents dir (persistence + restore are keyed by it).
-+    let mainSessionId: string | undefined;
-     try {
--      const id = ctx.sessionManager.getSessionId();
-+      mainSessionId = ctx.sessionManager.getSessionId();
-       const dir = ctx.sessionManager.getSessionDir();
--      subDir = id && dir ? subagentsDir(dir, id) : undefined;
-+      subDir = mainSessionId && dir ? subagentsDir(dir, mainSessionId) : undefined;
-     } catch {
-       subDir = undefined;
-     }
-@@ -872,27 +927,41 @@ export default function subagents(pi: ExtensionAPI) {
-         createdAt: Date.now(),
-         turns: 0,
-         lastActivity: Date.now(),
-+        sessionId: mainSessionId,
-         view: {
-           getMessages: () => [], // main transcript = the main chat (not mirrored)
-           getContextUsage: () => mainState().usage, // globalThis-backed, survives /reload
-           subscribe: () => () => {},
-         },
-       });
-+    } else {
-+      const main = engine.get("main");
-+      if (main) main.sessionId = mainSessionId;
-     }
-     await restoreSwarm();
-+    updateActivitySource(true);
-+    await activityPublisher.refreshTerminalProgress();
-     updateStatus();
-   });
- 
-   pi.on("session_shutdown", async (event) => {
--    // A same-version /reload must retain the singleton's live children. Real foreground
--    // replacement/quit closes their runtimes but deliberately leaves roster.json intact.
--    if (event.reason === "reload") return;
--    disposeProcessHooks(disposeHooks);
-+    // A same-version /reload retains the singleton's live children, but this foreground runtime's
-+    // callbacks and event publisher must be detached. Retained child callbacks resolve the fresh
-+    // notifier through globalThis after the replacement extension loads.
-+    if (event.reason === "reload") {
-+      disposeProcessHooks(disposeHooks);
-+      return;
-+    }
-     const previousSubDir = subDir;
-     subDir = undefined;
-     await engine.shutdownAll();
--    if (previousSubDir) restoredSet().delete(previousSubDir);
-+    // Publish the inactive snapshot before detaching this runtime's publisher.
-+    updateActivitySource(true);
-     updateStatus();
-+    // Let the coalesced inactive snapshot reach the foreground bus before disposal.
-+    await new Promise<void>((resolve) => queueMicrotask(resolve));
-+    disposeProcessHooks(disposeHooks);
-+    if (previousSubDir) restoredSet().delete(previousSubDir);
-   });
- 
-   // Register the foreground tools for 'main'. set_status is background-only: main has
-diff --git a/extensions/actor-subagents/panel-logic.test.ts b/extensions/actor-subagents/panel-logic.test.ts
-index 075a4ce..2d8b847 100644
---- a/extensions/actor-subagents/panel-logic.test.ts
-+++ b/extensions/actor-subagents/panel-logic.test.ts
-@@ -128,15 +128,12 @@ test("formatRoster: aligns the status column across rows (shared name-column wid
- 	assert.equal(rows[0].indexOf("idle"), rows[1].indexOf("thinking")); // same x → aligned
- });
- 
--test("formatRoster: name middle-ellipsis keeps the distinguishing tail (shared-prefix names stay distinct)", () => {
--	const rows = formatRoster(
--		[re({ name: "risk-R-UniformApp-pipeline-5" }), re({ name: "risk-R-UniformApp-pipeline-7" })],
--		200,
--	);
--	assert.notEqual(rows[0], rows[1]); // tails preserved → distinguishable
--	assert.match(rows[0], /…/); // middle ellipsis applied (name > cap 24)
--	assert.match(rows[0], /5\b/);
--	assert.match(rows[1], /7\b/);
-+test("formatRoster: long agent names remain distinct without a fixed cap", () => {
-+	const names = ["risk-R-UniformApp-pipeline-5", "risk-R-UniformApp-pipeline-7"];
-+	const rows = formatRoster(names.map((name) => re({ name })), 200);
-+	assert.match(rows[0], new RegExp(names[0]));
-+	assert.match(rows[1], new RegExp(names[1]));
-+	assert.doesNotMatch(rows.join("\n"), /…/);
- });
- 
- test("formatRoster: reading order is name, system status, model, ETA, context, custom status, targets", () => {
-diff --git a/extensions/actor-subagents/panel-logic.ts b/extensions/actor-subagents/panel-logic.ts
-index ece98c8..b9f96a7 100644
---- a/extensions/actor-subagents/panel-logic.ts
-+++ b/extensions/actor-subagents/panel-logic.ts
-@@ -6,6 +6,7 @@ import {
- } from "./agent-message.ts";
- import { type AgentStatus, formatStatus } from "./agent-status.ts";
- import { formatEtaSuffix } from "./eta.ts";
-+import { FAST_ROSTER_MARKER } from "./fast-control.ts";
- import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
- 
- export interface ContextUsageLike {
-@@ -66,6 +67,8 @@ export interface RosterEntry {
- 	name: string;
- 	model: string;
- 	thinkingLevel?: ThinkingLevel;
-+	/** Effective Fast state; rendered directly after model@thinking. */
-+	fastEffective?: boolean;
- 	context: string;
- 	/** Structured system status (agent-status.ts); the row renders label + tone from it. */
- 	status: AgentStatus;
-@@ -135,30 +138,42 @@ export function formatModel(model: string | undefined, thinkingLevel: ThinkingLe
- // least informative first:
- //   targets → custom-status → context → eta → model
- // Alignment requires a roster-wide pass (column widths = max content across agents), so this
--// replaces any per-row formatting. Layout math is plain-text (ASCII content + single-width
--// glyphs); the status cell is styled only AFTER padding so ANSI never corrupts the widths.
--// Callers still wrap each line in the ANSI-aware truncateToWidth as a final overflow guard.
-+// replaces any per-row formatting. Layout uses terminal display columns so astral/emoji glyphs do
-+// not cause premature collapse; the status cell is styled only AFTER padding so ANSI never
-+// corrupts the widths. Callers still wrap each line in the ANSI-aware truncateToWidth as a final
-+// overflow guard.
-+
-+export interface RosterDisplayWidth {
-+	visibleWidth(text: string): number;
-+	sliceByColumn(text: string, startColumn: number, length: number, strict?: boolean): string;
-+}
- 
--const NAME_CAP = 24; // names beyond this are middle-elided (keeps the distinguishing tail)
-+const plainDisplay: RosterDisplayWidth = {
-+	visibleWidth: (text) => text.length,
-+	sliceByColumn: (text, start, length) => text.slice(start, start + length),
-+};
- export const CUSTOM_STATUS_MAX = 32; // hard cap on the agent-set status (also stated in the set_status prompt)
- const SYS_STATUS_CAP = 18;
- 
--/** Truncate to width with a trailing ellipsis (plain-text width). */
--function fitEnd(s: string, w: number): string {
-+/** Truncate to terminal display width with a trailing ellipsis. */
-+function fitEnd(s: string, w: number, display: RosterDisplayWidth): string {
- 	if (w <= 0) return "";
--	if (s.length <= w) return s;
--	return w === 1 ? "…" : `${s.slice(0, w - 1)}…`;
-+	if (display.visibleWidth(s) <= w) return s;
-+	return w === 1 ? "…" : `${display.sliceByColumn(s, 0, w - 1, true)}…`;
- }
- 
--/** Truncate to width keeping head + tail (middle ellipsis) — for names, whose tail distinguishes. */
--function fitMiddle(s: string, w: number): string {
-+/** Truncate to display width keeping head + tail — for names, whose tail distinguishes. */
-+function fitMiddle(s: string, w: number, display: RosterDisplayWidth): string {
- 	if (w <= 0) return "";
--	if (s.length <= w) return s;
-+	const total = display.visibleWidth(s);
-+	if (total <= w) return s;
- 	if (w === 1) return "…";
- 	const keep = w - 1;
--	const head = Math.ceil(keep / 2);
--	const tail = keep - head;
--	return `${s.slice(0, head)}…${tail > 0 ? s.slice(s.length - tail) : ""}`;
-+	const headWidth = Math.ceil(keep / 2);
-+	const tailWidth = keep - headWidth;
-+	const head = display.sliceByColumn(s, 0, headWidth, true);
-+	const tail = tailWidth > 0 ? display.sliceByColumn(s, total - tailWidth, tailWidth, true) : "";
-+	return `${head}…${tail}`;
- }
- 
- interface ColSpec {
-@@ -182,17 +197,24 @@ export function formatRoster(
- 	width: number,
- 	opts: {
- 		selectedIndex?: number;
-+		display?: RosterDisplayWidth;
- 		styleStatus?: (label: string, tone: StatusTone) => string;
- 		/** Applied to the selected row as a whole (e.g. a background highlight). */
- 		styleSelected?: (line: string) => string;
- 	} = {},
- ): string[] {
-+	const display = opts.display ?? plainDisplay;
- 	const styleStatus = opts.styleStatus ?? ((l) => l);
- 
- 	const cols: ColSpec[] = [
--		{ key: "name", collapseRank: 0, fit: "middle", cap: NAME_CAP, cellOf: (e) => e.name },
-+		{ key: "name", collapseRank: 0, fit: "middle", cellOf: (e) => e.name },
- 		{ key: "status", collapseRank: 0, fit: "end", cap: SYS_STATUS_CAP, cellOf: (e) => formatStatus(e.status) },
--		{ key: "model", collapseRank: 5, fit: "end", cellOf: (e) => formatModel(e.model, e.thinkingLevel) },
-+		{
-+			key: "model",
-+			collapseRank: 5,
-+			fit: "end",
-+			cellOf: (e) => `${formatModel(e.model, e.thinkingLevel)}${e.fastEffective ? ` ${FAST_ROSTER_MARKER}` : ""}`,
-+		},
- 		{ key: "eta", collapseRank: 4, fit: "end", cellOf: (e) => (e.etaTs != null ? formatEtaSuffix(e.etaTs) : "") },
- 		{ key: "context", collapseRank: 3, fit: "end", cellOf: (e) => e.context },
- 		{ key: "custom", collapseRank: 2, fit: "end", cap: CUSTOM_STATUS_MAX, cellOf: (e) => e.customStatus ?? "" },
-@@ -203,7 +225,7 @@ export function formatRoster(
- 	const widthOf = new Map<string, number>();
- 	for (const c of cols) {
- 		let w = 0;
--		for (const e of entries) w = Math.max(w, c.cellOf(e).length);
-+		for (const e of entries) w = Math.max(w, display.visibleWidth(c.cellOf(e)));
- 		widthOf.set(c.key, c.cap != null ? Math.min(w, c.cap) : w);
- 	}
- 
-@@ -228,11 +250,12 @@ export function formatRoster(
- 		const selected = opts.selectedIndex === i;
- 		const cells = visible.map((c) => {
- 			const w = widthOf.get(c.key) ?? 0;
--			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w).padEnd(w);
-+			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w, display);
-+			const padded = `${fitted}${" ".repeat(Math.max(0, w - display.visibleWidth(fitted)))}`;
- 			// Tone styling keys off the SYSTEM status only, applied after padding so widths stay exact.
- 			// The selected row is left plain: a background inside it ends with a background reset,
- 			// which would cut the row highlight in half.
--			return c.key === "status" && !selected ? styleStatus(fitted, statusTone(e.status)) : fitted;
-+			return c.key === "status" && !selected ? styleStatus(padded, statusTone(e.status)) : padded;
- 		});
- 		const line = cells.join(" ").replace(/ +$/, "");
- 		return selected && opts.styleSelected ? opts.styleSelected(line) : line;
-diff --git a/extensions/actor-subagents/panel.ts b/extensions/actor-subagents/panel.ts
-index 268a6c1..53e311f 100644
---- a/extensions/actor-subagents/panel.ts
-+++ b/extensions/actor-subagents/panel.ts
-@@ -15,7 +15,7 @@
-  * TranscriptDocument so pi's own line caches apply, and scrolled by pi's ScrollView so wheel,
-  * page and half-page movement behave exactly like the main chat.
-  */
--import { Editor, type EditorTheme, Key, matchesKey, ScrollView, truncateToWidth } from "@earendil-works/pi-tui";
-+import { Editor, type EditorTheme, Key, matchesKey, ScrollView, sliceByColumn, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
- import { isMouseReport, parseWheelEvent } from "./mouse-input.ts";
- import { nextInCycle } from "./next-in-cycle.ts";
- import { THINKING_LEVELS } from "./thinking-level.ts";
-@@ -27,6 +27,7 @@ import {
- } from "@earendil-works/pi-coding-agent";
- import { AGENT_MESSAGE_CUSTOM_TYPE } from "./agent-message.ts";
- import { renderAgentMessage } from "./agent-message-renderer.ts";
-+import { readFastState } from "./fast-control.ts";
- import { orderAgents } from "./agent-order.ts";
- import { agentStatus } from "./agent-status.ts";
- import type { Engine } from "./engine.ts";
-@@ -389,6 +390,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
- 					name: a.name,
- 					model: a.model,
- 					thinkingLevel: a.thinkingLevel,
-+					fastEffective: readFastState(a.sessionId)?.effective,
- 					context: formatContext(a.view?.getContextUsage()),
- 					status: agentStatus(a),
- 					customStatus: a.customStatus,
-@@ -397,6 +399,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
- 				})),
- 				width,
- 				{
-+					display: { visibleWidth, sliceByColumn },
- 					styleStatus: styler,
- 					selectedIndex,
- 					// Selection is a full-row highlight instead of a cursor glyph, so the roster starts
-diff --git a/extensions/actor-subagents/spawner.ts b/extensions/actor-subagents/spawner.ts
-index 32d55db..371a140 100644
---- a/extensions/actor-subagents/spawner.ts
-+++ b/extensions/actor-subagents/spawner.ts
-@@ -6,6 +6,7 @@
- import type { RoutedAgentMessage } from "./agent-message.ts";
- import type { StopReason } from "./agent-status.ts";
- import type { AgentHandle, AgentRecord, AgentView, Engine } from "./engine.ts";
-+import { describeFastState, type FastState } from "./fast-control.ts";
- import { formatReceiverStatus } from "./feed.ts";
- import { unknownModelMessage } from "./resolve-model.ts";
- import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
-@@ -23,6 +24,8 @@ function lastStopReason(messages: unknown[]): StopReason | undefined {
- 
- /** Minimal slice of an AgentSession that the orchestration needs. */
- export interface SessionLike {
-+	/** Live UUID used to address per-session extension controllers. */
-+	readonly sessionId?: string;
- 	/** Deliver peer traffic without representing it as a human-authored user message. */
- 	sendAgentMessage(
- 		message: RoutedAgentMessage,
-@@ -66,6 +69,8 @@ export interface SpawnSpec {
- 	model?: string;
- 	/** Optional override; omitted means inherit the spawning agent's effective level. */
- 	thinkingLevel?: ThinkingLevel;
-+	/** Optional Fast override; omitted means inherit the spawning session's desired state. */
-+	fast?: boolean;
- 	/** Optional first message: delivered atomically to the new agent right after spawn. */
- 	message?: string;
- }
-@@ -88,7 +93,10 @@ export interface SpawnerDeps {
- 		spawnedBy: string;
- 		model: unknown;
- 		thinkingLevel?: ThinkingLevel;
-+		fast: boolean;
- 	}) => Promise<{ session: SessionLike; sessionFile?: string }>;
-+	/** Read a live per-session Fast controller state. Omitted only by legacy test adapters. */
-+	getFastState?: (sessionId: string | undefined) => FastState | undefined;
- 	/** Called after every relevant activity (e.g. refresh the status footer). */
- 	onActivity?: () => void;
- }
-@@ -144,7 +152,7 @@ function createSessionCloser(session: SessionLike, detach: () => void = () => {}
- }
- 
- export function createSpawner(deps: SpawnerDeps): Spawner {
--	const { engine, resolveModel, createSession, onActivity, listAvailableModels } = deps;
-+	const { engine, resolveModel, createSession, getFastState, onActivity, listAvailableModels } = deps;
- 
- 	// Subscribe to a background session's lifecycle to refuse a paused agent's turns and
- 	// track the turn phase.
-@@ -190,6 +198,14 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
- 				// Surface the turn's terminal outcome at idle (error after retries / truncated).
- 				engine.setStopReason(name, lastStopReason(session.messages));
- 			}
-+			if (ev.type === "compaction_start") {
-+				const rec = engine.get(name);
-+				if (rec) rec.compacting = true;
-+			}
-+			if (ev.type === "compaction_end") {
-+				const rec = engine.get(name);
-+				if (rec) rec.compacting = false;
-+			}
- 			onActivity?.();
- 		});
- 	};
-@@ -212,15 +228,29 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
- 			// to fully stop. The child-only in-memory steeringMode "all" makes several queued
- 			// messages arrive at that boundary. Idle targets start a turn immediately.
- 			deliver: async (message) => {
--				void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch((e) =>
--					engine.reportError(name, e instanceof Error ? e.message : String(e)),
--				);
-+				// Mark work before the SDK emits agent_start; this covers a pending spawn and the
-+				// event-loop gap before a delivered turn starts. A delivery failure clears only this
-+				// speculative phase; compaction remains active until its own end event.
-+				engine.beginTurn(name);
-+				onActivity?.();
-+				void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch((e) => {
-+					engine.reportError(name, e instanceof Error ? e.message : String(e));
-+					onActivity?.();
-+				});
- 			},
- 			// A human-authored turn, steered in like peer traffic so a busy agent picks it up at its
- 			// next turn boundary instead of only when it fully stops. The promise resolves with the
- 			// prompted turn; the engine calls this fire-and-forget and reports a late failure.
- 			deliverUser: async (text) => {
--				await session.sendUserMessage(text);
-+				engine.beginTurn(name);
-+				onActivity?.();
-+				try {
-+					await session.sendUserMessage(text);
-+				} catch (error) {
-+					engine.reportError(name, error instanceof Error ? error.message : String(error));
-+					onActivity?.();
-+					throw error;
-+				}
- 			},
- 			// Bash first: abort() ends the agent loop but a tool already running keeps going, so a
- 			// pause that leaves a build or test run alive would not be a pause at all. A failing bash
-@@ -275,6 +305,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
- 			turns: 0,
- 			lastActivity: Date.now(),
- 			pausedMidTurn: spec.pausedMidTurn,
-+			sessionId: spec.session.sessionId,
- 		});
- 	};
- 
-@@ -283,21 +314,32 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
- 		const inheritRef = spec.model ?? spawner?.model;
- 		// The Map Is Not the Territory: inherit the observed effective level, not prior intent.
- 		const thinkingLevel = spec.thinkingLevel ?? spawner?.thinkingLevel;
-+		let desiredFast = spec.fast;
-+		if (desiredFast === undefined && getFastState) {
-+			const ownerFast = getFastState(spawner?.sessionId);
-+			if (!ownerFast) {
-+				return { ok: false, msg: `error: Fast controller for owner '${spawnerName}' is unavailable` };
-+			}
-+			desiredFast = ownerFast.desired;
-+		}
-+		desiredFast ??= false;
- 
- 		// 1) Reserve the name synchronously (atomic: duplicate/cap/depth) — closes races.
- 		const reserved = engine.reserve(spec.name, spawnerName);
- 		if (!reserved.ok) return { ok: false, msg: `error: ${reserved.reason}` };
-+		onActivity?.();
- 		// Identity, not just the name, distinguishes this reservation from a later re-spawn.
- 		const reservation = engine.get(spec.name);
- 
- 		const resolved = resolveModel(inheritRef);
- 		if (!resolved) {
- 			engine.release(spec.name);
-+			onActivity?.();
- 			return { ok: false, msg: `error: ${unknownModelMessage(inheritRef, listAvailableModels?.() ?? [])}` };
- 		}
- 
- 		// 2) Slow session creation (await). A concurrent send_message buffers meanwhile.
--		let session: SessionLike;
-+		let session: SessionLike | undefined;
- 		let sessionFile: string | undefined;
- 		try {
- 			({ session, sessionFile } = await createSession({
-@@ -306,12 +348,35 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
- 				spawnedBy: spawnerName,
- 				model: resolved.model,
- 				thinkingLevel,
-+				fast: desiredFast,
- 			}));
-+			if (getFastState) {
-+				const childFast = getFastState(session.sessionId);
-+				if (!childFast) throw new Error(`Fast controller for child '${spec.name}' is unavailable`);
-+				if (childFast.desired !== desiredFast) {
-+					throw new Error(`Fast controller for child '${spec.name}' did not apply desired state ${desiredFast}`);
-+				}
-+			}
- 		} catch (e) {
-+			if (session) {
-+				try {
-+					await createSessionCloser(session)();
-+				} catch {
-+					/* Preserve the primary creation/control error. */
-+				}
-+			}
-+
- 			if (engine.get(spec.name) === reservation) engine.release(spec.name);
-+			onActivity?.();
- 			return { ok: false, msg: `error: failed to start '${spec.name}': ${e instanceof Error ? e.message : String(e)}` };
- 		}
- 
-+		if (!session) {
-+			if (engine.get(spec.name) === reservation) engine.release(spec.name);
-+			onActivity?.();
-+			return { ok: false, msg: `error: failed to start '${spec.name}': child session was not created` };
-+		}
-+
- 		// A kill can win while session creation awaits. Close the orphan rather than attaching
- 		// it to a later reservation with the same name (Second-Order Thinking: avoid hidden work).
- 		if (engine.get(spec.name) !== reservation) {
-@@ -336,7 +401,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
- 			// Persisted to roster.json so a restart can rebuild this agent.
- 			systemPrompt: spec.systemPrompt,
- 			sessionFile,
-+			sessionId: session.sessionId,
- 		});
-+		onActivity?.();
- 
- 		// 4) Deliver the optional first message atomically (no race; the agent is registered).
- 		let sent = "";
-@@ -353,7 +420,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
- 			else sent = ` (initial message NOT delivered: ${outcome.reason})`;
- 		}
- 		const model = formatModelThinking(`${resolved.provider}/${resolved.id}`, session.thinkingLevel);
--		return { ok: true, msg: `spawned '${spec.name}' (model ${model})${sent}` };
-+		const childFast = getFastState?.(session.sessionId);
-+		const fast = childFast ? ` · ${describeFastState(childFast)}` : "";
-+		return { ok: true, msg: `spawned '${spec.name}' (model ${model}${fast})${sent}` };
- 	};
- 
- 	return { spawnAgent, restoreAgent };
 diff --git a/extensions/actor-subagents/activity.test.ts b/extensions/actor-subagents/activity.test.ts
 new file mode 100644
 index 0000000..ed108dd
@@ -1003,12 +103,12 @@ index 0000000..ed108dd
 +});
 diff --git a/extensions/actor-subagents/activity.ts b/extensions/actor-subagents/activity.ts
 new file mode 100644
-index 0000000..ccafe8e
+index 0000000..bb8860a
 --- /dev/null
 +++ b/extensions/actor-subagents/activity.ts
 @@ -0,0 +1,161 @@
 +/** Aggregate background work over Pi's shared foreground extension event bus. */
-+import type { AgentRecord } from "./engine.ts";
++import type { AgentRecord } from "./agent-record.ts";
 +
 +export const AGENT_ACTIVITY_UPDATE_EVENT = "pi.agent-activity.v1:update";
 +export const AGENT_ACTIVITY_REQUEST_EVENT = "pi.agent-activity.v1:request";
@@ -1025,14 +125,14 @@ index 0000000..ccafe8e
 +
 +/** A background record contributes while asynchronous work remains unsettled. */
 +export function isBackgroundAgentActive(
-+	rec: Pick<AgentRecord, "name" | "pending" | "activity" | "compacting">,
++	rec: Pick<AgentRecord, "name"> & Partial<Pick<AgentRecord, "pending" | "activity" | "compacting">>,
 +): boolean {
 +	return rec.name !== "main" && Boolean(rec.pending || rec.activity || rec.compacting);
 +}
 +
 +/** Union activity: concurrent records intentionally count as one wall-clock interval. */
 +export function hasActiveBackgroundAgent(
-+	records: Iterable<Pick<AgentRecord, "name" | "pending" | "activity" | "compacting">>,
++	records: Iterable<Pick<AgentRecord, "name"> & Partial<Pick<AgentRecord, "pending" | "activity" | "compacting">>>,
 +): boolean {
 +	for (const rec of records) {
 +		if (isBackgroundAgentActive(rec)) return true;
@@ -1168,6 +268,202 @@ index 0000000..ccafe8e
 +		/* Observability is best-effort and must never fail a child lifecycle event. */
 +	}
 +}
+diff --git a/extensions/actor-subagents/agent-record.ts b/extensions/actor-subagents/agent-record.ts
+index d6c20df..66b5247 100644
+--- a/extensions/actor-subagents/agent-record.ts
++++ b/extensions/actor-subagents/agent-record.ts
+@@ -77,6 +77,8 @@ export interface AgentRecord {
+ 	systemPrompt?: string;
+ 	/** Absolute path of this agent's session JSONL on disk (undefined for 'main' + in-memory). */
+ 	sessionFile?: string;
++	/** Live Pi session UUID used to address in-memory extension controllers; never persisted. */
++	sessionId?: string;
+ 	/**
+ 	 * Phase of the running turn (reasoning vs answer text vs tool run); undefined means no
+ 	 * turn is running. Single field for "is it working" AND "at what": a separate streaming
+@@ -89,6 +91,8 @@ export interface AgentRecord {
+ 	etaTs?: number;
+ 	/** Tool name while `activity === "tool"`. */
+ 	currentTool?: string;
++	/** Context compaction remains active even while model streaming is idle. */
++	compacting?: boolean;
+ 	/** Terminal reason of the last finished turn; drives the idle-time status (error/truncated). Cleared when a new turn starts. */
+ 	stopReason?: StopReason;
+ 	/**
+diff --git a/extensions/actor-subagents/agent-system-prompt.ts b/extensions/actor-subagents/agent-system-prompt.ts
+index 11f5ea5..8909ce0 100644
+--- a/extensions/actor-subagents/agent-system-prompt.ts
++++ b/extensions/actor-subagents/agent-system-prompt.ts
+@@ -16,10 +16,11 @@ export function agentSystemPrompt(
+     `You are agent "${name}" in a multi-agent system.`,
+     `You were spawned by "${spawnedBy}".`,
+     "You can talk to other agents with these tools:",
+-    "- spawn_subagent({name, systemPrompt, model?, thinkingLevel?, message}): create a subagent inside this session (message = its first task); omit model/thinkingLevel to inherit yours.",
++    "- spawn_subagent({name, systemPrompt, model?, thinkingLevel?, fast?, message}): create a subagent inside this session (message = its first task; omit fast unless the human operator explicitly requested an override; omission inherits your desired Fast state). Follow the active AGENTS.md model-routing policy when choosing model and thinking level; inheritance is only the fallback when no policy selects another route.",
+     '- send_message({to, content}): to is an array of agent names (multicast); fire-and-forget (e.g. ["main"]). It never waits for the reply, but it does report each receiver\'s state back to you.',
+     "- list_subagents(): see who exists.",
+     "- pause_subagents({names?}) / resume_subagents({names?}) / kill_subagents({names}): control the agents in your subtree (those you spawned, and theirs); each acts on the named agents' whole subtrees. Omitted names in pause/resume mean your direct children.",
++    "- set_fast({enabled, agent?}): change your Fast state or that of one directly owned child.",
+     "- set_status({status, etaMinutes?}): set your short status line (shown to others in list_subagents); empty string clears.",
+     "Messages you receive are prefixed with [message from <sender>].",
+     "",
+@@ -46,11 +47,11 @@ export function agentSystemPrompt(
+     "- If you are genuinely unsure (your task, a design decision, or a question another agent asked you), first try to resolve it yourself: explore the code, read docs, use your tools, or delegate to a peer/subagent.",
+     "- If it's a judgment only someone above you can make, escalate the question up to your spawner instead of fabricating an answer or a go-ahead. You cannot reach the user directly; uncertainty flows up the chain until it reaches someone (ultimately the user) who can decide.",
+     "",
+-    "Event-driven — do NOT poll or busy-wait: you run only when a message arrives. After you",
+-    "act, END YOUR TURN and go idle; you are automatically re-woken the moment another agent",
+-    "messages you. Never poll list_subagents in a loop or try to 'wait' for a subagent to finish",
+-    "— it wastes turns. If you spawned several agents, you are woken once per reply: track what",
+-    "is still outstanding and finish only when all expected replies are in. Inspect",
++    "Event-driven — do NOT poll or busy-wait: when no independent work remains and you need",
++    "another agent's reply, END YOUR TURN and go idle; you are automatically re-woken when it",
++    "messages you. Continue independent work while replies are outstanding. Never poll",
++    "list_subagents in a loop or try to 'wait' for a subagent to finish — it wastes turns.",
++    "If you spawned several agents, continue useful work while replies are outstanding; inspect",
+     "(list_subagents/subagent_history) only when you suspect a problem, not as a waiting mechanism.",
+     "",
+     systemPrompt,
+diff --git a/extensions/actor-subagents/agent-tools.ts b/extensions/actor-subagents/agent-tools.ts
+index 6ca8169..af173bb 100644
+--- a/extensions/actor-subagents/agent-tools.ts
++++ b/extensions/actor-subagents/agent-tools.ts
+@@ -19,6 +19,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
+ import { Text } from "@earendil-works/pi-tui";
+ import { Type } from "typebox";
+ import { orderAgents } from "./agent-order.ts";
++import { describeFastState, setOwnedAgentFast } from "./fast-control.ts";
+ import type { EngineResumeResult } from "./control-result.ts";
+ import type { Engine } from "./engine.ts";
+ import {
+@@ -34,6 +35,7 @@ import type { AgentModelSetter } from "./set-agent-model.ts";
+ import type { Spawner } from "./spawner.ts";
+ import { collapseBlock, toolPreviewParts } from "./tool-preview.ts";
+ import { THINKING_LEVELS } from "./thinking-level.ts";
++import { notifyActivity } from "./activity.ts";
+ 
+ // Tool-call preview that shows the FULL parameter content. Without a custom renderCall,
+ // pi's fallback for registered tools shows only the tool name (see ToolExecutionComponent
+@@ -130,11 +132,14 @@ export function makeAgentTools(
+         "Create a subagent — a helper that runs inside your current session. Give it a system prompt and its first message (the task). " +
+         "It can then be messaged by name. The result briefly checks whether the new agent picked its task up and " +
+         "reports its state ('idle (no reaction)' means it received the task but did not start a turn). " +
+-        "Event-driven & fire-and-forget: after spawning, END YOUR TURN — you are automatically re-woken when an agent " +
+-        "messages you back. Do NOT poll list_subagents or wait in a loop for completion; it wastes turns. Inspect " +
++        "Event-driven & fire-and-forget: continue independent work after spawning. When no independent work remains " +
++        "and you need the agent's reply, END YOUR TURN; you are automatically re-woken when it messages you. Do NOT " +
++        "poll list_subagents or wait in a loop for completion; it wastes turns. Inspect " +
+         "(list_subagents/subagent_history) only if you suspect something went wrong. The new agent's first reply will be " +
+         "its understanding of the task plus clarification questions, then it waits — reply using send_message " +
+-        "(go-ahead + any corrections) to unblock its work." +
++        "(go-ahead + any corrections) to unblock its work. Follow the active AGENTS.md model-routing policy when choosing " +
++        "model and thinking level; inheritance is only the fallback when no policy selects another route." +
++
+         // Only main can reach the human; subagents escalate uncertainty up their own chain instead.
+         (selfName === "main"
+           ? " If a spawned agent asks something you can't confidently answer yourself, ask the user rather than guessing."
+@@ -147,14 +152,21 @@ export function makeAgentTools(
+         model: Type.Optional(
+           Type.String({
+             description:
+-              "Omit to inherit your current model (the default — almost always correct). Set 'provider/id' " +
+-              "ONLY when the user explicitly named a specific model; a wrong value returns the available list.",
++              "Omit to inherit when no active routing policy selects another model. Otherwise pass the 'provider/id' " +
++              "selected by AGENTS.md or explicitly requested by the user; a wrong value returns the available list.",
+           }),
+         ),
+         thinkingLevel: Type.Optional(
+           StringEnum(THINKING_LEVELS, {
+             description:
+-              "often described as <model>@<thinking level>. Omit to inherit your current effective thinking level / effort.",
++              "often described as <model>@<thinking level>. Omit to inherit the spawning agent's effective level. Otherwise " +
++              "set the level selected by AGENTS.md or the user; Pi clamps it to the target model's capabilities.",
++          }),
++        ),
++        fast: Type.Optional(
++          Type.Boolean({
++            description:
++              "Omit unless the human operator explicitly requested an override; omission inherits this session's desired Fast state",
+           }),
+         ),
+         // Required, not optional: an agent that receives no message never gets a turn and
+@@ -171,6 +183,7 @@ export function makeAgentTools(
+             systemPrompt: args.systemPrompt,
+             model: args.model,
+             thinkingLevel: args.thinkingLevel,
++            fast: args.fast,
+             message: args.message,
+           },
+           selfName,
+@@ -195,8 +208,8 @@ export function makeAgentTools(
+         "reply, only briefly for the receiver to pick the message up, and then reports each receiver's state back: a " +
+         "working state (thinking/writing/tool) means it is running a turn, 'idle (no reaction)' means it took the " +
+         "message but did not start one, and buffered/gone mean it is paused or no longer exists. " +
+-        "After sending, END YOUR TURN — you are automatically re-woken if a reply arrives. Do NOT poll or wait in a " +
+-        "loop; inspect only if you suspect a problem.",
++        "After sending, continue independent work. When no independent work remains and you need a reply, END YOUR TURN; " +
++        "you are automatically re-woken if a reply arrives. Do NOT poll or wait in a loop; inspect only if you suspect a problem.",
+       parameters: Type.Object({
+         // Array-only, not a Union: weak models drop `to` entirely when the schema is
+         // anyOf(string, array). A flat array removes the choice and is type-honest.
+@@ -457,6 +470,37 @@ export function makeAgentTools(
+         return { content: [{ type: "text", text }], details: {} };
+       },
+     }),
++    defineTool({
++      name: "set_fast",
++      label: "Set Fast",
++      renderCall: (args, theme, context) =>
++        renderToolArgs(
++          "set_fast",
++          args as Record<string, unknown>,
++          theme as RenderTheme,
++          context?.expanded ?? false,
++        ),
++      description:
++        "Change Codex Fast mode for yourself, or for one directly owned child. " +
++        "The change affects the target's next provider request, not a request already streaming.",
++      parameters: Type.Object({
++        enabled: Type.Boolean({ description: "Desired Fast state" }),
++        agent: Type.Optional(
++          Type.String({ description: "Directly owned child to change; omit to change yourself" }),
++        ),
++      }),
++      execute: async (_id, args) => {
++        const result = setOwnedAgentFast(engine.list(), selfName, args.agent, args.enabled);
++        if (!result.ok) {
++          return { content: [{ type: "text", text: `error: ${result.reason}` }], details: {} };
++        }
++        notifyActivity();
++        return {
++          content: [{ type: "text", text: `${result.agent}: ${describeFastState(result.state)}` }],
++          details: {},
++        };
++      },
++    }),
+     defineTool({
+       name: "set_status",
+       label: "Set Status",
+diff --git a/extensions/actor-subagents/engine.ts b/extensions/actor-subagents/engine.ts
+index d28ac18..b6d4573 100644
+--- a/extensions/actor-subagents/engine.ts
++++ b/extensions/actor-subagents/engine.ts
+@@ -178,6 +178,7 @@ export class Engine {
+ 			reconfigure?: AgentRecord["reconfigure"];
+ 			systemPrompt?: string;
+ 			sessionFile?: string;
++			sessionId?: string;
+ 		},
+ 	): void {
+ 		const rec = this.agents.get(name);
+@@ -190,6 +191,7 @@ export class Engine {
+ 		rec.reconfigure = opts.reconfigure;
+ 		rec.systemPrompt = opts.systemPrompt;
+ 		rec.sessionFile = opts.sessionFile;
++		rec.sessionId = opts.sessionId;
+ 		rec.pending = false;
+ 		const buffered = rec.buffer ?? [];
+ 		rec.buffer = undefined;
 diff --git a/extensions/actor-subagents/fast-control.test.ts b/extensions/actor-subagents/fast-control.test.ts
 new file mode 100644
 index 0000000..71d5500
@@ -1352,3 +648,781 @@ index 0000000..93a21e2
 +	const reason = state.desired && !state.effective ? `; unsupported model: ${model}` : `; model: ${model}`;
 +	return `Fast desired ${desired}; effective ${effective}${reason}`;
 +}
+diff --git a/extensions/actor-subagents/feed.ts b/extensions/actor-subagents/feed.ts
+index 1a3bd96..f1c2ba0 100644
+--- a/extensions/actor-subagents/feed.ts
++++ b/extensions/actor-subagents/feed.ts
+@@ -8,6 +8,7 @@ import type { AgentRecord } from "./agent-record.ts";
+ import type { ControlResult, EngineResumeResult } from "./control-result.ts";
+ import type { Reaction } from "./engine.ts";
+ import { formatCustomStatus } from "./eta.ts";
++import { describeFastState, FAST_ROSTER_MARKER, readFastState } from "./fast-control.ts";
+ import { formatModelThinking } from "./thinking-level.ts";
+ 
+ /** Compact relative age: 3s / 4m / 2h. */
+@@ -78,6 +79,13 @@ export function formatSnapshot(
+ 		const rel = relTo(a, viewer, viewerParent);
+ 		const queued = a.pending && a.buffer && a.buffer.length > 0 ? `, ${a.buffer.length} queued` : "";
+ 		const model = formatModelThinking(a.model, a.thinkingLevel);
++		const fastState = readFastState(a.sessionId);
++		const modelFast = `${model}${fastState?.effective ? ` ${FAST_ROSTER_MARKER}` : ""}`;
++		const fastDetails = fastState
++			? ` · ${describeFastState(fastState)}`
++			: a.sessionId
++				? " · Fast unavailable"
++				: "";
+ 		// The foreground agent's turns are pi's own, not this engine's, and it has no spawner —
+ 		// printing "turns:0 (by main)" for it would state two things that are not true.
+ 		const isMain = a.name === "main";
+@@ -86,7 +94,7 @@ export function formatSnapshot(
+ 		return (
+ 			`  ${nameCell(o).padEnd(nameW)} ${rel.padEnd(6)} ${fit(status, statusW)} ` +
+ 			`turns:${turns.padEnd(3)} ctx:${ctx.padEnd(4)} last ${formatAge(now - a.lastActivity).padEnd(4)} ` +
+-			`${model}  ${origin}`
++			`${modelFast}${fastDetails}  ${origin}`
+ 		);
+ 	});
+ 	return ["agents:", ...rows].join("\n");
+diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
+index 7da91f3..94f4391 100644
+--- a/extensions/actor-subagents/index.ts
++++ b/extensions/actor-subagents/index.ts
+@@ -16,7 +16,7 @@ import {
+   SessionManager,
+   SettingsManager,
+ } from "@earendil-works/pi-coding-agent";
+-import { truncateToWidth } from "@earendil-works/pi-tui";
++import { sliceByColumn, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+ import {
+   AGENT_MESSAGE_CUSTOM_TYPE,
+   createRoutedAgentMessage,
+@@ -24,12 +24,14 @@ import {
+   type RoutedAgentMessage,
+ } from "./agent-message.ts";
+ import { renderAgentMessage } from "./agent-message-renderer.ts";
++import { ActivityPublisher, AGENT_ACTIVITY_REQUEST_EVENT, AGENT_ACTIVITY_UPDATE_EVENT, hasActiveBackgroundAgent, installActivityNotifier, notifyActivity } from "./activity.ts";
+ import { orderAgents } from "./agent-order.ts";
+ import { agentSystemPrompt } from "./agent-system-prompt.ts";
+ import { makeAgentTools } from "./agent-tools.ts";
+ import type { AgentHandle } from "./agent-record.ts";
+ import type { EngineResumeResult } from "./control-result.ts";
+ import { Engine } from "./engine.ts";
++import { readFastState, setFastDesired } from "./fast-control.ts";
+ import { errorNotification } from "./error-notification.ts";
+ import {
+   formatControlResult,
+@@ -162,7 +164,10 @@ const RESUME_NUDGE = (now: Date) => {
+ //      records. pause/resume/kill/retune take the acting agent first; pause/resume/kill take a
+ //      names list and return per-target outcomes; pause aborts the stopped turns itself and
+ //      resume is async, waiting for those aborts. A v25 instance would keep a swarm-wide pause this code can no longer lift.
+-const ENGINE_KEY = "__subagentsEngine_v26";
++// v27: the live session UUID and compaction flags join AgentRecord; old singleton records
++//      cannot supply Fast ownership or accurate activity after a same-process reload.
++const ENGINE_KEY = "__subagentsEngine_v27";
++const AGENT_NAME_LOOKUP_KEY = Symbol.for("futile.pi.subagents.agent-name-lookup.v1");
+ 
+ function getEngine(): Engine {
+   const g = globalThis as Record<string, unknown>;
+@@ -254,6 +259,9 @@ function disposeProcessHooks(dispose: () => void): void {
+ 
+ export default function subagents(pi: ExtensionAPI) {
+   const engine = getEngine();
++  // Context-pressure resolves retained child session IDs through this live, reload-safe bridge.
++  (globalThis as Record<symbol, unknown>)[AGENT_NAME_LOOKUP_KEY] = (sessionId: string) =>
++    engine.list().find((agent) => agent.sessionId === sessionId)?.name;
+ 
+   // The toolset acting as `selfName`. Deps are collected per call, so this stays independent
+   // of the order in which spawnAgent/updateStatus below are defined.
+@@ -292,12 +300,12 @@ export default function subagents(pi: ExtensionAPI) {
+   // ModelRuntime. ModelRuntime.create() with no args reads getAgentDir()/auth.json
+   // + models.json — the SAME credentials and models the foreground uses. subagents()
+   // is synchronous, so build asynchronously and expose the runtime via a promise;
+-  // find()/getAvailable() below read the registry synchronously once refresh() lands
+-  // (well before the first spawn), and guard against the brief pre-ready window.
++  // ModelRuntime.create() initializes the local/cached model snapshot before resolving,
++  // so find()/getAvailable() below can read the registry synchronously afterward and
++  // guard against the brief pre-ready window.
+   let modelRegistry: ModelRegistry | undefined;
+-  const modelRuntimeReady = ModelRuntime.create().then(async (runtime) => {
++  const modelRuntimeReady = ModelRuntime.create().then((runtime) => {
+     modelRegistry = new ModelRegistry(runtime);
+-    await modelRegistry.refresh();
+     return runtime;
+   });
+ 
+@@ -409,6 +417,7 @@ export default function subagents(pi: ExtensionAPI) {
+           depth: rosterDepth(depth),
+           model: a.model,
+           thinkingLevel: a.thinkingLevel,
++          fastEffective: readFastState(a.sessionId)?.effective,
+           context: formatContext(a.view?.getContextUsage()),
+           status: engine.status(a),
+           customStatus: a.customStatus,
+@@ -416,7 +425,7 @@ export default function subagents(pi: ExtensionAPI) {
+           targets: formatSendTargets(matrix, a.name, live),
+         })),
+         width,
+-        { styleStatus: styler },
++        { display: { visibleWidth, sliceByColumn }, styleStatus: styler },
+       ).map((line) => truncateToWidth(line, width));
+       const running = background.filter(
+         (o) => engine.status(o.agent).kind === "working",
+@@ -443,6 +452,24 @@ export default function subagents(pi: ExtensionAPI) {
+     }
+   };
+ 
++  // Publish one aggregate background source over Pi's shared foreground extension bus. Raw work
++  // is independent from terminal OSC policy, which is refreshed while work remains active.
++  const activityPublisher = new ActivityPublisher({
++    readActive: () => hasActiveBackgroundAgent(engine.list()),
++    readTerminalProgressEnabled: async () => {
++      if (!settingsMgr) settingsMgr = SettingsManager.create(cwd, realAgentDir);
++      await settingsMgr.reload();
++      return settingsMgr.getShowTerminalProgress();
++    },
++    emit: (update) => pi.events.emit(AGENT_ACTIVITY_UPDATE_EVENT, update),
++  });
++  const updateActivitySource = (force = false) => activityPublisher.notify(force);
++  const clearActivityNotifier = installActivityNotifier(() => {
++    updateActivitySource();
++    updateStatus();
++  });
++  const clearActivityRequest = pi.events.on(AGENT_ACTIVITY_REQUEST_EVENT, () => updateActivitySource(true));
++
+   // Tell a parent that its child broke. The child owes its parent a message that a failed turn
+   // will never send, so without this the parent waits forever (see error-notification.ts for the
+   // decision, including who is deliberately not told).
+@@ -471,9 +498,10 @@ export default function subagents(pi: ExtensionAPI) {
+     });
+   };
+ 
+-  // Update the status on every engine event.
++  // Update the status and aggregate activity on every engine event.
+   const unsubscribeEngine = engine.subscribe((e) => {
+     if (e.type === "error") notifyParentOfError(e);
++    updateActivitySource();
+     updateStatus();
+   });
+   // The roster widget hands pi fully composed lines truncated to the width they were built at,
+@@ -486,6 +514,9 @@ export default function subagents(pi: ExtensionAPI) {
+   const disposeHooks = () => {
+     process.stdout.off("resize", updateStatus);
+     unsubscribeEngine();
++    clearActivityRequest();
++    activityPublisher.dispose();
++    clearActivityNotifier();
+   };
+   installProcessHooks(disposeHooks);
+ 
+@@ -528,6 +559,7 @@ export default function subagents(pi: ExtensionAPI) {
+       spawnedBy: string;
+       model: unknown;
+       thinkingLevel?: ThinkingLevel;
++      fast?: boolean;
+     },
+     existingFile?: string,
+   ): Promise<{ session: SessionLike; sessionFile?: string }> => {
+@@ -572,19 +604,17 @@ export default function subagents(pi: ExtensionAPI) {
+     let sm: SessionManager;
+     if (existingFile) {
+       sm = SessionManager.open(existingFile);
++      // A manually renamed restored child owns its label; only unnamed sessions get the
++      // generated actor name. appendSessionInfo is the supported SDK metadata API.
++      if (!sm.getSessionName()) sm.appendSessionInfo(spec.name);
+       reconcileDangling(sm);
+     } else if (subDir) {
+       fs.mkdirSync(subDir, { recursive: true });
+       sm = SessionManager.create(cwd, subDir);
+-      try {
+-        (sm as { setSessionName?: (n: string) => void }).setSessionName?.(
+-          spec.name,
+-        );
+-      } catch {
+-        /* display name is cosmetic; ignore if unsupported */
+-      }
++      sm.appendSessionInfo(spec.name);
+     } else {
+       sm = SessionManager.inMemory(cwd);
++      sm.appendSessionInfo(spec.name);
+     }
+ 
+     // Leave the built-in tool allowlist unset so the agent inherits the full default
+@@ -603,8 +633,31 @@ export default function subagents(pi: ExtensionAPI) {
+       settingsManager: childSettings,
+     });
+     // SDK sessions do not start extension lifecycles until the host explicitly binds them.
+-    await session.bindExtensions({ mode: "print" });
++    // Bind first so codex-fast can register this session, then apply the inherited/explicit state
++    // before any first prompt is delivered. Missing control is a visible capability failure.
++    try {
++      await session.bindExtensions({
++        mode: "print",
++        onError: (error) => {
++          console.error(`Subagent extension error (${error.extensionPath}): ${error.error}`);
++        },
++      });
++      const applied = setFastDesired(sm.getSessionId(), spec.fast ?? false);
++      if (!applied.ok) throw new Error(applied.reason);
++    } catch (error) {
++      try {
++        const runner = session.extensionRunner;
++        if (runner.hasHandlers("session_shutdown")) {
++          await runner.emit({ type: "session_shutdown", reason: "quit" });
++        }
++      } catch {
++        /* Preserve the primary bind/control error. */
++      }
++      session.dispose();
++      throw error;
++    }
+     const managedSession: SessionLike = {
++      sessionId: sm.getSessionId(),
+       sendAgentMessage: (message, options) =>
+         session.sendCustomMessage(toCustomAgentMessage(message), {
+           triggerTurn: true,
+@@ -652,7 +705,8 @@ export default function subagents(pi: ExtensionAPI) {
+     engine,
+     resolveModel,
+     createSession,
+-    onActivity: updateStatus,
++    getFastState: (sessionId) => readFastState(sessionId),
++    onActivity: notifyActivity,
+     listAvailableModels: listModels,
+   });
+ 
+@@ -731,8 +785,10 @@ export default function subagents(pi: ExtensionAPI) {
+           pausedMidTurn:
+             deriveStatus(session.messages as RawMessage[]) === "pausedMidTurn",
+         });
+-      } catch {
+-        /* skip an unrestorable agent */
++      } catch (error) {
++        console.error(
++          `Failed to restore subagent '${entry.name}': ${error instanceof Error ? error.message : String(error)}`,
++        );
+       }
+     }
+     // Present the restored swarm as paused: pausing main's direct children holds every restored
+@@ -822,10 +878,11 @@ export default function subagents(pi: ExtensionAPI) {
+       (s) => `${s.model.provider}/${s.model.id}`,
+     );
+     // Locate this main session's subagents dir (persistence + restore are keyed by it).
++    let mainSessionId: string | undefined;
+     try {
+-      const id = ctx.sessionManager.getSessionId();
++      mainSessionId = ctx.sessionManager.getSessionId();
+       const dir = ctx.sessionManager.getSessionDir();
+-      subDir = id && dir ? subagentsDir(dir, id) : undefined;
++      subDir = mainSessionId && dir ? subagentsDir(dir, mainSessionId) : undefined;
+     } catch {
+       subDir = undefined;
+     }
+@@ -849,27 +906,41 @@ export default function subagents(pi: ExtensionAPI) {
+         createdAt: Date.now(),
+         turns: 0,
+         lastActivity: Date.now(),
++        sessionId: mainSessionId,
+         view: {
+           getMessages: () => [], // main transcript = the main chat (not mirrored)
+           getContextUsage: () => mainState().usage, // globalThis-backed, survives /reload
+           subscribe: () => () => {},
+         },
+       });
++    } else {
++      const main = engine.get("main");
++      if (main) main.sessionId = mainSessionId;
+     }
+     await restoreSwarm();
++    updateActivitySource(true);
++    await activityPublisher.refreshTerminalProgress();
+     updateStatus();
+   });
+ 
+   pi.on("session_shutdown", async (event) => {
+-    // A same-version /reload must retain the singleton's live children. Real foreground
+-    // replacement/quit closes their runtimes but deliberately leaves roster.json intact.
+-    if (event.reason === "reload") return;
+-    disposeProcessHooks(disposeHooks);
++    // A same-version /reload retains the singleton's live children, but this foreground runtime's
++    // callbacks and event publisher must be detached. Retained child callbacks resolve the fresh
++    // notifier through globalThis after the replacement extension loads.
++    if (event.reason === "reload") {
++      disposeProcessHooks(disposeHooks);
++      return;
++    }
+     const previousSubDir = subDir;
+     subDir = undefined;
+     await engine.shutdownAll();
+-    if (previousSubDir) restoredSet().delete(previousSubDir);
++    // Publish the inactive snapshot before detaching this runtime's publisher.
++    updateActivitySource(true);
+     updateStatus();
++    // Let the coalesced inactive snapshot reach the foreground bus before disposal.
++    await new Promise<void>((resolve) => queueMicrotask(resolve));
++    disposeProcessHooks(disposeHooks);
++    if (previousSubDir) restoredSet().delete(previousSubDir);
+   });
+ 
+   // Register the foreground tools for 'main'. set_status is background-only: main has
+diff --git a/extensions/actor-subagents/panel-logic.test.ts b/extensions/actor-subagents/panel-logic.test.ts
+index f0d77ea..9b70823 100644
+--- a/extensions/actor-subagents/panel-logic.test.ts
++++ b/extensions/actor-subagents/panel-logic.test.ts
+@@ -128,15 +128,12 @@ test("formatRoster: aligns the status column across rows (shared name-column wid
+ 	assert.equal(rows[0].indexOf("idle"), rows[1].indexOf("thinking")); // same x → aligned
+ });
+ 
+-test("formatRoster: name middle-ellipsis keeps the distinguishing tail (shared-prefix names stay distinct)", () => {
+-	const rows = formatRoster(
+-		[re({ name: "risk-R-UniformApp-pipeline-5" }), re({ name: "risk-R-UniformApp-pipeline-7" })],
+-		200,
+-	);
+-	assert.notEqual(rows[0], rows[1]); // tails preserved → distinguishable
+-	assert.match(rows[0], /…/); // middle ellipsis applied (name > cap 24)
+-	assert.match(rows[0], /5\b/);
+-	assert.match(rows[1], /7\b/);
++test("formatRoster: long agent names remain distinct without a fixed cap", () => {
++	const names = ["risk-R-UniformApp-pipeline-5", "risk-R-UniformApp-pipeline-7"];
++	const rows = formatRoster(names.map((name) => re({ name })), 200);
++	assert.match(rows[0], new RegExp(names[0]));
++	assert.match(rows[1], new RegExp(names[1]));
++	assert.doesNotMatch(rows.join("\n"), /…/);
+ });
+ 
+ test("formatRoster: reading order is name, system status, model, ETA, context, custom status, targets", () => {
+@@ -338,9 +335,9 @@ test("formatRoster: indent keeps the columns aligned", () => {
+ 	assert.equal(rows[0].indexOf("x/y"), rows[1].indexOf("x/y"));
+ });
+ 
+-test("formatRoster: the indent adds to the name cap, so a deep name is not elided more", () => {
++test("formatRoster: a deep name keeps its complete text", () => {
+ 	const long = "a".repeat(30);
+ 	const flat = formatRoster([re({ name: long, depth: 0 })], 200)[0];
+ 	const deep = formatRoster([re({ name: long, depth: 3 })], 200)[0];
+-	assert.equal(deep, `   ${flat}`); // same 24-char name cell, only shifted by the indent
++	assert.equal(deep, `   ${flat}`); // same full name, only shifted by the indent
+ });
+diff --git a/extensions/actor-subagents/panel-logic.ts b/extensions/actor-subagents/panel-logic.ts
+index d21d51a..3f560e8 100644
+--- a/extensions/actor-subagents/panel-logic.ts
++++ b/extensions/actor-subagents/panel-logic.ts
+@@ -6,6 +6,7 @@ import {
+ } from "./agent-message.ts";
+ import { type AgentStatus, formatStatus } from "./agent-status.ts";
+ import { formatEtaSuffix } from "./eta.ts";
++import { FAST_ROSTER_MARKER } from "./fast-control.ts";
+ import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
+ 
+ export interface ContextUsageLike {
+@@ -71,6 +72,8 @@ export interface RosterEntry {
+ 	depth: number;
+ 	model: string;
+ 	thinkingLevel?: ThinkingLevel;
++	/** Effective Fast state; rendered directly after model@thinking. */
++	fastEffective?: boolean;
+ 	context: string;
+ 	/** Structured system status (agent-status.ts); the row renders label + tone from it. */
+ 	status: AgentStatus;
+@@ -141,33 +144,44 @@ export function formatModel(model: string | undefined, thinkingLevel: ThinkingLe
+ // at all. The rest collapse — whole column dropped, all rows — when the terminal is too narrow,
+ // least informative first:
+ //   targets → custom-status → context → eta → model
+-// The name cell carries the spawn-tree indent (one space per depth level), added on top of the
+-// name's own cap so nesting never costs name characters.
++// The name cell carries the spawn-tree indent (one space per depth level).
+ // Alignment requires a roster-wide pass (column widths = max content across agents), so this
+-// replaces any per-row formatting. Layout math is plain-text (ASCII content + single-width
+-// glyphs); the status cell is styled only AFTER padding so ANSI never corrupts the widths.
+-// Callers still wrap each line in the ANSI-aware truncateToWidth as a final overflow guard.
++// replaces any per-row formatting. Layout uses terminal display columns so astral/emoji glyphs do
++// not cause premature collapse; the status cell is styled only AFTER padding so ANSI never
++// corrupts the widths. Callers still wrap each line in the ANSI-aware truncateToWidth as a final
++// overflow guard.
++
++export interface RosterDisplayWidth {
++	visibleWidth(text: string): number;
++	sliceByColumn(text: string, startColumn: number, length: number, strict?: boolean): string;
++}
+ 
+-const NAME_CAP = 24; // names beyond this are middle-elided (keeps the distinguishing tail)
++const plainDisplay: RosterDisplayWidth = {
++	visibleWidth: (text) => text.length,
++	sliceByColumn: (text, start, length) => text.slice(start, start + length),
++};
+ export const CUSTOM_STATUS_MAX = 32; // hard cap on the agent-set status (also stated in the set_status prompt)
+ const SYS_STATUS_CAP = 18;
+ 
+-/** Truncate to width with a trailing ellipsis (plain-text width). */
+-function fitEnd(s: string, w: number): string {
++/** Truncate to terminal display width with a trailing ellipsis. */
++function fitEnd(s: string, w: number, display: RosterDisplayWidth): string {
+ 	if (w <= 0) return "";
+-	if (s.length <= w) return s;
+-	return w === 1 ? "…" : `${s.slice(0, w - 1)}…`;
++	if (display.visibleWidth(s) <= w) return s;
++	return w === 1 ? "…" : `${display.sliceByColumn(s, 0, w - 1, true)}…`;
+ }
+ 
+-/** Truncate to width keeping head + tail (middle ellipsis) — for names, whose tail distinguishes. */
+-function fitMiddle(s: string, w: number): string {
++/** Truncate to display width keeping head + tail — for names, whose tail distinguishes. */
++function fitMiddle(s: string, w: number, display: RosterDisplayWidth): string {
+ 	if (w <= 0) return "";
+-	if (s.length <= w) return s;
++	const total = display.visibleWidth(s);
++	if (total <= w) return s;
+ 	if (w === 1) return "…";
+ 	const keep = w - 1;
+-	const head = Math.ceil(keep / 2);
+-	const tail = keep - head;
+-	return `${s.slice(0, head)}…${tail > 0 ? s.slice(s.length - tail) : ""}`;
++	const headWidth = Math.ceil(keep / 2);
++	const tailWidth = keep - headWidth;
++	const head = display.sliceByColumn(s, 0, headWidth, true);
++	const tail = tailWidth > 0 ? display.sliceByColumn(s, total - tailWidth, tailWidth, true) : "";
++	return `${head}…${tail}`;
+ }
+ 
+ interface ColSpec {
+@@ -191,11 +205,13 @@ export function formatRoster(
+ 	width: number,
+ 	opts: {
+ 		selectedIndex?: number;
++		display?: RosterDisplayWidth;
+ 		styleStatus?: (label: string, tone: StatusTone) => string;
+ 		/** Applied to the selected row as a whole (e.g. a background highlight). */
+ 		styleSelected?: (line: string) => string;
+ 	} = {},
+ ): string[] {
++	const display = opts.display ?? plainDisplay;
+ 	const styleStatus = opts.styleStatus ?? ((l) => l);
+ 
+ 	const cols: ColSpec[] = [
+@@ -203,11 +219,15 @@ export function formatRoster(
+ 			key: "name",
+ 			collapseRank: 0,
+ 			fit: "middle",
+-			// Cap the name itself, then prefix the indent: the column is NAME_CAP + deepest indent wide.
+-			cellOf: (e) => `${" ".repeat(e.depth)}${fitMiddle(e.name, NAME_CAP)}`,
++			cellOf: (e) => `${" ".repeat(e.depth)}${e.name}`,
+ 		},
+ 		{ key: "status", collapseRank: 0, fit: "end", cap: SYS_STATUS_CAP, cellOf: (e) => formatStatus(e.status) },
+-		{ key: "model", collapseRank: 5, fit: "end", cellOf: (e) => formatModel(e.model, e.thinkingLevel) },
++		{
++			key: "model",
++			collapseRank: 5,
++			fit: "end",
++			cellOf: (e) => `${formatModel(e.model, e.thinkingLevel)}${e.fastEffective ? ` ${FAST_ROSTER_MARKER}` : ""}`,
++		},
+ 		{ key: "eta", collapseRank: 4, fit: "end", cellOf: (e) => (e.etaTs != null ? formatEtaSuffix(e.etaTs) : "") },
+ 		{ key: "context", collapseRank: 3, fit: "end", cellOf: (e) => e.context },
+ 		{ key: "custom", collapseRank: 2, fit: "end", cap: CUSTOM_STATUS_MAX, cellOf: (e) => e.customStatus ?? "" },
+@@ -218,7 +238,7 @@ export function formatRoster(
+ 	const widthOf = new Map<string, number>();
+ 	for (const c of cols) {
+ 		let w = 0;
+-		for (const e of entries) w = Math.max(w, c.cellOf(e).length);
++		for (const e of entries) w = Math.max(w, display.visibleWidth(c.cellOf(e)));
+ 		widthOf.set(c.key, c.cap != null ? Math.min(w, c.cap) : w);
+ 	}
+ 
+@@ -243,11 +263,12 @@ export function formatRoster(
+ 		const selected = opts.selectedIndex === i;
+ 		const cells = visible.map((c) => {
+ 			const w = widthOf.get(c.key) ?? 0;
+-			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w).padEnd(w);
++			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w, display);
++			const padded = `${fitted}${" ".repeat(Math.max(0, w - display.visibleWidth(fitted)))}`;
+ 			// Tone styling keys off the SYSTEM status only, applied after padding so widths stay exact.
+ 			// The selected row is left plain: a background inside it ends with a background reset,
+ 			// which would cut the row highlight in half.
+-			return c.key === "status" && !selected ? styleStatus(fitted, statusTone(e.status)) : fitted;
++			return c.key === "status" && !selected ? styleStatus(padded, statusTone(e.status)) : padded;
+ 		});
+ 		const line = cells.join(" ").replace(/ +$/, "");
+ 		return selected && opts.styleSelected ? opts.styleSelected(line) : line;
+diff --git a/extensions/actor-subagents/panel.ts b/extensions/actor-subagents/panel.ts
+index e1e76e4..55ab852 100644
+--- a/extensions/actor-subagents/panel.ts
++++ b/extensions/actor-subagents/panel.ts
+@@ -15,7 +15,7 @@
+  * TranscriptDocument so pi's own line caches apply, and scrolled by pi's ScrollView so wheel,
+  * page and half-page movement behave exactly like the main chat.
+  */
+-import { Editor, type EditorTheme, Key, matchesKey, ScrollView, truncateToWidth } from "@earendil-works/pi-tui";
++import { Editor, type EditorTheme, Key, matchesKey, ScrollView, sliceByColumn, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+ import { isMouseReport, parseWheelEvent } from "./mouse-input.ts";
+ import { nextInCycle } from "./next-in-cycle.ts";
+ import { THINKING_LEVELS } from "./thinking-level.ts";
+@@ -27,6 +27,7 @@ import {
+ } from "@earendil-works/pi-coding-agent";
+ import { AGENT_MESSAGE_CUSTOM_TYPE } from "./agent-message.ts";
+ import { renderAgentMessage } from "./agent-message-renderer.ts";
++import { readFastState } from "./fast-control.ts";
+ import { orderAgents } from "./agent-order.ts";
+ import type { Engine } from "./engine.ts";
+ import {
+@@ -394,6 +395,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
+ 					depth: rosterDepth(depth),
+ 					model: a.model,
+ 					thinkingLevel: a.thinkingLevel,
++					fastEffective: readFastState(a.sessionId)?.effective,
+ 					context: formatContext(a.view?.getContextUsage()),
+ 					status: deps.engine.status(a),
+ 					customStatus: a.customStatus,
+@@ -402,6 +404,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
+ 				})),
+ 				width,
+ 				{
++					display: { visibleWidth, sliceByColumn },
+ 					styleStatus: styler,
+ 					selectedIndex,
+ 					// Selection is a full-row highlight instead of a cursor glyph, so the roster starts
+diff --git a/extensions/actor-subagents/spawner.test.ts b/extensions/actor-subagents/spawner.test.ts
+index bf477c8..0aa94a7 100644
+--- a/extensions/actor-subagents/spawner.test.ts
++++ b/extensions/actor-subagents/spawner.test.ts
+@@ -6,6 +6,7 @@ import { errorNotification } from "./error-notification.ts";
+ import { createSpawner, type SessionLike, type ThinkingLevel } from "./spawner.ts";
+ 
+ class FakeSession implements SessionLike {
++	sessionId?: string;
+ 	delivered: RoutedAgentMessage[] = [];
+ 	userMessages: string[] = [];
+ 	aborted = 0;
+@@ -644,3 +645,37 @@ test("an abort while idle does not mask an error in a later run", async () => {
+ 	session.emit("agent_settled");
+ 	assert.equal(engine.get("beta")?.stopReason, "error");
+ });
++
++
++test("spawn inherits its owner's desired Fast state and honors explicit overrides", async () => {
++	const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3 });
++	withMain(engine, []);
++	engine.get("main")!.sessionId = "main-session";
++	const states = new Map([
++		["main-session", { desired: true, effective: true }],
++	]);
++	const requested: Array<{ name: string; fast: boolean }> = [];
++	const spawner = createSpawner({
++		engine,
++		resolveModel: () => ({ provider: "test", id: "m", model: {} }),
++		getFastState: (id) => id ? states.get(id) : undefined,
++		createSession: async (spec) => {
++			requested.push({ name: spec.name, fast: spec.fast });
++			const session = new FakeSession();
++			session.sessionId = `${spec.name}-session`;
++			states.set(session.sessionId, { desired: spec.fast, effective: spec.fast });
++			return { session };
++		},
++	});
++	assert.equal((await spawner.spawnAgent({ name: "first", systemPrompt: "" }, "main")).ok, true);
++	assert.equal((await spawner.spawnAgent({ name: "nested", systemPrompt: "" }, "first")).ok, true);
++	assert.equal((await spawner.spawnAgent({ name: "disabled", systemPrompt: "", fast: false }, "first")).ok, true);
++	assert.deepEqual(requested, [
++		{ name: "first", fast: true },
++		{ name: "nested", fast: true },
++		{ name: "disabled", fast: false },
++	]);
++	states.delete("main-session");
++	assert.match((await spawner.spawnAgent({ name: "unavailable", systemPrompt: "" }, "main")).msg, /controller.*unavailable/);
++	assert.equal(engine.has("unavailable"), false);
++});
+diff --git a/extensions/actor-subagents/spawner.ts b/extensions/actor-subagents/spawner.ts
+index 5d01b02..e3ccac0 100644
+--- a/extensions/actor-subagents/spawner.ts
++++ b/extensions/actor-subagents/spawner.ts
+@@ -7,6 +7,7 @@ import type { RoutedAgentMessage } from "./agent-message.ts";
+ import type { StopReason } from "./agent-status.ts";
+ import type { AgentHandle, AgentRecord, AgentView } from "./agent-record.ts";
+ import type { Engine } from "./engine.ts";
++import { describeFastState, type FastState } from "./fast-control.ts";
+ import { formatReceiverStatus } from "./feed.ts";
+ import { unknownModelMessage } from "./resolve-model.ts";
+ import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
+@@ -28,6 +29,8 @@ function lastAssistantOutcome(
+ 
+ /** Minimal slice of an AgentSession that the orchestration needs. */
+ export interface SessionLike {
++	/** Live UUID used to address per-session extension controllers. */
++	readonly sessionId?: string;
+ 	/** Deliver peer traffic without representing it as a human-authored user message. */
+ 	sendAgentMessage(
+ 		message: RoutedAgentMessage,
+@@ -71,6 +74,8 @@ export interface SpawnSpec {
+ 	model?: string;
+ 	/** Optional override; omitted means inherit the spawning agent's effective level. */
+ 	thinkingLevel?: ThinkingLevel;
++	/** Optional Fast override; omitted means inherit the spawning session's desired state. */
++	fast?: boolean;
+ 	/** Optional first message: delivered atomically to the new agent right after spawn. */
+ 	message?: string;
+ }
+@@ -93,7 +98,10 @@ export interface SpawnerDeps {
+ 		spawnedBy: string;
+ 		model: unknown;
+ 		thinkingLevel?: ThinkingLevel;
++		fast: boolean;
+ 	}) => Promise<{ session: SessionLike; sessionFile?: string }>;
++	/** Read a live per-session Fast controller state. Omitted only by legacy test adapters. */
++	getFastState?: (sessionId: string | undefined) => FastState | undefined;
+ 	/** Called after every relevant activity (e.g. refresh the status footer). */
+ 	onActivity?: () => void;
+ }
+@@ -149,7 +157,7 @@ function createSessionCloser(session: SessionLike, detach: () => void = () => {}
+ }
+ 
+ export function createSpawner(deps: SpawnerDeps): Spawner {
+-	const { engine, resolveModel, createSession, onActivity, listAvailableModels } = deps;
++	const { engine, resolveModel, createSession, getFastState, onActivity, listAvailableModels } = deps;
+ 
+ 	// Subscribe to a background session's lifecycle to refuse a paused agent's turns and
+ 	// track the turn phase.
+@@ -214,6 +222,14 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 				const stopReason = run.abortRequested && outcome?.stopReason === "error" ? "aborted" : outcome?.stopReason;
+ 				engine.setStopReason(name, stopReason, outcome?.errorMessage);
+ 			}
++			if (ev.type === "compaction_start") {
++				const rec = engine.get(name);
++				if (rec) rec.compacting = true;
++			}
++			if (ev.type === "compaction_end") {
++				const rec = engine.get(name);
++				if (rec) rec.compacting = false;
++			}
+ 			onActivity?.();
+ 		});
+ 	};
+@@ -237,15 +253,29 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			// to fully stop. The child-only in-memory steeringMode "all" makes several queued
+ 			// messages arrive at that boundary. Idle targets start a turn immediately.
+ 			deliver: async (message) => {
+-				void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch((e) =>
+-					engine.reportError(name, e instanceof Error ? e.message : String(e)),
+-				);
++				// Mark work before the SDK emits agent_start; this covers a pending spawn and the
++				// event-loop gap before a delivered turn starts. A delivery failure clears only this
++				// speculative phase; compaction remains active until its own end event.
++				engine.beginTurn(name);
++				onActivity?.();
++				void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch((e) => {
++					engine.reportError(name, e instanceof Error ? e.message : String(e));
++					onActivity?.();
++				});
+ 			},
+ 			// A human-authored turn, steered in like peer traffic so a busy agent picks it up at its
+ 			// next turn boundary instead of only when it fully stops. The promise resolves with the
+ 			// prompted turn; the engine calls this fire-and-forget and reports a late failure.
+ 			deliverUser: async (text) => {
+-				await session.sendUserMessage(text);
++				engine.beginTurn(name);
++				onActivity?.();
++				try {
++					await session.sendUserMessage(text);
++				} catch (error) {
++					engine.reportError(name, error instanceof Error ? error.message : String(error));
++					onActivity?.();
++					throw error;
++				}
+ 			},
+ 			// Bash first: abort() ends the agent loop but a tool already running keeps going, so a
+ 			// pause that leaves a build or test run alive would not be a pause at all. A failing bash
+@@ -305,6 +335,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			turns: 0,
+ 			lastActivity: Date.now(),
+ 			pausedMidTurn: spec.pausedMidTurn,
++			sessionId: spec.session.sessionId,
+ 		});
+ 	};
+ 
+@@ -313,21 +344,32 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 		const inheritRef = spec.model ?? spawner?.model;
+ 		// The Map Is Not the Territory: inherit the observed effective level, not prior intent.
+ 		const thinkingLevel = spec.thinkingLevel ?? spawner?.thinkingLevel;
++		let desiredFast = spec.fast;
++		if (desiredFast === undefined && getFastState) {
++			const ownerFast = getFastState(spawner?.sessionId);
++			if (!ownerFast) {
++				return { ok: false, msg: `error: Fast controller for owner '${spawnerName}' is unavailable` };
++			}
++			desiredFast = ownerFast.desired;
++		}
++		desiredFast ??= false;
+ 
+ 		// 1) Reserve the name synchronously (atomic: duplicate/cap/depth) — closes races.
+ 		const reserved = engine.reserve(spec.name, spawnerName);
+ 		if (!reserved.ok) return { ok: false, msg: `error: ${reserved.reason}` };
++		onActivity?.();
+ 		// Identity, not just the name, distinguishes this reservation from a later re-spawn.
+ 		const reservation = engine.get(spec.name);
+ 
+ 		const resolved = resolveModel(inheritRef);
+ 		if (!resolved) {
+ 			engine.release(spec.name);
++			onActivity?.();
+ 			return { ok: false, msg: `error: ${unknownModelMessage(inheritRef, listAvailableModels?.() ?? [])}` };
+ 		}
+ 
+ 		// 2) Slow session creation (await). A concurrent send_message buffers meanwhile.
+-		let session: SessionLike;
++		let session: SessionLike | undefined;
+ 		let sessionFile: string | undefined;
+ 		try {
+ 			({ session, sessionFile } = await createSession({
+@@ -336,12 +378,35 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 				spawnedBy: spawnerName,
+ 				model: resolved.model,
+ 				thinkingLevel,
++				fast: desiredFast,
+ 			}));
++			if (getFastState) {
++				const childFast = getFastState(session.sessionId);
++				if (!childFast) throw new Error(`Fast controller for child '${spec.name}' is unavailable`);
++				if (childFast.desired !== desiredFast) {
++					throw new Error(`Fast controller for child '${spec.name}' did not apply desired state ${desiredFast}`);
++				}
++			}
+ 		} catch (e) {
++			if (session) {
++				try {
++					await createSessionCloser(session)();
++				} catch {
++					/* Preserve the primary creation/control error. */
++				}
++			}
++
+ 			if (engine.get(spec.name) === reservation) engine.release(spec.name);
++			onActivity?.();
+ 			return { ok: false, msg: `error: failed to start '${spec.name}': ${e instanceof Error ? e.message : String(e)}` };
+ 		}
+ 
++		if (!session) {
++			if (engine.get(spec.name) === reservation) engine.release(spec.name);
++			onActivity?.();
++			return { ok: false, msg: `error: failed to start '${spec.name}': child session was not created` };
++		}
++
+ 		// A kill can win while session creation awaits. Close the orphan rather than attaching
+ 		// it to a later reservation with the same name (Second-Order Thinking: avoid hidden work).
+ 		if (engine.get(spec.name) !== reservation) {
+@@ -366,7 +431,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			// Persisted to roster.json so a restart can rebuild this agent.
+ 			systemPrompt: spec.systemPrompt,
+ 			sessionFile,
++			sessionId: session.sessionId,
+ 		});
++		onActivity?.();
+ 
+ 		// 4) Deliver the optional first message atomically (no race; the agent is registered).
+ 		let sent = "";
+@@ -383,7 +450,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			else sent = ` (initial message NOT delivered: ${outcome.reason})`;
+ 		}
+ 		const model = formatModelThinking(`${resolved.provider}/${resolved.id}`, session.thinkingLevel);
+-		return { ok: true, msg: `spawned '${spec.name}' (model ${model})${sent}` };
++		const childFast = getFastState?.(session.sessionId);
++		const fast = childFast ? ` · ${describeFastState(childFast)}` : "";
++		return { ok: true, msg: `spawned '${spec.name}' (model ${model}${fast})${sent}` };
+ 	};
+ 
+ 	return { spawnAgent, restoreAgent };
