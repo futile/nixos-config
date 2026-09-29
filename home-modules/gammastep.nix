@@ -14,7 +14,11 @@
     provider = "manual";
 
     # Loerick, Duesseldorf
-    latitude = "51.246389";
-    longitude = "6.727778";
+    # latitude = "51.246389";
+    # longitude = "6.727778";
+
+    # Saint Francois, Guadeloupe
+    latitude = "16.25";
+    longitude = "-61.27";
   };
 }

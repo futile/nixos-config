@@ -107,7 +107,8 @@ in
 
   time = {
     # Set your time zone.
-    timeZone = "Europe/Berlin";
+    #timeZone = "Europe/Berlin";
+    timeZone = "America/Guadeloupe";
     # timeZone = "Asia/Bangkok";
 
     # For dualbooting with Windows
