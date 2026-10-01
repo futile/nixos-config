@@ -1,0 +1,30 @@
+--- a/src/blender_mcp/bundled/addon.py
++++ b/src/blender_mcp/bundled/addon.py
+@@ -6111,6 +6111,8 @@
+ 
+ def _start_addon_update_check():
+     """Start a check from the main thread; the sidebar redraws when it lands."""
++    return  # Updates are managed by Nix, not GitHub's main branch.
++
+     if _addon_update["status"] == "checking":
+         return
+     _addon_update["status"] = "checking"
+@@ -6126,6 +6128,8 @@
+ 
+ def install_addon_update(target_path, source):
+     """Replace the addon file, keeping the old one beside it as .bak."""
++    raise RuntimeError("This add-on is managed by Nix; update it through Nix.")
++
+     if addon_release_key(source) is None:
+         raise ValueError("Refusing to install: not an MCP for Blender addon")
+     compile(source, "addon.py", "exec")
+@@ -6138,6 +6142,9 @@
+ 
+ def draw_addon_update(layout):
++    layout.label(text="Add-on updates are managed by Nix", icon='INFO')
++    return
++
+     status = _addon_update["status"]
+     version = _addon_update["version"]
+     here = addon_version_label(_local_release_key())
+     if status == "available":

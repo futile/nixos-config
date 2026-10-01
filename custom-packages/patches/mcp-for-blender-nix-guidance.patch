@@ -1,0 +1,107 @@
+--- a/src/blender_mcp/addon_manager.py
++++ b/src/blender_mcp/addon_manager.py
+@@ -73,7 +73,7 @@
+ 
+ 
+ _UPDATE_HINT = (
+-    "Run `uvx mcp-for-blender install-addon` to update it, then in Blender: "
++    "Update and activate your Nix/Home Manager configuration, then in Blender: "
+     "Preferences → Add-ons → disable and re-enable 'Interface: MCP for Blender' "
+     "(or restart Blender) and click Start MCP Server."
+ )
+@@ -113,7 +113,7 @@
+                 reason="not_installed",
+                 message=(
+                     "MCP for Blender addon not found in any Blender addons folder. "
+-                    "Run `uvx mcp-for-blender install-addon` to install it."
++                    "Enable my.blenderMcp in Home Manager and activate your configuration."
+                 ),
+             )
+ 
+@@ -397,7 +397,7 @@
+             warning = (
+                 f"Blender addon protocol {protocol_i!r} is behind "
+                 f"expected {EXPECTED_ADDON_PROTOCOL_VERSION}. "
+-                "Run `uvx mcp-for-blender install-addon` to update it, then "
++                "Update and activate your Nix/Home Manager configuration, then "
+                 "restart Blender or disable/enable 'Interface: MCP for Blender', "
+                 "then Start MCP Server. Trajectory still works via fallbacks."
+             )
+@@ -416,7 +416,7 @@
+         if "unknown command" in msg or "get_addon_info" in msg:
+             warning = (
+                 "Blender addon is outdated (no get_addon_info). "
+-                "Run `uvx mcp-for-blender install-addon` to update it, then "
++                "Update and activate your Nix/Home Manager configuration, then "
+                 "restart Blender or disable/enable 'Interface: MCP for Blender', "
+                 "then Start MCP Server. Fallbacks keep working in the meantime."
+             )
+--- a/tests/test_addon_manager.py
++++ b/tests/test_addon_manager.py
+@@ -148,7 +148,7 @@
+ 
+     assert report.needs_action is True
+     assert str(stale) in report.outdated_paths
+-    assert "install-addon" in report.message
++    assert "Nix/Home Manager" in report.message
+     # The whole point of detect-and-tell: nothing on disk changed.
+     assert stale.read_bytes() == before
+     assert sorted(p.name for p in addons.iterdir()) == listing_before
+@@ -179,7 +179,7 @@
+     report = am.check_addon_status_on_startup()
+     assert report.missing is True
+     assert report.needs_action is True
+-    assert "install-addon" in report.message
++    assert "my.blenderMcp" in report.message
+ 
+ 
+ def test_install_updates_extensions_dir_when_addon_lives_there(
+--- a/src/blender_mcp/server.py
++++ b/src/blender_mcp/server.py
+@@ -27,6 +27,7 @@
+     run_cli as run_addon_cli,
+     EXPECTED_ADDON_PROTOCOL_VERSION,
+     check_addon_status_on_startup,
++    _UPDATE_HINT,
+ )
+ from .consent_prompt import maybe_prompt_for_consent
+ from .premium_hint import premium_hint_once, premium_generation_guidance
+@@ -440,7 +441,7 @@
+     `premium_generators` lists the 3D generators MCP for Blender Premium has on; when it is
+     non-empty the reply ends with guidance on when to generate instead of using libraries.
+ 
+-    If outdated, tells the user how to update via `uvx mcp-for-blender install-addon`
++    If outdated, tells the user to update and activate their Nix/Home Manager configuration
+     (then restart or re-enable the addon in Blender).
+ 
+     `telemetry_consent` reports whether data collection is on, off, or null if
+@@ -466,7 +467,8 @@
+             "source": result.source,
+             "warning": result.warning,
+             "telemetry_consent": get_telemetry().check_user_consent(),
+-            "update_command": "uvx mcp-for-blender install-addon",
++            "update_command": None,
++            "update_instructions": _UPDATE_HINT,
+             "after_install": (
+                 "If the addon file was updated: in Blender, Preferences → Add-ons → "
+                 "disable/enable 'Interface: Blender MCP', or restart Blender, then Start MCP Server."
+@@ -2131,8 +2133,8 @@
+         return f"Error generating Hunyuan3D task: {str(e)}"
+ 
+ 
+-TRIPO_UNAVAILABLE = ("Tripo is only available with MCP for Blender Premium. If Premium is on, update the Blender "
+-                     "addon: run `uvx mcp-for-blender install-addon`, then restart Blender.")
++TRIPO_UNAVAILABLE = ("Tripo is only available with MCP for Blender Premium. If Premium is on: "
++                     + _UPDATE_HINT)
+ 
+ 
+ def _tripo_error(action: str, e: Exception) -> str:
+@@ -2570,7 +2572,7 @@
+             "It will now wait silently for a client on stdin -- that is normal, "
+             "not a hang. Press Ctrl-C to exit. "
+             "Setup guide: https://github.com/ahujasid/blender-mcp#installation "
+-            "(if the addon is outdated this logs how to update it: uvx mcp-for-blender install-addon)"
++            "(if the addon is outdated, update and activate your Nix/Home Manager configuration)"
+         )
+     mcp.run()
+ 

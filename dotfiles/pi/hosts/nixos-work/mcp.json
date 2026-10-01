@@ -16,6 +16,10 @@
       ],
       "lifecycle": "lazy"
     },
+    "blender": {
+      "command": "mcp-for-blender",
+      "lifecycle": "lazy"
+    },
     "codebase-memory-mcp": {
       "command": "codebase-memory-mcp",
       "env": {

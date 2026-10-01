@@ -188,6 +188,7 @@
         gascity = pkgsForSystem.callPackage ./custom-packages/gascity.nix { };
         headroom = withRustSccache (pkgsForSystem.callPackage ./custom-packages/headroom.nix { });
         llm-wiki = withRustSccache (pkgsForSystem.callPackage ./custom-packages/llm-wiki.nix { });
+        mcp-for-blender = pkgsForSystem.callPackage ./custom-packages/mcp-for-blender.nix { };
         mex = pkgsForSystem.callPackage ./custom-packages/mex.nix { };
         phinger-cursors-extended =
           pkgsForSystem.callPackage ./custom-packages/phinger-cursors-extended.nix

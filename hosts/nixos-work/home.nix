@@ -46,6 +46,7 @@ in
       "${home-modules}/fish.nix"
       "${home-modules}/nushell.nix"
       "${home-modules}/desktop-common.nix"
+      "${home-modules}/blender-mcp.nix"
       "${home-modules}/desktop-gdrive.nix"
       "${home-modules}/signal-desktop.nix"
       "${home-modules}/halloy.nix"
@@ -129,6 +130,11 @@ in
     autostart = false;
   };
 
+  my.blenderMcp = {
+    enable = true;
+    blenderPackage = pkgs.nixpkgs-unstable.blender;
+  };
+
   my.gascity = {
     enable = true;
     supervisor.installOnActivation = true;
@@ -201,7 +207,6 @@ in
           # zotero
           # my-custom-packages.llm-wiki
           # protonvpn-cli
-          nixpkgs-unstable.blender
           my-custom-packages.tiled-xcb
           nixpkgs-unstable.process-compose
           my-custom-packages.mgba-xcb

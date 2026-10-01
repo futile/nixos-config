@@ -48,6 +48,7 @@ let
       gascity = final.callPackage ../custom-packages/gascity.nix { };
       headroom = final.callPackage ../custom-packages/headroom.nix { };
       llm-wiki = final.callPackage ../custom-packages/llm-wiki.nix { };
+      mcp-for-blender = final.callPackage ../custom-packages/mcp-for-blender.nix { };
       mex = final.callPackage ../custom-packages/mex.nix { };
       mgba-xcb = final.lib.my.mkWrappedWithDeps {
         pkg = final.nixpkgs-unstable.mgba;
