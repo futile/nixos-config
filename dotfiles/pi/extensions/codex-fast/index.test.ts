@@ -30,7 +30,7 @@ class FakePi {
 
 function fakeContext(
   sessionId: string,
-  model: { provider: string; id: string } | undefined = { provider: "openai-codex", id: "gpt-5.6-sol" },
+  model: { provider: string; id: string } | undefined = { provider: "openai-codex", id: "gpt-6.1-sol" },
   hasUI = true,
 ) {
   const statuses: Array<[string, string | undefined]> = [];
@@ -202,7 +202,7 @@ test("a fresh session with a reused id starts with Fast off", async () => {
   assert.deepEqual(getFastController("session-fresh")?.getState(), {
     desired: false,
     effective: false,
-    model: { provider: "openai-codex", id: "gpt-5.6-sol" },
+    model: { provider: "openai-codex", id: "gpt-6.1-sol" },
   });
   await second.emit("session_shutdown", { type: "session_shutdown", reason: "quit" }, secondContext.ctx);
 });

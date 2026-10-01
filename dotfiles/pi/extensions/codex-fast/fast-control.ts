@@ -36,7 +36,7 @@ function registry(): FastRegistry {
 }
 
 export function isFastEligibleModel(model: FastModel | undefined): boolean {
-  return model?.provider === "openai-codex" && /^gpt-5\.(?:4|5|6)(?:$|[-.])/i.test(model.id);
+  return model?.provider === "openai-codex" && model.id.startsWith("gpt-");
 }
 
 export function fastState(desired: boolean, model: FastModel | undefined): FastState {

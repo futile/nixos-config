@@ -9,14 +9,18 @@ import {
   type FastController,
 } from "./fast-control.ts";
 
-test("Fast eligibility is limited to openai-codex GPT-5.4 through GPT-5.6 families", () => {
-  for (const id of ["gpt-5.4", "gpt-5.4-codex", "gpt-5.5", "gpt-5.6-sol", "gpt-5.6-luna"]) {
+test("Fast eligibility covers all openai-codex gpt- models", () => {
+  for (const id of [
+    "gpt-5.3-codex", "gpt-5.4", "gpt-5.4-codex", "gpt-5.5", "gpt-5.6-sol", "gpt-5.6-luna",
+    "gpt-5.7", "gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra", "gpt-6-sol", "gpt-future-model",
+  ]) {
     assert.equal(isFastEligibleModel({ provider: "openai-codex", id }), true, id);
   }
   for (const model of [
     { provider: "openai", id: "gpt-5.6-sol" },
-    { provider: "openai-codex", id: "gpt-5.3-codex" },
-    { provider: "openai-codex", id: "gpt-5.7" },
+    { provider: "openai-codex", id: "gpt6-sol" },
+    { provider: "openai-codex", id: "not-gpt-6-sol" },
+    { provider: "openai-codex", id: "" },
     { provider: "anthropic", id: "claude-opus-4-6" },
     undefined,
   ]) {
@@ -25,10 +29,10 @@ test("Fast eligibility is limited to openai-codex GPT-5.4 through GPT-5.6 famili
 });
 
 test("request rewriting adds only the priority service tier when Fast is effective", () => {
-  const eligible = fastState(true, { provider: "openai-codex", id: "gpt-5.6-sol" });
-  const original = { model: "gpt-5.6-sol", input: [], reasoning: { effort: "high" }, verbosity: "medium" };
+  const eligible = fastState(true, { provider: "openai-codex", id: "gpt-6.1-sol" });
+  const original = { model: "gpt-6.1-sol", input: [], reasoning: { effort: "high" }, verbosity: "medium" };
   assert.deepEqual(applyFastToPayload(original, eligible), { ...original, service_tier: "priority" });
-  assert.deepEqual(original, { model: "gpt-5.6-sol", input: [], reasoning: { effort: "high" }, verbosity: "medium" });
+  assert.deepEqual(original, { model: "gpt-6.1-sol", input: [], reasoning: { effort: "high" }, verbosity: "medium" });
 
   assert.equal(applyFastToPayload(original, fastState(false, eligible.model)), undefined);
   assert.equal(
