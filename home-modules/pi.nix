@@ -32,9 +32,9 @@ in
       description = "Host-specific Pi settings.json source path.";
     };
 
-    mcpJson = lib.mkOption {
+    mcpAdapterJson = lib.mkOption {
       type = lib.types.str;
-      description = "Host-specific Pi MCP configuration source path.";
+      description = "Host-specific pi-mcp-adapter configuration source path.";
     };
   };
 
@@ -49,8 +49,8 @@ in
         force = true;
       };
 
-      ".pi/agent/mcp.json" = {
-        source = config.lib.file.mkOutOfStoreSymlink cfg.mcpJson;
+      ".pi/agent/mcp-adapter.json" = {
+        source = config.lib.file.mkOutOfStoreSymlink cfg.mcpAdapterJson;
         force = true;
       };
 
@@ -65,7 +65,7 @@ in
         maxAgents = 16;
         maxSpawnDepth = 3;
         childExtensions = [
-          "npm:pi-mcp-adapter@2.17.0"
+          "npm:pi-mcp-adapter@4.0.0"
           "npm:@juicesharp/rpiv-web-tools@2.3.1"
           "git:github.com/DietrichGebert/ponytail"
           "${config.home.homeDirectory}/.pi/agent/extensions/infinite-context"

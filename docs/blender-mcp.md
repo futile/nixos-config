@@ -33,6 +33,23 @@ For another Linux Home Manager host, import `home-modules/blender-mcp.nix`, set
 `my.blenderMcp.blenderPackage`. Configure its MCP client to execute
 `mcp-for-blender` directly.
 
+## Viewport screenshots
+
+Pi reads the server definition from `~/.pi/agent/mcp-adapter.json` with
+`pi-mcp-adapter` 4.0.0. Its automatic browser viewer can still block the
+screenshot request on Linux while waiting for the browser opener to exit.
+For inline screenshots without opening a browser, quit Pi and continue with:
+
+```sh
+MCP_UI_VIEWER=none pi -c
+```
+
+This variable belongs to Pi, not the Blender MCP server's `env`. It suppresses
+automatic MCP UI windows for that process; screenshots still reach the model.
+The upgrade fixes app-only viewport polling triggering unwanted model turns,
+but does not fix the browser-opener wait. Browser behavior is unchanged by the
+repository configuration.
+
 ## Package checks
 
 ```sh

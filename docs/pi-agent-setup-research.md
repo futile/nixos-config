@@ -3,7 +3,9 @@
 Historical setup snapshot: extension names, tool schemas, and child settings
 below predate infinite-context v2. Use the
 [current v2 integration and fresh-session instructions](pi-upstream-migration.md#current-infinite-context-v2-preparation-2026-09-15)
-for the configured setup; do not use this research as an upgrade procedure.
+for the configured setup and the
+[current MCP adapter configuration](pi-upstream-migration.md#current-mcp-adapter-400)
+for its renamed config file; do not use this research as an upgrade procedure.
 
 Status: configuration implemented for `nixos-work`; fdietze subagents integration upgraded to current upstream
 

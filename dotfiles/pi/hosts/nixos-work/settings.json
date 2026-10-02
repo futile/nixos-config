@@ -5,7 +5,7 @@
   "lastChangelogVersion": "0.87.0",
   "theme": "light/dark",
   "packages": [
-    "npm:pi-mcp-adapter@2.17.0",
+    "npm:pi-mcp-adapter@4.0.0",
     "npm:@juicesharp/rpiv-web-tools@2.3.1",
     "git:github.com/futile/pi-statusline@02a95ec7aae9848d8970a5cea26b50532cb18500",
     "git:github.com/DietrichGebert/ponytail",

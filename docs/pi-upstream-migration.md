@@ -1,5 +1,30 @@
 # Pi standalone upstream migration
 
+## Current: MCP adapter 4.0.0
+
+The main-session pin in `dotfiles/pi/hosts/nixos-work/settings.json` and the
+child-extension pin in `home-modules/pi.nix` are both `pi-mcp-adapter@4.0.0`.
+Pi 0.87.0 is in its supported peer range; the installed Node 24 meets its
+Node >=20 requirement.
+
+Adapter 3.0 stopped reading the Pi-specific `mcp.json` path. Home Manager now
+links `dotfiles/pi/hosts/nixos-work/mcp-adapter.json` to
+`~/.pi/agent/mcp-adapter.json`. The server definitions and lazy lifecycles are
+unchanged. Use `/mcp-adapter`; `/mcp` remains an alias on Pi 0.87.0.
+`mcpScript` is now opt-in and remains disabled here.
+
+After applying with `just switch`, install the exact package with
+`pi install npm:pi-mcp-adapter@4.0.0`, then restart Pi. Do not use a broad
+`pi update`: pinned packages are skipped, and Pi itself remains Nix-managed.
+The older adapter versions below are historical snapshots, not current pins.
+
+The upstream app-only polling fix is included. Linux browser launching still
+awaits the opener, so the previous screenshot hang is not fixed by the upgrade;
+see [the inline screenshot workaround](blender-mcp.md#viewport-screenshots).
+
+Sources: [4.0.0 release](https://github.com/nicobailon/pi-mcp-adapter/releases/tag/v4.0.0),
+[3.0.0 migration](https://github.com/nicobailon/pi-mcp-adapter/releases/tag/v3.0.0).
+
 ## Current: infinite-context v2 preparation (2026-09-25)
 
 The configured pin is

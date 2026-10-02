@@ -81,7 +81,7 @@ in
   my.pi = {
     enable = true;
     settingsJson = "${thisFlakePath}/dotfiles/pi/hosts/nixos-work/settings.json";
-    mcpJson = "${thisFlakePath}/dotfiles/pi/hosts/nixos-work/mcp.json";
+    mcpAdapterJson = "${thisFlakePath}/dotfiles/pi/hosts/nixos-work/mcp-adapter.json";
   };
   my.serena = {
     configYml = "${thisFlakePath}/dotfiles/serena/hosts/nixos-work/serena_config.yml";
