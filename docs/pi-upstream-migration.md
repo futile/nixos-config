@@ -1,28 +1,45 @@
 # Pi standalone upstream migration
 
-## Current: MCP adapter 4.0.0
+## Current: extension pins (2026-10-01)
 
-The main-session pin in `dotfiles/pi/hosts/nixos-work/settings.json` and the
-child-extension pin in `home-modules/pi.nix` are both `pi-mcp-adapter@4.0.0`.
-Pi 0.87.0 is in its supported peer range; the installed Node 24 meets its
-Node >=20 requirement.
+The main-session pins in `dotfiles/pi/hosts/nixos-work/settings.json` and the
+child-extension pins in `home-modules/pi.nix` use `pi-mcp-adapter@5.0.0` and
+`@juicesharp/rpiv-web-tools@2.12.0`. The latter fixes the Pi 1.0 warning about
+`typebox` being a dependency instead of a wildcard peer dependency.
+Pi-statusline already matches the upstream `feat/extension-statuses` branch
+HEAD at `02a95ec7aae9848d8970a5cea26b50532cb18500`; do not replace it with
+`master`, which would lose the extension-status changes.
+Actor-subagents, infinite-context, and session-name already match upstream HEAD
+and remain unchanged, including the local Nix patches.
+
+Pi itself is now 1.0.0. Adapter 5.0.0's declared Pi peer range still stops at
+0.99; these pins are an update-first rollout, not a compatibility certification.
 
 Adapter 3.0 stopped reading the Pi-specific `mcp.json` path. Home Manager now
 links `dotfiles/pi/hosts/nixos-work/mcp-adapter.json` to
 `~/.pi/agent/mcp-adapter.json`. The server definitions and lazy lifecycles are
-unchanged. Use `/mcp-adapter`; `/mcp` remains an alias on Pi 0.87.0.
+unchanged. Use `/mcp-adapter`; Pi 1.0's `/mcp` command manages its built-in MCP
+integration instead.
 `mcpScript` is now opt-in and remains disabled here.
 
-After applying with `just switch`, install the exact package with
-`pi install npm:pi-mcp-adapter@4.0.0`, then restart Pi. Do not use a broad
-`pi update`: pinned packages are skipped, and Pi itself remains Nix-managed.
+After applying with `just switch`, install the updated packages:
+
+```sh
+pi install npm:pi-mcp-adapter@5.0.0
+pi install npm:@juicesharp/rpiv-web-tools@2.12.0
+```
+
+Then restart Pi. `pi update` skips pinned packages, and Pi itself remains
+Nix-managed.
 The older adapter versions below are historical snapshots, not current pins.
 
 The upstream app-only polling fix is included. Linux browser launching still
-awaits the opener, so the previous screenshot hang is not fixed by the upgrade;
+awaited the opener in 4.0.0; do not assume this pin refresh fixes the screenshot
+hang. If it persists,
 see [the inline screenshot workaround](blender-mcp.md#viewport-screenshots).
 
-Sources: [4.0.0 release](https://github.com/nicobailon/pi-mcp-adapter/releases/tag/v4.0.0),
+Sources: [adapter package](https://www.npmjs.com/package/pi-mcp-adapter),
+[web-tools typebox fix](https://github.com/juicesharp/rpiv-mono/pull/282),
 [3.0.0 migration](https://github.com/nicobailon/pi-mcp-adapter/releases/tag/v3.0.0).
 
 ## Current: infinite-context v2 preparation (2026-09-25)

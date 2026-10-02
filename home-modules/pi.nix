@@ -65,8 +65,8 @@ in
         maxAgents = 16;
         maxSpawnDepth = 3;
         childExtensions = [
-          "npm:pi-mcp-adapter@4.0.0"
-          "npm:@juicesharp/rpiv-web-tools@2.3.1"
+          "npm:pi-mcp-adapter@5.0.0"
+          "npm:@juicesharp/rpiv-web-tools@2.12.0"
           "git:github.com/DietrichGebert/ponytail"
           "${config.home.homeDirectory}/.pi/agent/extensions/infinite-context"
           "${config.home.homeDirectory}/.pi/agent/extensions/context-pressure"
