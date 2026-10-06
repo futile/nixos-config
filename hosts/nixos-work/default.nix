@@ -276,9 +276,6 @@ in
       enable = true;
       packageNames = [
         "linux" # build our kernel with ccache, as we have crashdump enabled, which requires compiling it ourselves
-        # 2026-07-21 trying out if this caches noctalia's C++ compilation
-        # 2026-09-04 this applies to `pkgs.noctalia`, so using the overlay now to get the package there
-        "noctalia"
       ];
     };
 

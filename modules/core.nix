@@ -110,7 +110,6 @@ in
     nixpkgs.overlays = [
       # nixos-unstable-overlay
       nixpkgs-unstable-overlay
-      flake-inputs.noctalia.overlays.default
       # nixpkgs-master-overlay
       # nixpkgs-local-overlay
       custom-packages-overlay
