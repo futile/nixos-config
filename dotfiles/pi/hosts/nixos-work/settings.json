@@ -2,7 +2,7 @@
   "defaultModel": "gpt-6.1-sol",
   "defaultThinkingLevel": "high",
   "defaultProvider": "openai-codex",
-  "lastChangelogVersion": "0.87.0",
+  "lastChangelogVersion": "1.0.0",
   "theme": "light/dark",
   "packages": [
     "npm:pi-mcp-adapter@5.0.0",
