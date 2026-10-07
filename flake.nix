@@ -87,7 +87,8 @@
     };
 
     codebase-memory-mcp = {
-      url = "github:DeusData/codebase-memory-mcp";
+      # Temporary mimalloc startup fix; upstream: github:DeusData/codebase-memory-mcp
+      url = "github:futile/codebase-memory-mcp/be9fcc827eacca13eb589b690008df5a33c38dcc";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

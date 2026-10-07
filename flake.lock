@@ -7,16 +7,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1791140478,
-        "narHash": "sha256-jBpKceg4b/rWX5zJY9FtGQVux6S78/wLM3dO65K2aoM=",
-        "owner": "DeusData",
+        "lastModified": 1791412625,
+        "narHash": "sha256-VhQvq98LZ5MpRyJaQh9+tatSDauJ/9A1+V4qpC0EN/o=",
+        "owner": "futile",
         "repo": "codebase-memory-mcp",
-        "rev": "268a9d8886642eb7f9b2ce45f5ce27cdecf0f519",
+        "rev": "be9fcc827eacca13eb589b690008df5a33c38dcc",
         "type": "github"
       },
       "original": {
-        "owner": "DeusData",
+        "owner": "futile",
         "repo": "codebase-memory-mcp",
+        "rev": "be9fcc827eacca13eb589b690008df5a33c38dcc",
         "type": "github"
       }
     },
