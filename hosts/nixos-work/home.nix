@@ -203,6 +203,7 @@ in
           sccache
 
           # misc
+          zellij
           # texlive.combined.scheme-full
           # zotero
           # my-custom-packages.llm-wiki

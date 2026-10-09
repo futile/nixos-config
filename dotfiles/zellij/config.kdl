@@ -22,22 +22,25 @@ keybinds {
     }
     pane {
         bind "Ctrl l" { Clear; }
-
         bind "Ctrl p" { SwitchToMode "Normal"; }
         bind "h" "Left" { MoveFocus "Left"; }
         bind "l" "Right" { MoveFocus "Right"; }
         bind "j" "Down" { MoveFocus "Down"; }
         bind "k" "Up" { MoveFocus "Up"; }
         bind "p" { SwitchFocus; }
+        bind ";" { FocusLastPane; }
         bind "n" { NewPane; SwitchToMode "Normal"; }
         bind "d" { NewPane "Down"; SwitchToMode "Normal"; }
         bind "r" { NewPane "Right"; SwitchToMode "Normal"; }
+        bind "s" { NewPane "stacked"; SwitchToMode "Normal"; }
         bind "x" { CloseFocus; SwitchToMode "Normal"; }
         bind "f" { ToggleFocusFullscreen; SwitchToMode "Normal"; }
+        bind "Shift f" { ToggleFocusNoUiFullscreen; SwitchToMode "Normal"; }
         bind "z" { TogglePaneFrames; SwitchToMode "Normal"; }
         bind "w" { ToggleFloatingPanes; SwitchToMode "Normal"; }
         bind "e" { TogglePaneEmbedOrFloating; SwitchToMode "Normal"; }
         bind "c" { SwitchToMode "RenamePane"; PaneNameInput 0;}
+        bind "i" { TogglePanePinned; SwitchToMode "Normal"; }
     }
     move {
         bind "Ctrl h" { SwitchToMode "Normal"; }
@@ -81,6 +84,10 @@ keybinds {
         bind "Ctrl b" "PageUp" "Left" "h" { PageScrollUp; }
         bind "d" { HalfPageScrollDown; }
         bind "u" { HalfPageScrollUp; }
+        bind "[" { ScrollToPreviousPrompt; }
+        bind "]" { ScrollToNextPrompt; }
+        bind "m" { SelectCommandAtScrollPosition; }
+        bind "c" { CopyLastCommandOutput; SwitchToMode "Normal"; }
         // uncomment this and adjust key if using copy_on_select=false
         // bind "Alt c" { Copy; }
     }
@@ -93,6 +100,9 @@ keybinds {
         bind "Ctrl b" "PageUp" "Left" "h" { PageScrollUp; }
         bind "d" { HalfPageScrollDown; }
         bind "u" { HalfPageScrollUp; }
+        bind "[" { ScrollToPreviousPrompt; }
+        bind "]" { ScrollToNextPrompt; }
+        bind "m" { SelectCommandAtScrollPosition; }
         bind "n" { Search "down"; }
         bind "p" { Search "up"; }
         bind "c" { SearchToggleOption "CaseSensitivity"; }
@@ -115,8 +125,46 @@ keybinds {
         bind "Ctrl o" { SwitchToMode "Normal"; }
         bind "Ctrl s" { SwitchToMode "Scroll"; }
         bind "d" { Detach; }
+        bind "]" { FocusHostSession; SwitchToMode "Normal"; }
+        bind "[" { FocusGuestSession; SwitchToMode "Normal"; }
+        bind "f" { ToggleHostFullscreen; SwitchToMode "Normal"; }
         bind "w" {
-            LaunchOrFocusPlugin "zellij:session-manager" {
+            LaunchOrFocusPlugin "session-manager" {
+                floating true
+                move_to_focused_tab true
+            };
+            SwitchToMode "Normal"
+        }
+        bind "c" {
+            LaunchOrFocusPlugin "configuration" {
+                floating true
+                move_to_focused_tab true
+            };
+            SwitchToMode "Normal"
+        }
+        bind "p" {
+            LaunchOrFocusPlugin "plugin-manager" {
+                floating true
+                move_to_focused_tab true
+            };
+            SwitchToMode "Normal"
+        }
+        bind "a" {
+            LaunchOrFocusPlugin "zellij:about" {
+                floating true
+                move_to_focused_tab true
+            };
+            SwitchToMode "Normal"
+        }
+        bind "s" {
+            LaunchOrFocusPlugin "zellij:share" {
+                floating true
+                move_to_focused_tab true
+            };
+            SwitchToMode "Normal"
+        }
+        bind "l" {
+            LaunchOrFocusPlugin "zellij:layout-manager" {
                 floating true
                 move_to_focused_tab true
             };
@@ -149,7 +197,10 @@ keybinds {
     shared_except "locked" {
         bind "Ctrl g" { SwitchToMode "Locked"; }
         bind "Ctrl q" { Quit; }
+        bind "Alt f" { ToggleFloatingPanes; }
         bind "Alt n" { NewPane; }
+        bind "Alt i" { MoveTab "Left"; }
+        bind "Alt o" { MoveTab "Right"; }
         bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
         bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
         bind "Alt j" "Alt Down" { MoveFocus "Down"; }
@@ -158,6 +209,8 @@ keybinds {
         bind "Alt -" { Resize "Decrease"; }
         bind "Alt [" { PreviousSwapLayout; }
         bind "Alt ]" { NextSwapLayout; }
+        bind "Alt p" { TogglePaneInGroup; }
+        bind "Alt Shift p" { ToggleGroupMarking; }
     }
     shared_except "normal" "locked" {
         bind "Enter" "Esc" { SwitchToMode "Normal"; }
@@ -185,21 +238,49 @@ keybinds {
     }
 }
 
+// Plugin aliases - can be used to change the implementation of Zellij
+// changing these requires a restart to take effect
 plugins {
-    tab-bar { path "tab-bar"; }
-    status-bar { path "status-bar"; }
-    strider { path "strider"; }
-    compact-bar { path "compact-bar"; }
-    session-manager { path "session-manager"; }
+    tab-bar location="zellij:tab-bar"
+    status-bar location="zellij:status-bar"
+    strider location="zellij:strider"
+    compact-bar location="zellij:compact-bar"
+    session-manager location="zellij:session-manager"
+    welcome-screen location="zellij:session-manager" {
+        welcome_screen true
+    }
+    filepicker location="zellij:strider" {
+        cwd "/"
+    }
+    configuration location="zellij:configuration"
+    plugin-manager location="zellij:plugin-manager"
+    about location="zellij:about"
+}
+
+// Plugins to load in the background when a new session starts
+load_plugins {
+    "zellij:link"
+    // "file:/path/to/my-plugin.wasm"
+    // "https://example.com/my-plugin.wasm"
 }
 
 // Choose what to do when zellij receives SIGTERM, SIGINT, SIGQUIT or SIGHUP
 // eg. when terminal window with an active zellij session is closed
+// (Requires restart)
 // Options:
 //   - detach (Default)
 //   - quit
 //
 // on_force_close "quit"
+
+// Choose how to handle a nested Zellij session detected running inside a pane
+// Options:
+//   - ask (Default - prompt with a modal to zoom in or control on focus)
+//   - fullscreen (always zoom into the nested session)
+//   - descend (always control the nested session on focus)
+//   - never (never prompt or descend; do it manually)
+//
+// nested_session_handling "ask"
 
 //  Send a request for a simplified ui (without arrow fonts) to plugins
 //  Options:
@@ -224,12 +305,43 @@ plugins {
 //
 // pane_frames true
 
+// Set the pane frame style when pane_frames is enabled
+// Options:
+//   - titles (default - draw a title above each pane)
+//   - full (draw a full frame around each pane)
+//   - none (equivalent to pane_frames false)
+//
+// pane_frame_style "titles"
+
 // Toggle between having Zellij lay out panes according to a predefined set of layouts whenever possible
 // Options:
 //   - true (default)
 //   - false
 //
 // auto_layout true
+
+// Whether sessions should be serialized to the cache folder (including their tabs/panes, cwds and running commands) so that they can later be resurrected
+// (Requires restart)
+// Options:
+//   - true (default)
+//   - false
+//
+// session_serialization false
+
+// Whether pane viewports are serialized along with the session, default is false
+// (Requires restart)
+// Options:
+//   - true
+//   - false (default)
+//
+// serialize_pane_viewport true
+
+// Scrollback lines to serialize along with the pane viewport when serializing sessions, 0
+// defaults to the scrollback size. If this number is higher than the scrollback size, it will
+// also default to the scrollback size. This does nothing if `serialize_pane_viewport` is not true.
+// (Requires restart)
+//
+// scrollback_lines_to_serialize 10000
 
 // Define color themes for Zellij
 // For more examples, see: https://github.com/zellij-org/zellij/tree/main/example/themes
@@ -251,78 +363,29 @@ plugins {
 //     }
 // }
 
-// from https://github.com/zellij-org/zellij/blob/main/zellij-utils/assets/themes/catppuccin.kdl
-// Catppuccin Theme:
-// https://github.com/catppuccin/catppuccin
-themes {
-  catppuccin-latte {
-    bg "#acb0be" // Surface2
-    fg "#acb0be" // Surface2
-    red "#d20f39"
-    green "#40a02b"
-    blue "#1e66f5"
-    yellow "#df8e1d"
-    magenta "#ea76cb" // Pink
-    orange "#fe640b" // Peach
-    cyan "#04a5e5" // Sky
-    black "#dce0e8" // Crust
-    white "#4c4f69" // Text
-  }
-
-  catppuccin-frappe {
-    bg "#626880" // Surface2
-    fg "#c6d0f5"
-    red "#e78284"
-    green "#a6d189"
-    blue "#8caaee"
-    yellow "#e5c890"
-    magenta "#f4b8e4" // Pink
-    orange "#ef9f76" // Peach
-    cyan "#99d1db" // Sky
-    black "#292c3c" // Mantle
-    white "#c6d0f5"
-  }
-
-  catppuccin-macchiato {
-    bg "#5b6078" // Surface2
-    fg "#cad3f5"
-    red "#ed8796"
-    green "#a6da95"
-    blue "#8aadf4"
-    yellow "#eed49f"
-    magenta "#f5bde6" // Pink
-    orange "#f5a97f" // Peach
-    cyan "#91d7e3" // Sky
-    black "#1e2030" // Mantle
-    white "#cad3f5"
-  }
-
-  catppuccin-mocha {
-    bg "#585b70" // Surface2
-    fg "#cdd6f4"
-    red "#f38ba8"
-    green "#a6e3a1"
-    blue "#89b4fa"
-    yellow "#f9e2af"
-    magenta "#f5c2e7" // Pink
-    orange "#fab387" // Peach
-    cyan "#89dceb" // Sky
-    black "#181825" // Mantle
-    white "#cdd6f4"
-  }
-}
-
 // Choose the theme that is specified in the themes section.
 // Default: default
-
-// for dark terminal themes:
-// theme "catppuccin-macchiato"
-
-// for light terminal themes:
+//
 theme "catppuccin-latte"
+
+// Themes to use when the host terminal reports a dark or light color palette.
+// Both must be set for automatic switching to take place, otherwise `theme`
+// remains authoritative. Until the host terminal reports (or if it never does),
+// the dark theme is used.
+//
+// theme_dark "nightfox"
+// theme_light "dayfox"
+
+// Pin the session to a dark or light appearance, ignoring what the host
+// terminal reports. Resolved before the first render. When unset, the host
+// terminal decides.
+// Options: dark, light
+//
+// explicit_theme_hue "dark"
 
 // The name of the default layout to load on startup
 // Default: "default"
+// (Requires restart)
 //
 // default_layout "compact"
 
@@ -334,6 +397,7 @@ theme "catppuccin-latte"
 // Toggle enabling the mouse mode.
 // On certain configurations, or terminals this could
 // potentially interfere with copying text.
+// (Requires restart)
 // Options:
 //   - true (default)
 //   - false
@@ -343,6 +407,7 @@ theme "catppuccin-latte"
 // Configure the scroll back buffer size
 // This is the number of lines zellij stores for each pane in the scroll back
 // buffer. Excess number of lines are discarded in a FIFO fashion.
+// (Requires restart)
 // Valid values: positive integers
 // Default value: 10000
 //
@@ -380,14 +445,192 @@ scroll_buffer_size 100000
 // When attaching to an existing session with other users,
 // should the session be mirrored (true)
 // or should each user have their own cursor (false)
+// (Requires restart)
 // Default: false
 //
 // mirror_session true
 
 // The folder in which Zellij will look for layouts
+// (Requires restart)
 //
 // layout_dir "/path/to/my/layout_dir"
 
 // The folder in which Zellij will look for themes
+// (Requires restart)
 //
 // theme_dir "/path/to/my/theme_dir"
+
+// Enable or disable the rendering of styled and colored underlines (undercurl).
+// May need to be disabled for certain unsupported terminals
+// (Requires restart)
+// Default: true
+//
+// styled_underlines false
+
+// Enable or disable writing of session metadata to disk (if disabled, other sessions might not know
+// metadata info on this session)
+// (Requires restart)
+// Default: false
+//
+// disable_session_metadata true
+
+// Enable or disable support for the enhanced Kitty Keyboard Protocol (the host terminal must also support it)
+// (Requires restart)
+// Default: true (if the host terminal supports it)
+//
+// support_kitty_keyboard_protocol false
+
+// Enable or disable support for the Kitty Graphics Protocol, used to display images (the host terminal must also support it)
+// (Requires restart)
+// Default: true (if the host terminal supports it)
+//
+// support_kitty_graphics_protocol false
+
+// Whether to make sure a local web server is running when a new Zellij session starts.
+// This web server will allow creating new sessions and attaching to existing ones that have
+// opted in to being shared in the browser.
+// When enabled, navigate to http://127.0.0.1:8082
+// (Requires restart)
+//
+// Note: a local web server can still be manually started from within a Zellij session or from the CLI.
+// If this is not desired, one can use a version of Zellij compiled without
+// `web_server_capability`
+//
+// Possible values:
+// - true
+// - false
+// Default: false
+//
+// web_server true
+
+// Whether to allow sessions started in the terminal to be shared through a local web server, assuming one is
+// running (see the `web_server` option for more details).
+// (Requires restart)
+//
+// Note: This is an administrative separation and not intended as a security measure.
+//
+// Possible values:
+// - "on" (allow web sharing through the local web server if it
+// is online)
+// - "off" (do not allow web sharing unless sessions explicitly opt-in to it)
+// - "disabled" (do not allow web sharing and do not permit sessions started in the terminal to opt-in to it)
+// Default: "off"
+//
+// web_sharing "on"
+
+// The ip address the web server should listen on when it starts
+// Default: "127.0.0.1"
+// (Requires restart)
+//
+// web_server_ip "127.0.0.1"
+
+
+// A path to a certificate file to be used when setting up the web client to serve the
+// connection over HTTPs
+//
+// web_server_cert "/path/to/my/cert.pem"
+
+// A path to a key file to be used when setting up the web client to serve the
+// connection over HTTPs
+//
+// web_server_key "/path/to/my/key.pem"
+
+// Whether to enforce https connections to the web server when it is bound to localhost
+// (127.0.0.0/8)
+//
+// Note: https is ALWAYS enforced when bound to non-local interfaces
+//
+// Default: false
+//
+// enforce_https_for_localhost true
+
+// The port the web server should listen on when it starts
+// Default: 8082
+// (Requires restart)
+//
+// web_server_port 8082
+
+// Whether to stack panes when resizing beyond a certain size
+// Default: true
+//
+// stacked_resize false
+
+// Whether to let programs running inside panes read the paste buffer (clipboard)
+// with the OSC 52 escape sequence. When enabled, any program in any pane -
+// including one running on a remote machine over SSH - can read the clipboard
+// without the user being asked.
+// Default: false
+//
+// dangerously_enable_paste_buffer_read true
+
+// Whether stacked panes display as a list with the expanded pane pinned to the bottom
+// Default: true
+//
+// stacked_pane_list false
+
+// Whether to show release notes on first version run
+// Default: true
+//
+// show_release_notes false
+
+// Whether to enable mouse hover effects and pane grouping functionality
+// Default: true
+//
+// advanced_mouse_actions false
+
+// Whether Ctrl+ScrollWheel resizes panes
+// Default: true
+//
+// mouse_scroll_resize false
+
+// Whether scrolling a pane implicitly enters and exits Scroll mode
+// Default: true
+//
+// scroll_mode_sync false
+
+// Whether to enable mouse hover visual effects (frame highlight and help text)
+// Default: true
+//
+// mouse_hover_effects false
+
+// Whether to show mouse hover help-text tips (resize help and group shortcuts)
+// Default: true
+//
+// mouse_hover_tips false
+
+// Whether triple-clicking inside command output marked by the shell (OSC 133) selects
+// the command and its output instead of the logical line
+// Default: true
+//
+// osc133_command_selection false
+
+// Characters that terminate a word when double-clicking to select it
+// whitespace is always a separator and need not be listed here
+// Default: "[]{}<>()"
+//
+// word_separators "[]{}<>()"
+
+// Whether to output OSC8 hyperlink sequences
+// Default: true
+//
+// osc8_hyperlinks false
+
+// A command to run (will be wrapped with sh -c and provided the RESURRECT_COMMAND env variable)
+// after Zellij attempts to discover a command inside a pane when resurrecting sessions, the STDOUT
+// of this command will be used instead of the discovered RESURRECT_COMMAND
+// can be useful for removing wrappers around commands
+// Note: be sure to escape backslashes and similar characters properly
+//
+// post_command_discovery_hook "echo $RESURRECT_COMMAND | sed <your_regex_here>"
+
+// Number of async worker tasks to spawn per active client.
+//
+// Allocating few tasks may result in resource contention and lags. Small values (around 4) should
+// typically work best. Set to 0 to use the number of (physical) CPU cores.
+// NOTE: This only applies to web clients at the moment."#;
+// client_async_worker_tasks 4
+
+
+web_client {
+    font "monospace"
+}
