@@ -137,6 +137,34 @@ export default function(pi) {
 '''
 
 
+DIRENV_FIXTURE = r'''
+import hashlib, json, os, pathlib, sys
+cwd = pathlib.Path.cwd()
+rc = next((p / '.envrc' for p in [cwd, *cwd.parents] if (p / '.envrc').is_file()), None)
+authorization = pathlib.Path(os.environ['TEST_AUTHORIZATION'])
+fingerprint = hashlib.sha256(rc.read_bytes()).hexdigest() if rc else None
+allowed = rc is not None and authorization.exists() and authorization.read_text() == str(rc) + '\n' + fingerprint
+with open(os.environ['TEST_DIRENV_LOG'], 'a') as stream:
+    stream.write(json.dumps({'action': sys.argv[1], 'argv': sys.argv[1:], 'cwd': str(cwd),
+                            'rc': str(rc) if rc else None, 'config': os.environ.get('DIRENV_CONFIG')}) + '\n')
+if sys.argv[1] == 'status':
+    print(json.dumps({'state': {'foundRC': {'path': str(rc), 'allowed': 0 if allowed else 1} if rc else None}}))
+elif sys.argv[1] == 'allow':
+    assert rc and pathlib.Path(sys.argv[2]) == rc.parent, 'approve only the discovered rc parent'
+    authorization.write_text(str(rc) + '\n' + fingerprint)
+elif sys.argv[1] == 'exec':
+    if rc and not allowed:
+        print('direnv fixture: rc blocked', file=sys.stderr); sys.exit(23)
+    if str(cwd) == os.environ['TEST_SOURCE']:
+        # Preflight must use the supervisor baseline, not these source-project overrides.
+        os.environ['PATH'] = '/unusable-source-path'
+        os.environ['DIRENV_CONFIG'] = 'source-project-override'
+    os.execv(sys.argv[3], sys.argv[3:])
+else:
+    raise AssertionError('unexpected direnv command')
+'''
+
+
 def read_jsonl(path):
     if not Path(path).exists():
         return []
@@ -466,6 +494,68 @@ class Suite:
         finally:
             t.close()
 
+    def approval(self, tool=False, allow=True):
+        name = f"approval-{'tool' if tool else 'command'}-{'yes' if allow else 'cancel'}"
+        case, source, parent, env = self.prepare(name)
+        target = parent / 'nested directory'
+        target.mkdir()
+        rc = parent / '.envrc'
+        rc.write_text('# controlled fixture; never sourced by fake direnv\n')
+        binaries = case / 'bin'
+        binaries.mkdir()
+        for binary in ('pi', 'python3'):
+            (binaries / binary).symlink_to((self.bin / binary).resolve())
+        fake = binaries / 'direnv'
+        fake.write_text(f'#!{sys.executable}\n' + DIRENV_FIXTURE)
+        fake.chmod(0o755)
+        authorization = case / 'authorization'
+        log = case / 'direnv.jsonl'
+        baseline_config = str(case / 'baseline-config')
+        env.update(PATH=str(binaries), TEST_TARGET=str(target), TEST_SOURCE=str(source),
+                   TEST_AUTHORIZATION=str(authorization), TEST_DIRENV_LOG=str(log),
+                   DIRENV_CONFIG=baseline_config)
+        t = self.start(case, source, env)
+        try:
+            self.seed(t)
+            initial = self.kinds(read_jsonl(t.log), 'startup')[0]
+            t.send('restart tool' if tool else f'/restart-in-dir {target}')
+            t.wait(lambda _: b'Allow and restart' in t.output, 'explicit Pi approval dialog')
+            require(str(rc).encode() in t.output, 'dialog must show actual ancestor rc path')
+            require(not authorization.exists(), 'showing dialog must not grant approval')
+            require(not any(r.get('customType') == CHECKPOINT for r in read_jsonl(initial['file'])), 'dialog must precede checkpoint')
+            require(len(self.kinds(read_jsonl(t.log), 'startup')) == 1, 'source Pi must remain running during dialog')
+            # Built-in selection starts on Cancel. Down+Enter is explicit Allow.
+            os.write(t.master, b'\x1b[B\r' if allow else b'\x1b')
+            if allow:
+                replacement = self.startup(t, 2)
+                require(replacement['cwd'] == str(target), 'approved target cwd')
+                require(replacement['sessionId'] != initial['sessionId'], 'approved cross-directory restart must fork')
+                if tool:
+                    rows = t.wait(lambda rs: any(r['kind'] == 'settled' and r.get('launch', {}).get('incoming') for r in rs), 'approved continuation settled')
+                else:
+                    rows = t.observe()
+                self.assert_checkpoint(rows, tool)
+                calls = [r for r in self.kinds(rows, 'provider') if r.get('launch', {}).get('incoming')]
+                require(len(calls) == (1 if tool else 0), 'approval must retain normal user/tool continuation policy')
+                require(authorization.exists(), 'explicit Allow must authorize the rc')
+                operations = read_jsonl(log)
+                require(sum(r['action'] == 'allow' for r in operations) == 1, 'exactly one user-authorized allow')
+                require(all(r['config'] == baseline_config for r in operations), 'approval/launch must use baseline config, not source overrides')
+            else:
+                if tool:
+                    t.wait(lambda rs: len(self.kinds(rs, 'settled')) >= 2, 'cancelled tool settled normally')
+                else:
+                    t.observe()
+                inspected = t.command('/restart-test-inspect', 'inspect')
+                require(inspected['sessionId'] == initial['sessionId'] and inspected['cwd'] == str(source), 'cancel must keep original Pi/session usable')
+                require(inspected['actor']['ready'] is True, 'cancel must release actor handoff lease')
+                require(not any(r.get('customType') == CHECKPOINT for r in read_jsonl(initial['file'])), 'cancel must not checkpoint')
+                require(not authorization.exists(), 'Escape must not grant approval')
+                require(not any(r['action'] == 'allow' for r in read_jsonl(log)), 'cancel must never invoke allow')
+                require(len(self.kinds(read_jsonl(t.log), 'startup')) == 1, 'cancel must not restart')
+        finally:
+            t.close()
+
     def missing_owner(self):
         case, source, target, env = self.prepare("missing-owner", "missing-owner")
         t = self.start(case,source,env,["--model","proof/old"])
@@ -493,7 +583,11 @@ class Suite:
                  ("resource reload preserves one-use continuation",lambda:self.tool("reload-once",reload=True)),
                  ("broken IC blocks automatic continuation",lambda:self.tool("broken-ic","broken-ic")),
                  ("missing IC health blocks automatic continuation",lambda:self.tool("no-health","no-health")),
-                 ("missing flag owner exits before provider",self.missing_owner)]
+                 ("missing flag owner exits before provider",self.missing_owner),
+                 ("Pi approval dialog: command Allow",self.approval),
+                 ("Pi approval dialog: tool Allow + one-shot continuation",lambda:self.approval(True)),
+                 ("Pi approval dialog: command Escape preserves session",lambda:self.approval(False,False)),
+                 ("Pi approval dialog: tool Escape releases lease",lambda:self.approval(True,False))]
         for name, test in tests:
             try:
                 test()

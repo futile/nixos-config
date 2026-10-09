@@ -10,7 +10,7 @@ export const MAX_JSON_BYTES = 65536;
 export type Expected = { model: { provider: string; modelId: string } | null; thinkingLevel: string | null };
 export type Checkpoint = { version: 1; childId: string; sourceCwd: string; target: string; invocation: "command" | "tool"; continue: boolean };
 export type Request = Checkpoint & { source: string; checkpointId: string; expected: Expected; prompt: string | null };
-export type Launch = { version: 1; childId: string; launcherPid: number; unsupported: string[]; interactive: boolean; incoming: Request | null };
+export type Launch = { version: 2; childId: string; launcherPid: number; unsupported: string[]; interactive: boolean; incoming: Request | null };
 export type Authority = { directory: string; launch: Launch };
 
 function object(value: unknown, keys: string[]): asserts value is Record<string, unknown> {
@@ -48,7 +48,8 @@ export function validateRequest(value: unknown): asserts value is Request {
 }
 export function validateLaunch(value: unknown): asserts value is Launch {
   object(value, ["version", "childId", "launcherPid", "unsupported", "interactive", "incoming"]);
-  if (value.version !== 1 || !Number.isSafeInteger(value.launcherPid) || (value.launcherPid as number) <= 1 || typeof value.interactive !== "boolean") throw new Error("Invalid launcher metadata");
+  if (value.version === 1) throw new Error("This pi-restartable launcher predates direnv approval support; exit and relaunch with the updated pi-restartable");
+  if (value.version !== 2 || !Number.isSafeInteger(value.launcherPid) || (value.launcherPid as number) <= 1 || typeof value.interactive !== "boolean") throw new Error("Invalid launcher metadata");
   identifier(value.childId);
   if (!Array.isArray(value.unsupported) || value.unsupported.length > 128) throw new Error("Invalid unsupported options");
   for (const option of value.unsupported) {

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """No live Pi, providers, or envrc: fake executable/PTY supervisor regressions."""
+import hashlib
 import importlib.machinery
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
 import pty
 import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -36,6 +39,28 @@ record = {'argv': sys.argv[1:], 'cwd': os.getcwd(), 'launch': launch,
           'modes': [control.stat().st_mode & 0o777, (control / 'launch.json').stat().st_mode & 0o777]}
 with logs.open('a') as out:
     out.write(json.dumps(record) + '\n')
+if case.startswith('approval'):
+    replies = []
+    rc = None
+    for i, action in enumerate(['status', 'allow']):
+        request_id = format(i + 1, '032x')
+        request = {'version':1, 'childId':launch['childId'], 'requestId':request_id,
+                   'action':action, 'target':os.environ['TARGET'], 'rc':rc}
+        temp = control / 'approval-temp'
+        temp.write_text(json.dumps(request)); temp.chmod(0o600)
+        temp.replace(control / 'approval-request.json')
+        response = control / ('approval-response.' + request_id + '.json')
+        deadline = time.monotonic() + 4
+        while not response.exists():
+            if time.monotonic() > deadline: sys.exit(45)
+            time.sleep(.01)
+        reply = json.loads(response.read_text()); replies.append(reply)
+        if action == 'status' and reply['ok']:
+            rc = reply['status']['rc']
+            if case == 'approval_edit': pathlib.Path(rc['path']).write_text('changed')
+        if not reply['ok'] or rc is None: break
+    (root / 'approval-replies').write_text(json.dumps(replies))
+    sys.exit(0)
 if launch['incoming'] and case != 'repeat':
     if case == 'stale':
         request = launch['incoming']
@@ -110,7 +135,18 @@ DIRENV = r'''
 import json, os, pathlib, sys
 root = pathlib.Path(os.environ['TEST_ROOT'])
 with (root / 'direnv-logs').open('a') as out:
-    out.write(json.dumps({'argv':sys.argv[1:], 'cwd':os.getcwd(), 'diff':os.environ.get('DIRENV_DIFF')}) + '\n')
+    out.write(json.dumps({'argv':sys.argv[1:], 'cwd':os.getcwd(), 'diff':os.environ.get('DIRENV_DIFF'), 'path':os.environ.get('PATH')}) + '\n')
+if sys.argv[1] == 'status':
+    permission = root / 'permission'
+    found = None if os.environ.get('DIRENV_NONE') else {'path':str(pathlib.Path(os.environ['TARGET']) / '.envrc'), 'allowed':int(permission.read_text()) if permission.exists() else 1}
+    print(json.dumps({'state':{'foundRC':found, 'loadedRC':{'path':'/wrong', 'allowed':0}}}))
+    sys.exit(0)
+if sys.argv[1] == 'allow':
+    if sys.argv[2] != os.environ['TARGET']: sys.exit(31)
+    (root / 'permission').write_text('0')
+    if os.environ.get('DIRENV_CHANGE_ON_ALLOW'):
+        (pathlib.Path(os.environ['TARGET']) / '.envrc').write_text('changed during allow')
+    sys.exit(0)
 if os.environ.get('DIRENV_FAIL'):
     print('.envrc is blocked. Run direnv allow to approve its content', file=sys.stderr)
     sys.exit(23)
@@ -143,6 +179,151 @@ class ClassificationTests(unittest.TestCase):
             with self.subTest(args=args):
                 self.assertFalse(launcher.classify(args)[2])
         self.assertTrue(launcher.classify(['--mode', 'text'])[2])
+
+
+class ApprovalTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='approval-test-')
+        self.root = Path(self.temp.name).resolve()
+        self.control = self.root / 'control'
+        self.control.mkdir(mode=0o700)
+        self.rc = self.root / '.envrc'
+        self.rc.write_text('not executable')
+        self.child_id = 'child-identity'
+        self.request = {'version':1, 'childId':self.child_id, 'requestId':'a' * 32,
+                        'action':'status', 'target':str(self.root), 'rc':None}
+        self.blocked = {'state':'blocked', 'rc':{'path':str(self.rc), 'fingerprint':hashlib.sha256(b'not executable').hexdigest()}}
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_fingerprint_matches_standard_sha256_across_chunks(self):
+        for content in [b'', b'normal envrc', bytes(range(256)) * 1025]:
+            with self.subTest(size=len(content)), mock.patch.object(launcher.time, 'monotonic', return_value=0):
+                self.assertEqual(launcher.rc_fingerprint(io.BytesIO(content)), hashlib.sha256(content).hexdigest())
+
+    def test_fingerprint_deadline_stops_continuously_growing_reads(self):
+        stream = mock.Mock()
+        stream.read.return_value = b'x' * (64 * 1024)
+        times = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5]
+        with mock.patch.object(launcher.time, 'monotonic', side_effect=times):
+            with self.assertRaisesRegex(launcher.Invalid, 'fingerprint timed out'):
+                launcher.rc_fingerprint(stream)
+        self.assertEqual(stream.read.call_args_list, [mock.call(64 * 1024)] * 5)
+        # A regular-file read that itself overruns the budget also fails on return.
+        with mock.patch.object(launcher.time, 'monotonic', side_effect=[0, 0, 6]):
+            with self.assertRaisesRegex(launcher.Invalid, 'fingerprint timed out'):
+                launcher.rc_fingerprint(io.BytesIO(b'small'))
+
+    def test_status_uses_found_not_loaded_rc_and_exact_enum(self):
+        for value, state in [(0, 'allowed'), (1, 'blocked'), (2, 'denied')]:
+            raw = json.dumps({'state':{'foundRC':{'path':str(self.rc), 'allowed':value}, 'loadedRC':{'path':'/not-found', 'allowed':0}}}).encode()
+            with self.subTest(value=value), mock.patch.object(launcher, 'direnv_command', return_value=raw):
+                result = launcher.direnv_status('/direnv', str(self.root), {})
+                self.assertEqual(result, {**self.blocked, 'state':state})
+        for raw in [b'{}', b'null', b'{"state":{"foundRC":{"path":"/rc","allowed":true}}}', b'{"state":{"foundRC":{"path":"/rc","allowed":3}}}', b'{bad']:
+            with self.subTest(raw=raw), mock.patch.object(launcher, 'direnv_command', return_value=raw):
+                with self.assertRaises(launcher.Invalid): launcher.direnv_status('/direnv', str(self.root), {})
+        with mock.patch.object(launcher, 'direnv_command', return_value=b'{"state":{"foundRC":null}}'):
+            self.assertEqual(launcher.direnv_status('/direnv', str(self.root), {}), {'state':'none', 'rc':None})
+
+    def test_metadata_rejects_stale_extra_types_and_unavailable_targets(self):
+        cases = [{'version':True}, {'version':2}, {'childId':'old'}, {'requestId':'A'*32}, {'requestId':'a'*31}, {'extra':1}, {'rc':self.blocked['rc']}, {'action':'unknown'}, {'target':'relative'}, {'target':str(self.root / 'missing')}, {'action':'allow', 'rc':{'path':str(self.rc), 'fingerprint':'G'*64}}]
+        for change in cases:
+            with self.subTest(change=change), self.assertRaises(launcher.Invalid):
+                launcher.approval_metadata({**self.request, **change}, self.child_id)
+        alias = self.root / 'alias'
+        alias.symlink_to(self.root, target_is_directory=True)
+        with self.assertRaises(launcher.Invalid): launcher.approval_metadata({**self.request, 'target':str(alias)}, self.child_id)
+
+    def test_allow_races_denied_already_allowed_and_child_exit(self):
+        request = {**self.request, 'action':'allow', 'rc':self.blocked['rc']}
+        cases = [(self.blocked, False, False), ({**self.blocked, 'state':'denied'}, True, False), ({**self.blocked, 'state':'allowed'}, True, True), ({**self.blocked, 'rc':{**self.blocked['rc'], 'path':str(self.root / 'other')}}, True, False), ({**self.blocked, 'rc':{**self.blocked['rc'], 'fingerprint':'0'*64}}, True, False)]
+        for status, alive, succeeds in cases:
+            with self.subTest(status=status, alive=alive), mock.patch.object(launcher, 'direnv_status', return_value=status), mock.patch.object(launcher, 'direnv_command') as command:
+                if succeeds:
+                    self.assertEqual(launcher.approval_result(request, self.child_id, {}, lambda:alive), status)
+                else:
+                    with self.assertRaises(launcher.Invalid): launcher.approval_result(request, self.child_id, {}, lambda:alive)
+                command.assert_not_called()
+
+    def test_post_allow_must_confirm_identical_allowed_rc(self):
+        request = {**self.request, 'action':'allow', 'rc':self.blocked['rc']}
+        for after in [self.blocked, {'state':'none', 'rc':None}, {**self.blocked, 'state':'allowed', 'rc':{**self.blocked['rc'], 'fingerprint':'0'*64}}]:
+            with self.subTest(after=after), mock.patch.object(launcher, 'direnv_status', side_effect=[self.blocked, after]), mock.patch.object(launcher, 'direnv_command') as command:
+                with self.assertRaises(launcher.Invalid) as error: launcher.approval_result(request, self.child_id, {}, lambda:True)
+                self.assertIn('permission may have changed', str(error.exception))
+                command.assert_called_once()
+
+    def test_private_ipc_response_consumption_replay_and_rejected_files(self):
+        seen = set()
+        request_path = self.control / 'approval-request.json'
+        response_path = self.control / ('approval-response.' + self.request['requestId'] + '.json')
+        with mock.patch.object(launcher, 'approval_result', return_value=self.blocked) as result:
+            launcher.atomic_json(request_path, self.request)
+            launcher.serve_approval(self.control, self.child_id, seen, {}, lambda:True)
+            self.assertFalse(request_path.exists())
+            response = launcher.private_json(response_path)
+            self.assertEqual(response, {'version':1, 'childId':self.child_id, 'requestId':self.request['requestId'], 'ok':True, 'status':self.blocked})
+            self.assertEqual(response_path.stat().st_mode & 0o777, 0o600)
+            launcher.atomic_json(request_path, self.request)
+            launcher.serve_approval(self.control, self.child_id, seen, {}, lambda:True)
+            self.assertFalse(launcher.private_json(response_path)['ok'])
+            result.assert_called_once()
+            response_path.unlink()
+            for kind in ['malformed', 'oversize', 'permissions', 'symlink', 'fifo']:
+                with self.subTest(kind=kind):
+                    if kind == 'symlink': request_path.symlink_to(self.rc)
+                    elif kind == 'fifo': os.mkfifo(request_path, 0o600)
+                    else:
+                        request_path.write_text('{' if kind == 'malformed' else ' ' * 65537 if kind == 'oversize' else json.dumps(self.request))
+                        request_path.chmod(0o644 if kind == 'permissions' else 0o600)
+                    launcher.serve_approval(self.control, self.child_id, seen, {}, lambda:True)
+                    self.assertFalse(os.path.lexists(request_path))
+                    self.assertFalse(response_path.exists())
+            result.assert_called_once()
+
+    def test_direnv_timeout_failure_never_echoes_output(self):
+        for outcome in [subprocess.TimeoutExpired('direnv', 5, output=b'SECRET'), subprocess.CompletedProcess([], 1, stdout=b'SECRET'), subprocess.CompletedProcess([], 0, stdout=b'x'*65537)]:
+            with self.subTest(outcome=outcome):
+                options = {'side_effect':outcome} if isinstance(outcome, Exception) else {'return_value':outcome}
+                with mock.patch.object(launcher.subprocess, 'run', **options) as run:
+                    with self.assertRaises(launcher.Invalid) as error: launcher.direnv_command('/direnv', ['status', '--json'], str(self.root), {'DIRENV_DIFF':'secret'})
+                    self.assertNotIn('SECRET', str(error.exception))
+                    self.assertEqual(run.call_args.kwargs['timeout'], 5)
+                    self.assertEqual(run.call_args.kwargs['env'], {'DIRENV_DIFF':'secret'})
+
+    @unittest.skipUnless(shutil.which('direnv'), 'optional real direnv unavailable')
+    def test_isolated_real_direnv_symlink_rc_approval_and_deny_without_execution(self):
+        project = self.root / 'project'
+        project.mkdir()
+        contents = self.root / 'contents'
+        contents.mkdir()
+        marker = self.root / 'EXECUTED'
+        content = contents / 'rc'
+        content.write_text('printf executed > ' + shlex.quote(str(marker)) + '\n')
+        # A wrong file-argument approval would resolve into this unrelated RC.
+        (contents / '.envrc').write_text('unrelated')
+        (project / '.envrc').symlink_to(content)
+        baseline = {k:v for k,v in os.environ.items() if not k.startswith(('DIRENV', 'PI_RESTARTABLE_'))}
+        for key in ['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME', 'DIRENV_CONFIG']:
+            directory = self.root / key
+            directory.mkdir()
+            baseline[key] = str(directory)
+        request = {**self.request, 'target':str(project)}
+        before = launcher.approval_result(request, self.child_id, baseline, lambda:True)
+        self.assertEqual(before['state'], 'blocked')
+        self.assertEqual(before['rc']['path'], str(project / '.envrc'))
+        after = launcher.approval_result({**request, 'action':'allow', 'rc':before['rc']}, self.child_id, baseline, lambda:True)
+        self.assertEqual(after, {**before, 'state':'allowed'})
+        direnv = shutil.which('direnv', path=baseline['PATH'])
+        other = launcher.direnv_status(direnv, str(contents), baseline)
+        self.assertEqual(other['state'], 'blocked')
+        launcher.direnv_command(direnv, ['deny', str(project)], str(project), baseline)
+        denied = launcher.approval_result(request, self.child_id, baseline, lambda:True)
+        self.assertEqual(denied, {**before, 'state':'denied'})
+        with self.assertRaises(launcher.Invalid): launcher.approval_result({**request, 'action':'allow', 'rc':denied['rc']}, self.child_id, baseline, lambda:True)
+        self.assertFalse(marker.exists())
 
 
 class SupervisorTests(unittest.TestCase):
@@ -212,6 +393,7 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(request['childId'], first['launch']['childId'])
         for record in (first, second):
             self.assertEqual(record['modes'], [0o700, 0o600])
+            self.assertEqual(record['launch']['version'], 2)
             self.assertEqual(record['launch']['launcherPid'], self.process.pid)
             self.assertEqual(set(record['env']), {'PI_RESTARTABLE_CONTROL_DIR', 'PI_RESTARTABLE_CHILD_ID', 'PI_RESTARTABLE_LAUNCHER_PID'})
             self.assertEqual(record['diff'], 'inherited-diff')
@@ -408,6 +590,52 @@ class SupervisorTests(unittest.TestCase):
         (self.bin / 'pi').symlink_to(self.bin / 'pi-restartable')
         self.assertEqual(self.run_wrapper()[0], 1)
         self.assertEqual(self.logs(), [])
+
+    def test_live_child_approval_uses_baseline_not_direnv_child_environment(self):
+        self.write_executable(self.bin / 'direnv', DIRENV)
+        (self.target / '.envrc').write_text('never execute this')
+        self.assertEqual(self.run_wrapper(case='approval')[0], 0)
+        replies = json.loads((self.root / 'approval-replies').read_text())
+        self.assertEqual([r['status']['state'] for r in replies], ['blocked', 'allowed'])
+        self.assertEqual(replies[0]['status']['rc'], replies[1]['status']['rc'])
+        self.assertEqual(replies[0]['status']['rc']['fingerprint'], hashlib.sha256(b'never execute this').hexdigest())
+        records = [json.loads(line) for line in (self.root / 'direnv-logs').read_text().splitlines()]
+        self.assertEqual([r['argv'] for r in records[1:]], [['status', '--json'], ['status', '--json'], ['allow', str(self.target)], ['status', '--json']])
+        for record in records:
+            self.assertEqual(record['diff'], 'inherited-diff')
+            self.assertEqual(record['path'], str(self.bin))
+        self.assertEqual([r['cwd'] for r in records[1:]], [str(self.target)] * 4)
+        self.assertEqual(len(self.logs()), 1)
+
+    def test_live_child_changed_rc_refuses_approval(self):
+        self.write_executable(self.bin / 'direnv', DIRENV)
+        (self.target / '.envrc').write_text('before')
+        self.assertEqual(self.run_wrapper(case='approval_edit')[0], 0)
+        replies = json.loads((self.root / 'approval-replies').read_text())
+        self.assertTrue(replies[0]['ok'])
+        self.assertFalse(replies[1]['ok'])
+        self.assertFalse((self.root / 'permission').exists())
+
+    def test_live_child_post_allow_change_reports_partial_grant_without_handoff(self):
+        self.write_executable(self.bin / 'direnv', DIRENV)
+        self.env['DIRENV_CHANGE_ON_ALLOW'] = '1'
+        (self.target / '.envrc').write_text('before')
+        self.assertEqual(self.run_wrapper(case='approval')[0], 0)
+        replies = json.loads((self.root / 'approval-replies').read_text())
+        self.assertTrue(replies[0]['ok'])
+        self.assertFalse(replies[1]['ok'])
+        self.assertIn('permission may have changed', replies[1]['error'])
+        self.assertEqual((self.root / 'permission').read_text(), '0')
+        self.assertEqual(len(self.logs()), 1)
+        self.assertEqual(list(self.root.glob('source *.jsonl')), [])
+        records = [json.loads(line) for line in (self.root / 'direnv-logs').read_text().splitlines()]
+        self.assertEqual([r['argv'][0] for r in records], ['exec', 'status', 'status', 'allow', 'status'])
+        self.assertEqual(records[0]['cwd'], str(self.start))
+
+    def test_live_child_optional_direnv_missing_returns_unavailable(self):
+        self.assertEqual(self.run_wrapper(case='approval')[0], 0)
+        reply, = json.loads((self.root / 'approval-replies').read_text())
+        self.assertEqual(reply['status'], {'state':'unavailable', 'rc':None})
 
     def test_private_request_rejects_wrong_owner(self):
         control = self.root / 'private-control'

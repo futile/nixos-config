@@ -14,6 +14,20 @@ After applying the Home Manager configuration, interactive Fish `pi` runs
 as a directory, including spaces; it is not a shell expression. `/restart-in-dir .`
 resumes the current session, while a different canonical directory forks it.
 
+A blocked target direnv configuration opens a Pi selection dialog before any
+handoff checkpoint or shutdown. **Cancel** is selected first; Escape also cancels.
+**Allow and restart** explicitly grants the discovered rc using the launcher's
+baseline environment, then rechecks readiness and continues the normal handoff.
+The dialog shows the target and actual rc path, which may belong to an ancestor.
+It warns that restarting will execute project code with your user permissions.
+This works for both the user command and the main-agent tool.
+
+After deploying this update, start a fresh `pi-restartable`/Fish `pi` invocation.
+The private launcher metadata is now version 2; an old running launcher cannot
+serve approval requests, and the updated extension refuses it helpfully. Reloading
+only the extension does not upgrade the supervisor. Historical checkpoints and
+handoff requests remain version 1 and are not migrated.
+
 Maintained verification entrypoints:
 
 - `python3 -m unittest discover -s tests -p 'test_pi_*.py'`: launcher and existing RPC tests.
@@ -23,8 +37,10 @@ Maintained verification entrypoints:
 - `scripts/test-pi-restart.py --ic-source <patched-IC-root> --actor-source <patched-actor-root>`:
   isolated actual-Pi PTY tests with a fake provider, including native same-directory
   resume/paused swarm, cross-directory forks, recursive folds, historical settings,
-  one-shot tool continuation (including extension reload/marker replay) and
-  failed/missing guards. `--help` lists executable
+  one-shot tool continuation (including extension reload/marker replay),
+  failed/missing guards, and real Pi approval dialogs with fake direnv: command/tool
+  Allow and Escape, ancestor rc discovery, source-environment isolation, and no
+  checkpoint or shutdown while awaiting consent. `--help` lists executable
   overrides. No real provider or project envrc is executed.
 
 Build/check verification does not activate the configuration. Activation remains
@@ -188,9 +204,39 @@ and its configured optional dotenv support. Do not decide based only on whether
 baseline environment. Without direnv, plain execution retains the inherited
 baseline; the launcher cannot recreate direnv's environment reversion itself.
 
-If direnv is present but fails, report the failure and stop. Never fall back to
-plain execution to bypass a rejected environment, and never run `direnv allow`
-automatically. An unapproved rc normally reports:
+Before a restart, the extension requests non-executing `direnv status --json`
+through a private, versioned, one-use launcher channel. The supervisor polls this
+channel while its Pi child is alive; it runs status and explicitly authorized
+approval with its baseline PATH/environment, not the source project's overrides.
+No credentials or baseline environment are serialized into the control files.
+Only a blocked rc prompts; unavailable direnv, no rc, already allowed rc, and
+explicitly denied rc preserve ordinary direnv semantics without a dialog.
+
+The existing Pi extension uses a built-in selection dialog, defaulting to Cancel.
+Only **Allow and restart** authorizes a separate launcher request. The supervisor
+rechecks the discovered path and SHA-256 fingerprint before granting permission,
+then verifies the same rc is allowed. It passes the rc's validated parent directory
+to `direnv allow`: passing a symlink rc file directly would resolve its target and
+could approve another directory instead. Status does not execute rc code; the
+normal replacement `direnv exec` remains the only environment-loading step.
+
+Pi stays running during this interaction. Pending preparation holds the actor
+lease, rejects competing requests, and cannot finalize on `agent_settled`.
+Cancellation, abort, malformed/stale IPC, changed rc, failed approval, or changed
+source/readiness release the lease without a handoff checkpoint or shutdown.
+Approval failure can leave permission granted; report this rather than claiming
+rollback. Normal direnv approval is not atomic conditional-on-content approval:
+an rc can change between the final fingerprint check and direnv's read. A
+post-check mismatch refuses the handoff and warns that permission may have changed;
+it never automatically retries or revokes another potentially concurrent grant.
+
+If direnv is present but environment loading fails after shutdown, report the
+failure and stop with the existing recovery commands. Approval can change after
+preflight; no post-exit prompt or retry loop is added in this version. Never fall
+back to plain execution to bypass a rejected environment, or run `direnv allow`
+without the user's explicit dialog choice. Initial launcher startup has no Pi UI
+available yet; an unapproved initial rc still reports the ordinary direnv error:
+
 
 ```text
 /path/to/.envrc is blocked. Run `direnv allow` to approve its content
@@ -534,7 +580,10 @@ other than optional direnv are declared in the launcher package as needed.
 | Crash/signal/non-clean exit or invalid/stale request | Do not restart or replay; show an appropriate diagnostic. |
 | Target/source disappears after acceptance | Stop with explicit recovery instructions; preserve source session. |
 | direnv absent | Launch plainly from target using the pinned executable. |
-| direnv present but environment load fails | Show error and manual approval/retry instructions; no bypass or automatic allow. |
+| Target rc is blocked during preflight | Show explicit Pi Allow and restart / Cancel dialog before checkpoint/shutdown; only the user's affirmative choice grants permission. |
+| Approval cancelled, changed, or failed | Keep Pi usable, release the preparation lease, and do not checkpoint/shut down; report any potentially partial grant honestly. |
+| Old launcher metadata v1 | Refuse before approval/checkpoint; start a fresh updated launcher. |
+| direnv present but environment load fails after shutdown | Show error and manual approval/retry instructions; no bypass, automatic allow, or post-exit retry loop. |
 | Pinned Pi disappears or replacement fails | Stop visibly; no version substitution, endless retry, or automatic rollback. |
 | Missing required handoff-flag owner, with no conflicting registration | Pi rejects the unknown extension flag before startup; wrapper reports recovery instructions. |
 | Missing/invalid IC health, handoff marker, or unexpected target model/thinking fallback | Withhold automatic continuation, show the error, and leave user control where startup succeeded. |
@@ -612,8 +661,13 @@ cover the following with focused tests and authorized interactive smoke tests:
   interrupts, atomic commit, stale/malformed requests, duplicate consumption,
   vanished launcher, startup failure, and terminal cleanup.
 - Fake direnv available/missing/failing; recheck on each restart; inherited
-  `DIRENV_DIFF`, ancestor/no rc, and visible unapproved-rc behavior. Do not execute
-  unapproved project environments merely to satisfy a test.
+  `DIRENV_DIFF`, ancestor/no rc, and visible unapproved-rc behavior. Explicit Pi
+  default-Cancel/Allow dialogs on command and tool paths; Escape, abort (including
+  after tool acceptance), private IPC nonce/ownership/bounds, source-environment
+  isolation, rc change/error/partial grant, symlink-parent approval, and pending
+  preparation/lease races. Isolated real direnv tests validate status/allow/deny
+  without executing the fixture rc. Do not execute or approve a real project
+  environment merely to satisfy a test.
 - Per-launcher executable pinning despite profile/PATH changes, missing pinned
   executable, and initial/restart argument classification: startup-only values,
   native latest/historical model/thinking and global-name restoration,

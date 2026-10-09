@@ -16,7 +16,7 @@ test("protocol rejects extra keys, malformed values, unbounded input and acciden
     { ...request(), expected: { model: { provider: "fake", modelId: "a", apiKey: "secret" }, thinkingLevel: null } },
     { ...request(), continue: false }, { ...request(), source: "/source" },
   ]) assert.throws(() => validateRequest(invalid));
-  const launch = { version: 1, childId: "child-2", launcherPid: 42, unsupported: ["--api-key"], interactive: true, incoming: request() };
+  const launch = { version: 2, childId: "child-2", launcherPid: 42, unsupported: ["--api-key"], interactive: true, incoming: request() };
   validateLaunch(launch);
   for (const invalid of [{ ...launch, secret: "no" }, { ...launch, unsupported: ["--api-key=secret"] }, { ...launch, launcherPid: 1 }, { ...launch, incoming: { ...request(), extra: true } }]) assert.throws(() => validateLaunch(invalid));
 });
@@ -25,7 +25,7 @@ test("authority requires live direct parent, private canonical directory and bou
   const directory = mkdtempSync(join(tmpdir(), "pi-restart-authority-"));
   const env = { PI_RESTARTABLE_CONTROL_DIR: directory, PI_RESTARTABLE_CHILD_ID: "child", PI_RESTARTABLE_LAUNCHER_PID: String(process.ppid) };
   const file = join(directory, "launch.json");
-  const launch = { version: 1, childId: "child", launcherPid: process.ppid, unsupported: [], interactive: true, incoming: null };
+  const launch = { version: 2, childId: "child", launcherPid: process.ppid, unsupported: [], interactive: true, incoming: null };
   try {
     writeFileSync(file, JSON.stringify(launch), { mode: 0o600 });
     assert.equal(authority(env).launch.childId, "child");
@@ -122,7 +122,7 @@ test("source ownership mismatch refuses before handoff (mocked UID, no foreign-o
 
 test("private atomic consumption receipts are per current and incoming child, retained across new readers", () => {
   const directory = mkdtempSync(join(tmpdir(), "pi-restart-consumed-"));
-  const launch = { version: 1 as const, childId: "current-child", launcherPid: process.ppid, unsupported: [], interactive: true, incoming: request() };
+  const launch = { version: 2 as const, childId: "current-child", launcherPid: process.ppid, unsupported: [], interactive: true, incoming: request() };
   try {
     assert.equal(consumeIncoming({ directory, launch }), true);
     assert.equal(consumeIncoming({ directory, launch: JSON.parse(JSON.stringify(launch)) }), false);
@@ -141,7 +141,7 @@ test("private atomic consumption receipts are per current and incoming child, re
 
 test("failed exclusive receipt publication never replaces a malformed witness or leaks temporary links", () => {
   const directory = mkdtempSync(join(tmpdir(), "pi-restart-consume-failure-"));
-  const launch = { version: 1 as const, childId: "current", launcherPid: process.ppid, unsupported: [], interactive: true, incoming: request() };
+  const launch = { version: 2 as const, childId: "current", launcherPid: process.ppid, unsupported: [], interactive: true, incoming: request() };
   try {
     assert.equal(consumeIncoming({ directory, launch }), true);
     const [file] = readdirSync(directory);

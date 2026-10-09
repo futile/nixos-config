@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -58,7 +58,7 @@ function fixture() {
   ];
   const persist = () => writeFileSync(source, entries.map((entry) => JSON.stringify(entry)).join("\n") + "\n");
   persist();
-  const launch: any = { version: 1, childId: "old-child", launcherPid: process.ppid, unsupported: [], interactive: true, incoming: null };
+  const launch: any = { version: 2, childId: "old-child", launcherPid: process.ppid, unsupported: [], interactive: true, incoming: null };
   const saveLaunch = () => writeFileSync(join(control, "launch.json"), JSON.stringify(launch), { mode: 0o600 });
   saveLaunch();
   const oldEnv = { ...process.env };
@@ -69,6 +69,26 @@ function fixture() {
   delete globals[ACTOR]; delete globals[LOOKUP];
   const oldTerm = process.listeners("SIGTERM"); const oldHup = process.listeners("SIGHUP");
   const notices: string[] = [];
+  const noticeLevels: string[] = [];
+  const dialogs: Array<{ title: string; options: string[]; opts: any }> = [];
+  const approvalRequests: any[] = [];
+  let status: any = { state: "none", rc: null };
+  let approvalHandler: (request: any) => any = (request) => {
+    if (request.action === "allow") status = { ...status, state: "allowed" };
+    return { ok: true, status };
+  };
+  const server = setInterval(() => {
+    const file = join(control, "approval-request.json");
+    if (!existsSync(file)) return;
+    const request = JSON.parse(readFileSync(file, "utf8")); unlinkSync(file);
+    approvalRequests.push(request);
+    const reply = approvalHandler(request);
+    if (reply === undefined) return;
+    const response = join(control, `approval-response.${request.requestId}.json`);
+    writeFileSync(response + ".tmp", JSON.stringify({ version: 1, childId: request.childId, requestId: request.requestId, ...reply }), { mode: 0o600 });
+    renameSync(response + ".tmp", response);
+  }, 5);
+  let select: (dialog: { title: string; options: string[]; opts: any }) => Promise<string | undefined> = async () => "Cancel";
   const pi = new FakePi();
   let leaf = entries.at(-1).id;
   let entryCount = 0;
@@ -85,7 +105,7 @@ function fixture() {
       getApiKeyAndHeaders: async () => ({ ok: true }),
     },
     isIdle: () => idle, hasPendingMessages: () => pending,
-    ui: { notify: (text: string) => notices.push(text) },
+    ui: { notify: (text: string, level: string) => { notices.push(text); noticeLevels.push(level); }, select: (title: string, options: string[], opts: any) => { const dialog = { title, options, opts }; dialogs.push(dialog); return select(dialog); } },
     shutdown: () => { assert.ok(existsSync(join(control, "request.json")), "commit must precede shutdown"); pi.ledger.push("shutdown"); shutdown = true; },
     sessionManager: {
       getSessionId: () => currentHeader.id, getSessionFile: () => currentFile, getHeader: () => currentHeader,
@@ -101,6 +121,7 @@ function fixture() {
   };
   pi.current = { append }; restartInDir(pi as unknown as ExtensionAPI);
   const cleanup = () => {
+    clearInterval(server);
     for (const [name, before] of [["SIGTERM", oldTerm], ["SIGHUP", oldHup]] as const) for (const handler of process.listeners(name)) if (!before.includes(handler)) process.off(name, handler);
     for (const name of ["PI_RESTARTABLE_CONTROL_DIR", "PI_RESTARTABLE_CHILD_ID", "PI_RESTARTABLE_LAUNCHER_PID"]) {
       if (oldEnv[name] === undefined) delete process.env[name]; else process.env[name] = oldEnv[name];
@@ -135,7 +156,7 @@ function fixture() {
     }
   };
   const health = (modify: (value: any) => any = (value) => value) => pi.events.on("pi-restart-in-dir:ic-health-request", (event) => pi.events.emit("pi-restart-in-dir:ic-health-response", modify({ ...event, version: 2, ok: true })));
-  return { root, cwd, target, control, source, entries, launch, saveLaunch, ctx, pi, notices, cleanup, toolBatch, acceptedTool, saveResult, request, append, restore, health,
+  return { noticeLevels, dialogs, approvalRequests, status: (value: any) => { status = value; }, approvalHandler: (value: typeof approvalHandler) => { approvalHandler = value; }, selectDialog: (value: typeof select) => { select = value; }, root, cwd, target, control, source, entries, launch, saveLaunch, ctx, pi, notices, cleanup, toolBatch, acceptedTool, saveResult, request, append, restore, health,
     reload: () => { pi.handlers.clear(); restartInDir(pi as unknown as ExtensionAPI); },
     idle: (value: boolean) => { idle = value; }, pending: (value: boolean) => { pending = value; }, didShutdown: () => shutdown,
     select: (id: string) => { leaf = id; }, sourceFile: (file: string) => { currentFile = file; },
@@ -462,5 +483,174 @@ test("shared-process actor child cannot consume main's handoff; main can then co
     assert.equal(readdirSync(f.control).some((entry) => entry.startsWith("consumed.")), false);
     assert.deepEqual((await f.pi.emit("input", event, f.ctx))[0], { action: "transform", text: request.prompt, images: undefined });
     assert.equal(readdirSync(f.control).filter((entry) => entry.startsWith("consumed.")).length, 1);
+  } finally { f.cleanup(); }
+});
+
+const blockedRc = (f: ReturnType<typeof fixture>) => ({ path: join(f.root, ".envrc"), fingerprint: "a".repeat(64) });
+const deferred = <T,>() => { let resolve!: (value: T) => void; const promise = new Promise<T>((done) => { resolve = done; }); return { promise, resolve }; };
+
+test("only blocked direnv prompts; none, unavailable, allowed and explicitly denied retain normal launch behavior", async () => {
+  for (const state of ["none", "unavailable", "allowed", "denied"]) {
+    const f = fixture(); try {
+      f.status({ state, rc: ["none", "unavailable"].includes(state) ? null : blockedRc(f) });
+      await f.pi.command.handler(f.target, f.ctx);
+      assert.equal(f.didShutdown(), true); assert.equal(f.dialogs.length, 0);
+      assert.deepEqual(f.approvalRequests.map((request) => request.action), ["status"]);
+      assert.equal(f.approvalRequests[0].rc, null);
+    } finally { f.cleanup(); }
+  }
+});
+
+test("blocked direnv uses safe first Cancel option and exact ancestor rc; cancel/dismiss/boolean never authorize", async () => {
+  for (const choice of ["Cancel", undefined, true]) {
+    const f = fixture(); try {
+      let released = 0;
+      globals[ACTOR] = { inspect: () => ({ main: true, ready: true }), acquire: () => ({ ok: true }), release: () => { released++; } };
+      const rc = blockedRc(f); f.status({ state: "blocked", rc });
+      f.selectDialog(async () => choice as any);
+      await f.pi.command.handler(f.target, f.ctx);
+      assert.equal(released, 1); assert.equal(f.didShutdown(), false); assert.deepEqual(f.pi.ledger, []);
+      assert.equal(f.approvalRequests.length, 1);
+      assert.equal(f.notices.at(-1), "Restart cancelled; Pi remains here."); assert.equal(f.noticeLevels.at(-1), "info");
+      assert.doesNotMatch(f.notices.at(-1)!, /Restart refused|Manual recovery/);
+      assert.deepEqual(f.dialogs[0].options, ["Cancel", "Allow and restart"]);
+      assert.ok(f.dialogs[0].title.includes(rc.path)); assert.ok(f.dialogs[0].title.includes(f.target));
+      assert.match(f.dialogs[0].title, /next restart executes project code/);
+      assert.equal(f.dialogs[0].opts.timeout, undefined); assert.ok(f.dialogs[0].opts.signal instanceof AbortSignal);
+      assert.equal(existsSync(join(f.control, "request.json")), false);
+      assert.equal((await f.pi.emit("tool_call", { toolName: "write", toolCallId: "usable", input: {} }, f.ctx))[0], undefined);
+    } finally { f.cleanup(); }
+  }
+});
+
+test("explicit user Allow and restart sends exact rc witness before checkpoint; tool remains staged until durable result", async () => {
+  const f = fixture(); try {
+    const rc = blockedRc(f); f.status({ state: "blocked", rc }); f.selectDialog(async () => "Allow and restart");
+    const result = await f.acceptedTool(); assert.equal(result.terminate, true);
+    assert.deepEqual(f.pi.ledger, []); assert.equal(f.didShutdown(), false);
+    assert.deepEqual(f.approvalRequests.map((request) => request.action), ["status", "allow"]);
+    assert.deepEqual(f.approvalRequests[1].rc, rc);
+    assert.equal(f.approvalRequests[1].target, f.target); assert.equal(f.approvalRequests[1].childId, f.launch.childId);
+    assert.match(f.approvalRequests[1].requestId, /^[a-f0-9]{32}$/);
+    f.saveResult(); f.idle(true); await f.pi.emit("agent_settled", {}, f.ctx);
+    assert.equal(f.didShutdown(), true);
+  } finally { f.cleanup(); }
+});
+
+test("pending approval serializes preparations and ignores premature settled events without releasing its lease", async () => {
+  const f = fixture(); try {
+    let released = 0;
+    globals[ACTOR] = { inspect: () => ({ main: true, ready: true }), acquire: () => ({ ok: true }), release: () => { released++; } };
+    f.status({ state: "blocked", rc: blockedRc(f) });
+    const shown = deferred<void>(); const choice = deferred<string | undefined>();
+    f.selectDialog(async () => { shown.resolve(); return choice.promise; });
+    const pending = f.pi.command.handler(f.target, f.ctx); await shown.promise;
+    await f.pi.emit("agent_settled", {}, f.ctx);
+    await f.pi.command.handler(f.cwd, f.ctx);
+    await assert.rejects(f.pi.tool.execute("other", { directory: f.cwd }, undefined, undefined, f.ctx), /awaiting approval/);
+    assert.equal(released, 0); assert.deepEqual(f.pi.ledger, []); assert.equal(f.didShutdown(), false);
+    assert.equal(f.approvalRequests.length, 1);
+    choice.resolve("Cancel"); await pending;
+    assert.equal(released, 1); assert.deepEqual(f.pi.ledger, []);
+  } finally { f.cleanup(); }
+});
+
+test("every UI await revalidates readiness, branch, source, actor and launcher before publishing allow", async () => {
+  for (const change of [
+    (f: ReturnType<typeof fixture>) => f.pending(true),
+    (f: ReturnType<typeof fixture>) => f.append({ type: "custom", customType: "branch-change", data: {} }),
+    (f: ReturnType<typeof fixture>) => f.sourceFile(join(f.root, "missing.jsonl")),
+    (f: ReturnType<typeof fixture>) => { f.launch.childId = "changed-child"; f.saveLaunch(); },
+    (f: ReturnType<typeof fixture>) => { globals[LOOKUP] = () => "worker"; },
+    (f: ReturnType<typeof fixture>) => { globals[ACTOR] = { inspect: () => ({ main: true, ready: false }), acquire: () => ({ ok: true }), release: () => {} }; },
+  ]) {
+    const f = fixture(); try {
+      f.status({ state: "blocked", rc: blockedRc(f) });
+      f.selectDialog(async () => { change(f); return "Allow and restart"; });
+      await f.pi.command.handler(f.target, f.ctx);
+      assert.equal(f.approvalRequests.length, 1); assert.deepEqual(f.pi.ledger, []); assert.equal(f.didShutdown(), false);
+      assert.match(f.notices.at(-1)!, /Restart refused/);
+    } finally { f.cleanup(); }
+  }
+});
+
+test("tool abort and shutdown signal dismiss approval without allow, checkpoint or restart", async () => {
+  for (const useSignal of [false, true]) {
+    const f = fixture(); try {
+      await started(f); f.status({ state: "blocked", rc: blockedRc(f) }); f.toolBatch(); f.idle(false);
+      const shown = deferred<void>(); const controller = new AbortController();
+      f.selectDialog(({ opts }) => new Promise((resolve) => { shown.resolve(); opts.signal.addEventListener("abort", () => resolve(undefined), { once: true }); }));
+      const result = f.pi.tool.execute("switch", { directory: f.target }, controller.signal, undefined, f.ctx);
+      const rejected = assert.rejects(result, /Restart refused/); await shown.promise;
+      if (useSignal) process.listeners("SIGTERM").at(-1)!("SIGTERM"); else controller.abort();
+      await rejected;
+      assert.equal(f.approvalRequests.length, 1); assert.deepEqual(f.pi.ledger, []); assert.equal(f.didShutdown(), false);
+      assert.equal((await f.pi.emit("tool_call", { toolName: "write", toolCallId: "usable", input: {} }, f.ctx))[0], undefined);
+    } finally { f.cleanup(); }
+  }
+});
+
+test("status await readiness races never show approval; allow refusal or changed witness never checkpoints", async () => {
+  for (const kind of ["status-race", "allow-error", "allow-denied", "allow-changed", "allow-race"]) {
+    const f = fixture(); try {
+      const rc = blockedRc(f); f.selectDialog(async () => "Allow and restart");
+      f.approvalHandler((request) => {
+        if (request.action === "status") {
+          if (kind === "status-race") f.pending(true);
+          return { ok: true, status: { state: "blocked", rc } };
+        }
+        if (kind === "allow-error") return { ok: false, error: "direnv rc changed; fresh approval required" };
+        if (kind === "allow-race") f.pending(true);
+        return { ok: true, status: { state: kind === "allow-denied" ? "denied" : "allowed", rc: kind === "allow-changed" ? { ...rc, fingerprint: "b".repeat(64) } : rc } };
+      });
+      await f.pi.command.handler(f.target, f.ctx);
+      assert.deepEqual(f.pi.ledger, []); assert.equal(f.didShutdown(), false);
+      assert.equal(f.dialogs.length, kind === "status-race" ? 0 : 1);
+      assert.match(f.notices.at(-1)!, /Restart refused/);
+    } finally { f.cleanup(); }
+  }
+});
+
+test("old launcher v1 fails helpfully before IPC or checkpoint", async () => {
+  const f = fixture(); try {
+    f.launch.version = 1; f.saveLaunch(); await f.pi.command.handler(f.target, f.ctx);
+    assert.equal(f.approvalRequests.length, 0); assert.deepEqual(f.pi.ledger, []);
+    assert.match(f.notices.at(-1)!, /predates direnv approval support.*relaunch/);
+  } finally { f.cleanup(); }
+});
+
+test("tool abort after accepted result but before settled cancels without checkpointing or shutdown", async () => {
+  const f = fixture(); try {
+    let released = 0;
+    globals[ACTOR] = { inspect: () => ({ main: true, ready: true }), acquire: () => ({ ok: true }), release: () => { released++; } };
+    const rc = blockedRc(f); f.status({ state: "blocked", rc }); f.selectDialog(async () => "Allow and restart");
+    f.toolBatch(); f.idle(false); const controller = new AbortController();
+    const result = await f.pi.tool.execute("switch", { directory: f.target }, controller.signal, undefined, f.ctx);
+    assert.equal(result.terminate, true); assert.equal(f.approvalRequests[1].action, "allow");
+    controller.abort();
+    await f.pi.emit("tool_result", { toolCallId: "switch", isError: false }, f.ctx);
+    f.saveResult(); f.idle(true); await f.pi.emit("agent_settled", {}, f.ctx);
+    assert.equal(f.didShutdown(), false); assert.deepEqual(f.pi.ledger, ["result_saved"]); assert.equal(released, 1);
+    assert.equal(existsSync(join(f.control, "request.json")), false);
+    assert.equal((await f.pi.emit("tool_call", { toolName: "write", toolCallId: "usable", input: {} }, f.ctx))[0], undefined);
+  } finally { f.cleanup(); }
+});
+
+test("consent escapes path terminal controls rather than rendering spoofed path text", async () => {
+  const f = fixture(); try {
+    const rc = { path: join(f.root, "ancestor\n\x1b[31m.envrc"), fingerprint: "a".repeat(64) };
+    f.status({ state: "blocked", rc }); await f.pi.command.handler(f.target, f.ctx);
+    assert.ok(f.dialogs[0].title.includes(JSON.stringify(rc.path)));
+    assert.equal(f.dialogs[0].title.includes("\x1b"), false);
+    assert.equal(f.approvalRequests.length, 1); assert.deepEqual(f.pi.ledger, []);
+  } finally { f.cleanup(); }
+});
+
+test("deliberate tool approval cancellation is informational UI and a cancelled tool error", async () => {
+  const f = fixture(); try {
+    f.status({ state: "blocked", rc: blockedRc(f) }); f.toolBatch(); f.idle(false);
+    await assert.rejects(f.pi.tool.execute("switch", { directory: f.target }, undefined, undefined, f.ctx), /^Error: Restart cancelled:.*cancelled by user/);
+    assert.equal(f.notices.at(-1), "Restart cancelled; Pi remains here."); assert.equal(f.noticeLevels.at(-1), "info");
+    assert.equal(f.approvalRequests.length, 1); assert.deepEqual(f.pi.ledger, []); assert.equal(f.didShutdown(), false);
   } finally { f.cleanup(); }
 });

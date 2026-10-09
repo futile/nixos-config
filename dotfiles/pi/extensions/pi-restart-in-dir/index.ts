@@ -8,6 +8,8 @@ import {
   type Authority, type Checkpoint, type Request,
 } from "./handoff.ts";
 
+import { approval } from "./approval.ts";
+
 const ACTOR = Symbol.for("futile.pi.subagents.restart-in-dir.v1");
 const NAME_LOOKUP = Symbol.for("futile.pi.subagents.agent-name-lookup.v1");
 const HEALTH_REQUEST = "pi-restart-in-dir:ic-health-request";
@@ -20,6 +22,7 @@ type ActorBridge = {
 type Intent = {
   authority: Authority; data: Checkpoint; source: string; sessionId: string; token: string;
   actor?: ActorBridge; toolCallId?: string; resultObserved: boolean; committed: boolean;
+  controller: AbortController; signal: AbortSignal;
 };
 function bridge(): ActorBridge | undefined {
   const globals = globalThis as Record<symbol, unknown>;
@@ -58,9 +61,11 @@ function expected(ctx: ExtensionContext, branch: any[]) {
   return nativeExpected(branch, ctx.sessionManager.buildSessionProjection().messages.length > 0, (provider, id) => ctx.modelRegistry.find(provider, id));
 }
 function errorText(error: unknown): string { return error instanceof Error ? error.message : String(error); }
+class RestartCancelled extends Error {}
 
 export default function restartInDir(pi: ExtensionAPI): void {
   let intent: Intent | undefined;
+  let preparing = false;
   let interrupted = false;
   let incomingConsumed = false;
   let signalHandlersInstalled = false;
@@ -73,14 +78,17 @@ export default function restartInDir(pi: ExtensionAPI): void {
     const previous = intent;
     intent = undefined;
     if (previous) {
+      previous.controller.abort();
       try { invalidateRequest(previous.authority.directory); } catch (failure) { notify(ctx, `Could not invalidate restart request: ${errorText(failure)}`); }
       try { release(previous); } catch (failure) { notify(ctx, `Could not release restart lease: ${errorText(failure)}`); }
     }
+    if (error instanceof RestartCancelled) { notify(ctx, "Restart cancelled; Pi remains here.", "info"); return; }
     notify(ctx, `Restart refused: ${errorText(error)}. ${manualInstructions(previous?.data.target ?? refusalTarget, previous?.source ?? ctx.sessionManager.getSessionFile(), ctx.cwd)}`);
   };
   const invalidateOnSignal = () => {
     interrupted = true;
     if (intent) {
+      intent.controller.abort();
       // Do not cancel Pi's signal handler or force an exit. A clean signal exit must not restart.
       try { invalidateRequest(intent.authority.directory); } catch (error) { console.error(`pi-restart-in-dir: cannot invalidate signalled handoff: ${errorText(error)}`); }
     }
@@ -90,41 +98,76 @@ export default function restartInDir(pi: ExtensionAPI): void {
     signalHandlersInstalled = false;
   };
   const validateAuthority = (ctx: ExtensionContext): Authority => {
+    mainIdentity(ctx);
     const control = authority();
     if (!control.launch.interactive) throw new Error("Launcher invocation is not interactive");
     if (control.launch.unsupported.length) throw new Error(`Unsupported launcher options: ${control.launch.unsupported.join(", ")}`);
-    mainIdentity(ctx);
     if (interrupted) throw new Error("This process has received a shutdown signal");
     return control;
   };
-  const prepare = (directory: string, invocation: "command" | "tool", ctx: ExtensionContext, toolCallId?: string) => {
-    if (intent) throw new Error("A restart handoff is already accepted");
-    if (typeof directory !== "string" || !directory.trim()) throw new Error("A directory argument is required");
-    refusalTarget = undefined;
-    const target = canonicalDirectory(directory, ctx.cwd);
-    refusalTarget = target;
-    const control = validateAuthority(ctx);
-    const actor = mainIdentity(ctx);
-    if (invocation === "tool") soleTool(ctx, toolCallId!);
-    checkReady(ctx, actor, invocation === "tool", activeTools, toolCallId);
-    const source = savedSource(ctx.sessionManager.getSessionFile(), ctx.cwd, ctx.sessionManager.getSessionId());
-    const token = randomUUID();
-    if (actor) {
-      const lease = actor.acquire(ctx.sessionManager.getSessionId(), token);
-      if (lease.ok !== true) throw new Error(lease.reason ?? "Could not acquire actor restart lease");
-    }
-    intent = {
-      authority: control, source: source.source, sessionId: ctx.sessionManager.getSessionId(), token, actor, toolCallId,
-      data: { version: 1, childId: control.launch.childId, sourceCwd: source.sourceCwd, target, invocation, continue: invocation === "tool" },
-      resultObserved: false, committed: false,
-    };
-    // There is no await between lease acquisition and publication of the local intent.
-    checkReady(ctx, actor, invocation === "tool", activeTools, toolCallId);
+  const prepare = async (directory: string, invocation: "command" | "tool", ctx: ExtensionContext, toolCallId?: string, toolSignal?: AbortSignal) => {
+    if (intent || preparing) throw new Error("A restart handoff is already accepted or awaiting approval");
+    preparing = true;
+    try {
+      if (typeof directory !== "string" || !directory.trim()) throw new Error("A directory argument is required");
+      refusalTarget = undefined;
+      const target = canonicalDirectory(directory, ctx.cwd);
+      refusalTarget = target;
+      const control = validateAuthority(ctx);
+      const actor = mainIdentity(ctx);
+      if (invocation === "tool") soleTool(ctx, toolCallId!);
+      checkReady(ctx, actor, invocation === "tool", activeTools, toolCallId);
+      const source = savedSource(ctx.sessionManager.getSessionFile(), ctx.cwd, ctx.sessionManager.getSessionId());
+      const token = randomUUID();
+      if (actor) {
+        const lease = actor.acquire(ctx.sessionManager.getSessionId(), token);
+        if (lease.ok !== true) throw new Error(lease.reason ?? "Could not acquire actor restart lease");
+      }
+      const controller = new AbortController();
+      const signal = toolSignal ? AbortSignal.any([toolSignal, controller.signal]) : controller.signal;
+      intent = {
+        authority: control, source: source.source, sessionId: ctx.sessionManager.getSessionId(), token, actor, toolCallId,
+        data: { version: 1, childId: control.launch.childId, sourceCwd: source.sourceCwd, target, invocation, continue: invocation === "tool" },
+        resultObserved: false, committed: false, controller, signal,
+      };
+      // No await between lease acquisition and publication of the local pending intent.
+      const value = intent;
+      const leafId = ctx.sessionManager.getLeafId();
+      const revalidate = () => {
+        signal.throwIfAborted();
+        if (intent !== value || ctx.sessionManager.getSessionId() !== value.sessionId) throw new Error("Active session changed during restart preparation");
+        const fresh = validateAuthority(ctx);
+        if (fresh.directory !== control.directory || fresh.launch.childId !== control.launch.childId) throw new Error("Launcher changed during restart preparation");
+        if (mainIdentity(ctx) !== actor) throw new Error("Actor restart bridge changed");
+        if (canonicalDirectory(target, ctx.cwd) !== target) throw new Error("Restart target changed");
+        if (invocation === "tool") soleTool(ctx, toolCallId!);
+        checkReady(ctx, actor, invocation === "tool", activeTools, toolCallId);
+        const saved = savedSource(ctx.sessionManager.getSessionFile(), ctx.cwd, value.sessionId);
+        if (saved.source !== value.source || saved.sourceCwd !== value.data.sourceCwd || ctx.sessionManager.getLeafId() !== leafId) throw new Error("Session source or selected branch changed during restart preparation");
+      };
+      revalidate();
+      const status = await approval(control, "status", target, null, signal, revalidate);
+      revalidate();
+      if (status.state === "blocked") {
+        const choice = await ctx.ui.select(`Allow direnv for this restart?\n\nTarget: ${JSON.stringify(target)}\nConfiguration: ${JSON.stringify(status.rc!.path)}\n\nAllowing trusts this file persistently. The next restart executes project code through direnv.`, ["Cancel", "Allow and restart"], { signal });
+        revalidate();
+        if (choice !== "Allow and restart") throw new RestartCancelled("Direnv approval cancelled by user; Pi remains here without a checkpoint");
+        try {
+          const allowed = await approval(control, "allow", target, status.rc, signal, revalidate);
+          revalidate();
+          if (allowed.state !== "allowed" || !isDeepStrictEqual(allowed.rc, status.rc)) throw new Error("Direnv approval changed or was not granted; retry for a fresh explicit choice");
+        } catch (error) {
+          throw new Error(`${errorText(error)}. Direnv permission may have changed; Pi has not checkpointed or restarted. No automatic retry or revoke.`);
+        }
+      }
+      // Explicitly denied files retain direnv's normal skip behavior; never offer to override deny.
+    } finally { preparing = false; }
   };
   const finalize = (ctx: ExtensionContext) => {
     const value = intent;
-    if (!value || value.committed) return;
+    if (!value || value.committed || preparing) return;
     try {
+      value.signal.throwIfAborted();
       if (ctx.sessionManager.getSessionId() !== value.sessionId) throw new Error("Active session changed during handoff");
       const control = validateAuthority(ctx);
       if (control.directory !== value.authority.directory || control.launch.childId !== value.data.childId) throw new Error("Launcher changed during handoff");
@@ -184,24 +227,24 @@ export default function restartInDir(pi: ExtensionAPI): void {
   pi.registerCommand("restart-in-dir", {
     description: "Restart foreground Pi in an existing directory: /restart-in-dir <directory>",
     handler: async (args, ctx) => {
-      if (intent) { notify(ctx, "A restart handoff is already accepted"); return; }
-      try { prepare(args.trim(), "command", ctx); finalize(ctx); }
+      if (intent || preparing) { notify(ctx, "A restart handoff is already accepted or awaiting approval"); return; }
+      try { await prepare(args.trim(), "command", ctx); finalize(ctx); }
       catch (error) { cancel(ctx, error); }
     },
   });
   pi.registerTool({
     name: "restart-in-dir", label: "Restart in directory",
-    description: "Request a graceful Pi restart in an existing directory. Main agent only; must be the sole direct tool call in a batch. Return means handoff accepted, not restart succeeded. Same cwd resumes the saved session/swarm paused; different cwd forks with a new session ID and empty swarm. Queued hidden input may be lost and running user Bash interrupted.",
+    description: "Request a graceful Pi restart in an existing directory. Main agent only; must be the sole direct tool call in a batch. Unapproved direnv requires explicit user UI consent; cancellation refuses without checkpointing. Return means handoff accepted, not restart succeeded. Same cwd resumes the saved session/swarm paused; different cwd forks with a new session ID and empty swarm. Queued hidden input may be lost and running user Bash interrupted.",
     exposure: "model-only", executionMode: "sequential",
     parameters: { type: "object", properties: { directory: { type: "string", minLength: 1, maxLength: 4096, description: "Existing directory, relative to current Pi cwd or absolute" } }, required: ["directory"], additionalProperties: false } as any,
-    execute: async (id, params: { directory: string }, _signal, _onUpdate, ctx) => {
-      if (intent) throw new Error("A restart handoff is already accepted");
+    execute: async (id, params: { directory: string }, signal, _onUpdate, ctx) => {
+      if (intent || preparing) throw new Error("A restart handoff is already accepted or awaiting approval");
       try {
-        prepare(params.directory, "tool", ctx, id);
+        await prepare(params.directory, "tool", ctx, id, signal);
         return { content: [{ type: "text", text: "Restart handoff accepted. Pi will checkpoint the saved result and gracefully shut down; replacement startup may still fail." }], details: { accepted: true }, terminate: true };
       } catch (error) {
         cancel(ctx, error);
-        throw new Error(`Restart refused: ${errorText(error)}`);
+        throw new Error(`${error instanceof RestartCancelled ? "Restart cancelled" : "Restart refused"}: ${errorText(error)}`);
       }
     },
   });
@@ -287,6 +330,7 @@ export default function restartInDir(pi: ExtensionAPI): void {
   });
   pi.on("session_shutdown", () => {
     if (intent) {
+      intent.controller.abort();
       try { release(intent); } catch (error) { console.error(`pi-restart-in-dir: lease release failed: ${errorText(error)}`); }
     }
     // A committed dying process still needs direct-child signal invalidation during cleanup.

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Terminal Pi supervisor. No shell execution, version substitution, or retries."""
+import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import shutil
@@ -10,6 +12,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 
 LIMIT = 64 * 1024
@@ -187,6 +190,135 @@ def validate_request(request, child_id):
     return request
 
 
+def approval_metadata(request, child_id):
+    fields(request, "version childId requestId action target rc")
+    if type(request["version"]) is not int or request["version"] != 1 or request["childId"] != child_id:
+        raise Invalid("stale approval identity or version")
+    if not isinstance(request["requestId"], str) or not re.fullmatch(r"[0-9a-f]{32}", request["requestId"]):
+        raise Invalid("invalid approval request identity")
+    canonical(request["target"], directory=True)
+    if request["action"] == "status":
+        if request["rc"] is not None:
+            raise Invalid("status must not include an RC")
+    elif request["action"] == "allow":
+        fields(request["rc"], "path fingerprint")
+        rc = request["rc"]
+        if not text(rc["path"]) or not os.path.isabs(rc["path"]) or not isinstance(rc["fingerprint"], str) or not re.fullmatch(r"[0-9a-f]{64}", rc["fingerprint"]):
+            raise Invalid("invalid approval RC")
+    else:
+        raise Invalid("invalid approval action")
+
+
+def direnv_command(direnv, args, target, baseline):
+    try:
+        result = subprocess.run([direnv, *args], cwd=target, env=baseline, stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=5)
+    except subprocess.TimeoutExpired:
+        raise Invalid("direnv operation timed out") from None
+    except OSError:
+        raise Invalid("direnv operation unavailable") from None
+    if result.returncode != 0 or len(result.stdout) > LIMIT:
+        raise Invalid("direnv operation failed")
+    return result.stdout
+
+
+def rc_fingerprint(stream):
+    deadline = time.monotonic() + 5
+    digest = hashlib.sha256()
+    while True:
+        if time.monotonic() >= deadline:
+            raise Invalid("direnv RC fingerprint timed out")
+        chunk = stream.read(64 * 1024)
+        if time.monotonic() >= deadline:
+            raise Invalid("direnv RC fingerprint timed out")
+        if not chunk:
+            return digest.hexdigest()
+        digest.update(chunk)
+
+
+def direnv_status(direnv, target, baseline):
+    if direnv is None:
+        return {"state": "unavailable", "rc": None}
+    raw = direnv_command(direnv, ["status", "--json"], target, baseline)
+    try:
+        data = json.loads(raw, object_pairs_hook=unique_object)
+        found = data["state"]["foundRC"]
+        if found is None:
+            return {"state": "none", "rc": None}
+        path, allowed = found["path"], found["allowed"]
+        if not text(path) or not os.path.isabs(path) or type(allowed) is not int or allowed not in {0, 1, 2}:
+            raise ValueError()
+    except (KeyError, TypeError, ValueError, UnicodeError, RecursionError):
+        raise Invalid("invalid direnv status") from None
+    # Keep direnv's lexical path: its approval identity includes that exact path.
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    with os.fdopen(fd, "rb") as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise Invalid("direnv RC is not a regular file")
+        fingerprint = rc_fingerprint(stream)
+    return {"state": {0: "allowed", 1: "blocked", 2: "denied"}[allowed],
+            "rc": {"path": path, "fingerprint": fingerprint}}
+
+
+def approval_result(request, child_id, baseline, alive):
+    approval_metadata(request, child_id)
+    direnv = shutil.which("direnv", path=baseline.get("PATH", os.defpath))
+    direnv = os.path.abspath(direnv) if direnv else None
+    target = request["target"]
+    current = direnv_status(direnv, target, baseline)
+    if request["action"] == "status":
+        return current
+    if current["rc"] != request["rc"]:
+        raise Invalid("direnv RC changed; request fresh status and approval")
+    if current["state"] == "allowed":
+        return current
+    if current["state"] != "blocked":
+        raise Invalid("direnv RC is no longer blocked; request fresh status")
+    # Passing the file itself resolves RC symlinks and changes approval identity.
+    # Its canonical parent rediscovers the same lexical RC, including a symlink.
+    parent = canonical(os.path.dirname(current["rc"]["path"]), directory=True)
+    if not alive():
+        raise Invalid("Pi child exited or launcher interrupted; approval cancelled")
+    direnv_command(direnv, ["allow", parent], target, baseline)
+    after = direnv_status(direnv, target, baseline)
+    if after["rc"] != request["rc"] or after["state"] != "allowed":
+        raise Invalid("direnv approval did not confirm the same RC; permission may have changed. Request fresh status; no automatic retry or revoke.")
+    return after
+
+
+def serve_approval(control, child_id, seen, baseline, alive, eligible=True):
+    path = control / "approval-request.json"
+    if not os.path.lexists(path):
+        return
+    request_id = None
+    try:
+        request = private_json(path)
+        if isinstance(request, dict) and isinstance(request.get("requestId"), str) and re.fullmatch(r"[0-9a-f]{32}", request["requestId"]):
+            request_id = request["requestId"]
+        path.unlink()  # Consume before handling; retries need a new nonce.
+        if request_id in seen:
+            raise Invalid("approval request was already consumed")
+        if request_id is not None:
+            seen.add(request_id)
+        if not eligible:
+            raise Invalid("this invocation is not restartable")
+        result = approval_result(request, child_id, baseline, alive)
+        response = {"ok": True, "status": result}
+    except (Invalid, OSError, TypeError) as error:
+        # Only our fixed validation messages are safe to publish.
+        response = {"ok": False, "error": str(error)[:4096] if isinstance(error, Invalid) else "Invalid or unavailable approval request"}
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+    if request_id is not None:
+        try:
+            atomic_json(control / ("approval-response." + request_id + ".json"),
+                        {"version": 1, "childId": child_id, "requestId": request_id, **response})
+        except OSError:
+            pass  # A removed/tampered control directory must not terminate live Pi.
+
+
 def replacement_args(carry, request):
     selector = "--session" if request["sourceCwd"] == request["target"] else "--fork"
     args = [*carry, selector, request["source"], "--pi-restart-in-dir-handoff", request["childId"]]
@@ -235,7 +367,7 @@ def main(argv=None):
             control = Path(os.path.realpath(directory))
             while not interrupted:
                 child_id = uuid.uuid4().hex
-                atomic_json(control / "launch.json", {"version": 1, "childId": child_id, "launcherPid": os.getpid(), "unsupported": unsupported, "interactive": interactive, "incoming": incoming})
+                atomic_json(control / "launch.json", {"version": 2, "childId": child_id, "launcherPid": os.getpid(), "unsupported": unsupported, "interactive": interactive, "incoming": incoming})
                 env = dict(baseline)
                 env.update({PREFIX + "CONTROL_DIR": str(control), PREFIX + "CHILD_ID": child_id, PREFIX + "LAUNCHER_PID": str(os.getpid())})
                 direnv = shutil.which("direnv", path=baseline_path)
@@ -250,7 +382,16 @@ def main(argv=None):
                     child = subprocess.Popen(command, cwd=cwd, env=env)
                     if interrupted:
                         child.send_signal(interrupted)
-                    status = child.wait()
+                    seen = set()
+                    while True:
+                        try:
+                            status = child.wait(timeout=.05)
+                            break
+                        except subprocess.TimeoutExpired:
+                            if not interrupted and child.poll() is None:
+                                serve_approval(control, child_id, seen, baseline,
+                                               lambda: not interrupted and child.poll() is None,
+                                               interactive and not unsupported)
                     child = None
                 except OSError:
                     print("pi-restartable: child launch failed; no fallback or retry", file=sys.stderr)
