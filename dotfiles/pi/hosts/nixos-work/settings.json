@@ -9,7 +9,8 @@
     "npm:@juicesharp/rpiv-web-tools@2.12.0",
     "git:github.com/futile/pi-statusline@02a95ec7aae9848d8970a5cea26b50532cb18500",
     "git:github.com/DietrichGebert/ponytail",
-    "git:github.com/fdietze/pi-session-name@89dafe1dc48968f20d414ac0c922b3fd6cb88347"
+    "git:github.com/fdietze/pi-session-name@89dafe1dc48968f20d414ac0c922b3fd6cb88347",
+    "git:github.com/fdietze/pi-question@3cc0c05a35bdbcf9ba90e95ff5edf0b180c572d0"
   ],
   "steeringMode": "all",
   "terminal": {
