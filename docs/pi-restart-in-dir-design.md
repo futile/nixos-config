@@ -1,8 +1,9 @@
 # Pi restart-in-directory design
 
-Status: agreed implementation plan; feasibility gates must pass first. This
-records the Pi design including independent source review and PDO fit feedback.
-Implementation belongs in this repository, not in PDO.
+Status: agreed best-effort implementation plan, not yet implemented. This
+records the latest Pi decisions, bounded compatibility proofs, independent source
+review, and PDO fit feedback. Implementation belongs in this repository, not in
+PDO. No Pi core/TUI changes are planned.
 
 ## Goal and scope
 
@@ -16,9 +17,11 @@ environment, and extension services instead of mutating a running workspace.
 
 This is independent of `pi-worktree`. It does not create/remove worktrees, change
 branches, start project services, allocate ports, migrate subagents, or configure
-PDO runtimes. No Pi core change is planned. An occasional unnecessary API call
-while the old instance shuts down is an accepted limitation, not a guarantee that
-work continues in the old instance.
+PDO runtimes. An occasional unnecessary API call while the old instance shuts
+down is accepted. Readiness is best-effort: hidden queued user input may be lost,
+and running user Bash processes may be interrupted. These limitations are
+explicitly accepted instead of adding Pi core/TUI or custom-editor integration.
+Saved-history durability and restoration checks remain required.
 
 ## Agreed interfaces
 
@@ -40,40 +43,59 @@ require an accessible directory, not a file. Paths are data, not shell snippets:
 spaces and shell metacharacters must not change their meaning. Git membership
 and a local `.envrc` are not required.
 
-### Readiness: refuse, do not drain automatically
+### Readiness: best-effort refusal, not automatic draining
 
-The command refuses while the main agent or swarm is busy. It does not wait for
-work to finish, kill agents, discard queued messages, or pause active work to make
-a restart possible. The user/agent finishes outstanding work and retries.
+Refuse observed main/swarm activity or queued work instead of waiting for it to
+finish, killing agents, or pausing active agent work to make a restart possible.
+The user/agent finishes outstanding work and retries. Running user Bash processes
+are not a blocker; interruption during shutdown is accepted, and side effects
+already performed cannot be undone. Do not deliberately discard known completed
+results or queued messages merely to pass a check.
 
 For the tool, the switching call itself is necessarily part of an active main
-turn. Permit that call, but no other concurrent or pending work. The restart tool
-must be the sole call in its assistant tool-call batch; reject a mixed batch
-before accepting the handoff. Register it for sequential execution.
+turn. Permit that call, but refuse other observed concurrent or pending work. The
+restart tool must be the sole call in its assistant tool-call batch; reject a
+mixed batch before accepting the handoff. Register it for sequential execution.
 
-Readiness includes queued main messages and swarm messages, active provider/tool
-work, compaction/retries, paused or buffered inboxes, pending spawns, reserved
-names, and in-flight teardown. An idle agent record alone does not make the swarm
-busy; idle subagents can be left behind under the policy below.
+Check public main idle/pending state and the available installed-extension
+signals. Actor-owned readiness covers queued swarm messages, active work,
+compaction/retries, paused or buffered inboxes, pending spawns, reserved names,
+and in-flight teardown. An idle agent record alone does not make the swarm busy;
+idle subagents can be left behind under the policy below.
 
-A small actor-subagents integration must supply an authoritative, synchronous
-check-and-acquire handoff lease. Once acquired, new swarm work is refused until
-shutdown or until a failed preparation releases the lease. Checking a footer,
-activity boolean, roster file, or empty record map is insufficient: these omit
-pending work or can report empty before cleanup finishes.
+A small actor-subagents integration supplies a synchronous readiness check and
+handoff lease for actor-owned work. Once acquired, new swarm work is refused
+until shutdown or until failed preparation releases the lease. A footer,
+activity boolean, roster file, or empty record map alone is insufficient: these
+omit pending work or can report empty before cleanup finishes. This is not an
+authoritative lock or inventory of Pi core/TUI work.
 
 Exclude the extension from the configured child-extension allowlist, and also
 check main-agent identity at execution. When the actor bridge exists but identity
-or readiness cannot be established, fail closed. A standalone interactive Pi
-without actor-subagents is supported with no swarm to check. An installed actor
-extension without the required bridge must refuse, not assume quiescence.
+or its owned readiness cannot be established, fail closed. A standalone
+interactive Pi without actor-subagents is supported with no swarm to check. An
+installed actor extension without the required bridge must refuse, not assume
+quiescence.
 
-The implementation must also prevent a second restart request and recheck main
-queues immediately before accepting. Public idle/pending-message checks do not
-cover all custom-message and deferred core queues; proving absence of pre-existing
-main work is an implementation prerequisite, not supplied by the actor lease
-alone. This lease does not constitute a global lock against every extension's
-later nudge; see termination limitations.
+Prevent a second restart request and recheck observable main/extension work
+before accepting and before final checkpoint/commit. Cooperate with installed
+message senders where useful, but do not promise a fully idle check or refuse all
+normal sessions because unobservable core queues cannot be proven empty.
+
+Known accepted gaps include:
+
+- TUI input submitted during `/tree` branch summarization can remain queued after
+  cancellation or a failed queued-prompt submission, despite public idle state.
+- Input accepted during prompt preflight can remain in a separate TUI buffer
+  while the first turn executes the restart tool.
+- Custom/deferred messages and asynchronous settled handlers are not completely
+  covered by public pending-message counts; settlement has narrow idle windows.
+
+Normal successful runs generally drain their queues; these are limitations, not
+claims that every idle session has pending work. Hidden accepted input may be
+lost on restart. No core/TUI queue bridge, replacement editor, or strict
+zero-loss readiness proof is part of this version. Later old-process nudges are
+also not globally locked out; see termination limitations.
 
 ## Components and ownership
 
@@ -157,7 +179,10 @@ into `PATH`: its absence must remain a real, supported case.
 
 The initial child receives the user's original arguments unchanged. Restart
 arguments are built deliberately: use the pinned executable and
-`--fork <exact-source-session-file>`, with the target as OS cwd.
+`--fork <exact-source-session-file>`, with the target as OS cwd. Replacement argv
+also contains the wrapper-owned namespaced handoff flag and, only for automatic
+continuation, an opaque positional startup marker as specified below. These are
+generated protocol arguments, not replayed user flags or prompts.
 
 Do not reproduce Pi's CLI. Classify a bounded whitelist; unsupported options do
 not prevent the initial launch, but make that invocation non-restartable. Refuse
@@ -167,7 +192,7 @@ printing secret values. Add support only for a demonstrated caller.
 | Classification | Initial supported options | Restart behavior |
 | --- | --- | --- |
 | Startup-only | `--session`, `--continue`, `--resume`, `--fork`, `--session-id`; positional prompts and `@file` inputs | Do not replay. Fork the currently active session, not the original selection; do not repeat prompts/attachments. |
-| Startup state overrides | `--model`, `--provider`, `--thinking`, `--name` | Do not replay. Restore the current session state, verified by the feasibility gate. |
+| Startup state overrides | `--model`, `--provider`, `--thinking`, `--name` | Do not replay. Use native fork restoration of the selected conversation history; do not generate fresh live-setting overrides. |
 | Source-project approval | `--approve` | Do not replay or extend approval to the target. Reevaluate target trust normally. |
 | Persistent launch configuration | `--offline`, `--no-approve`, `--tui-mode`, `--verbose` | Carry forward with their values/semantics unchanged. |
 | Initially unsupported | Explicit resource paths/disabling flags; system-prompt overrides; tool-selection/restriction flags; `--session-dir`, `--no-session`, `--api-key`, `--models`; unknown extension flags | Refuse restart while leaving the original Pi usable. |
@@ -195,7 +220,8 @@ user configuration.
 
 Requests are bounded, versioned structured data containing the child identifier,
 canonical target directory, exact source session-file path, and continuation
-intent. Use atomic publication inside the private directory. Validate schema,
+intent/prompt metadata. Do not store credentials or command text to execute. Use
+atomic publication inside the private directory. Validate schema,
 identity, path types, and ownership on receipt. Do not execute request contents,
 source shell files, or rely on terminal output as the channel.
 
@@ -229,9 +255,11 @@ same-user code that can read Pi's environment or files.
    consumes the committed request once, revalidates the target and source, and
    launches the replacement. Use fresh child protocol metadata; stale requests
    cannot restart it again.
-7. The replacement forks into the target cwd and displays/records the active
-   directory and handoff outcome. If continuation is requested, start exactly one
-   continuation turn after startup initialization.
+7. The replacement forks into the target cwd using native selected-history
+   settings and displays/records the active directory and handoff outcome. The
+   required handoff flag witnesses guard loading. If continuation is requested,
+   process the opaque startup marker after initialization, validate restoration,
+   and transform it into exactly one continuation prompt.
 
 Verify this ordering against the installed Pi version. A crash, signal
 termination, malformed request, or failed final persistence must not turn into an
@@ -291,23 +319,95 @@ Do not rewrite JSONL headers, migrate historical sessions, use native compaction
 or transfer SQLite/session sidecars by copying directory trees. The old session
 remains available; the fork is the active conversation in the target.
 
+### Native model/thinking/name restoration
+
+Keep Pi's native fork semantics rather than capturing and overriding the live
+model/thinking settings. Do not replay the original `--model`, `--provider`,
+`--thinking`, or `--name`, and do not synthesize replacement flags from current
+runtime values. Ordinary latest-history forks restore the latest recorded
+settings. Historical-branch forks restore that branch's recorded settings.
+
+"Selected history" means the ancestry of the selected Pi conversation leaf,
+not a Git/worktree branch. For example, after A/low history, switching to B/high,
+and navigating back, the existing process still runs B/high. A restart checkpoint
+appended on the earlier history forks that history and restores A/low. This is
+intentional native behavior, not a restoration failure. The latest saved session
+name is file-global and survives independently of the selected branch.
+
+Before automatic continuation, check target model availability/authentication
+and expected native thinking compatibility. Distinguish intentional historical
+restoration from an unavailable-model fallback or unexpected clamp; report such
+problems and withhold automatic continuation rather than silently working with
+an unintended fallback. Empty/no-message histories follow native defaults and
+need explicit test coverage, not a live-settings-preservation promise.
+
 ### Who gets control after restart?
 
 | Invocation | Replacement behavior |
 | --- | --- |
-| User `/restart-in-dir` | Finish startup and return control to the user |
-| Main-agent `restart-in-dir` tool | Supply one initial continuation prompt |
+| User `/restart-in-dir` | Finish startup and return control to the user; no positional startup marker |
+| Main-agent `restart-in-dir` tool | Supply one opaque startup marker, transformed into one validated continuation prompt |
 
-Pi supports a positional startup prompt after interactive initialization. Prefer
-this over blindly sending a nudge from `session_start`, which can run before
-resource discovery has completed. Scope continuation to this one consumed
-handoff; ordinary resumes must not repeatedly nudge the agent.
+Scope continuation to this one consumed handoff; ordinary resumes must not
+repeatedly nudge the agent. The real prompt is derived from private handoff
+metadata, not copied from the original CLI prompt or attachments. It says that
+the restart reached the requested directory, identifies source/target, and asks
+the agent to verify cwd/project instructions and relevant environment/MCP routing
+before resuming its task. Old transcript instructions and tool results remain
+historical evidence, not proof that the new workspace or its services are correct.
 
-The continuation says that the restart reached the requested directory, identifies
-source/target, and asks the agent to verify current cwd/project instructions and
-relevant environment/MCP routing before resuming its previous task. Old transcript
-instructions and tool results remain historical evidence, not proof that the new
-workspace or its services are correct.
+### Required handoff flag plus opaque positional marker
+
+Every replacement launch supplies the extension-registered string flag
+`--pi-restart-in-dir-handoff <one-use-id>`. The flag identifies the consumed
+handoff and witnesses guard loading under the requirement that this namespace
+is registered only by the trusted `pi-restart-in-dir` extension. In inspected Pi,
+an unknown extension flag fails startup before interactive initialization or a
+model request. Pi checks globally registered names, not authenticated owner
+identity; another extension registering the same name would defeat this absence
+check and is outside the supported contract. Merely exporting an environment
+variable or checking registered tools cannot provide the missing-extension check.
+
+For agent-requested continuation, also supply an opaque positional marker tied
+to the handoff. It contains no task instructions and is never intended for the
+model. Pi processes positional startup input after awaited startup hooks,
+resource application, and interactive initialization. The extension's `input`
+handler validates the flag, one-use identity, main context, handoff data, target,
+IC health, and native settings before returning a transformed real prompt.
+Invalid/missing health handles the marker without starting a turn, reports why,
+and leaves control with the user. Consume continuation intent once; ordinary
+later input must not retrigger it.
+
+Both mechanisms are needed:
+
+- The flag provides fail-closed guard loading and selects metadata-owned content.
+  A marker alone could become a normal prompt if the extension were missing.
+- The marker provides safe post-initialization scheduling. A flag alone does not
+  schedule a turn, and Pi has no public startup-ready event in this version.
+
+Do not send the continuation from `session_start`, `resources_discover`, or an
+assumed timer/microtask delay. Those can run before later startup hooks or
+resource application complete. No Pi core startup-ready event is added.
+Initialization also does not prove arbitrary fire-and-forget external services
+are ready; service readiness remains a separate responsibility.
+
+### IC health guard and startup-turn assumption
+
+Add a small synchronous request/reply bridge through public `pi.events` in
+infinite-context v2. At marker processing time, require a positive compatible
+reply keyed to the current session ID and selected leaf, based on current
+branch/fold/projection validation. Missing, stale, incompatible, or failed health
+must withhold continuation. Tools can remain registered after IC stores a
+restoration error, so registration or a cached "loaded" boolean is not proof.
+
+**Requirement: no other extension starts a model turn during restart startup.**
+This includes approved target-project extensions and custom
+`pi.sendMessage(..., { triggerTurn: true })` nudges. Such custom-message triggers
+can bypass the `input` guard. The guard protects the planned marker-derived
+continuation under this assumption; it is not a global provider-request latch or
+sandbox against arbitrary extension code. Do not promise protection if another
+startup source violates this requirement. The inspected configured extensions
+do not auto-start model turns during startup.
 
 The old tool cannot return after replacement startup: its promise belongs to the
 exited process. Launch errors are reported by the wrapper to the user. Success is
@@ -330,7 +430,7 @@ The continuing main agent can create new agents for the target as needed.
 | Component | Required behavior / limit |
 | --- | --- |
 | Infinite-context v2 | Fork preserves entry IDs and recursive fold custom entries; target must load compatible v2. Anchor the selected leaf before exit. No v1/native-compacted migration. |
-| Actor-subagents | Add authoritative readiness/lease and main-identity integration; exclude restart extension from children. New fork has no swarm. |
+| Actor-subagents | Add actor-owned readiness/lease and main-identity integration, not a core/TUI readiness guarantee; exclude restart extension from children. New fork has no swarm. |
 | pi-mcp-adapter 5 | Normal shutdown attempts owned-resource cleanup; replacement discovers target config/trust and process env. Preserve explicit configured server cwd semantics. |
 | Serena / CBM | Fresh launch does not prove correct external project routing. Serena URLs/servers and CBM project IDs remain project responsibilities. |
 | Context-pressure | Persisted policy state can follow forked custom entries; verify session-ID rekeying. Its nudges explain the termination limitation. |
@@ -342,9 +442,11 @@ successful compatible handoff. Before automatic continuation is submitted, verif
 successful v2 branch/fold restoration, not merely extension/tool registration:
 IC can retain a state error while its tools remain present. Missing restart guard,
 missing compatible IC, or failed restoration must withhold continuation. The
-health-proof/guard mechanism remains an implementation question. Nonfatal
-extension initialization/state errors are not proof of readiness; extension load
-errors in the inspected CLI instead cause exit before interactive startup.
+agreed guard uses the required handoff flag, post-init marker/input handling,
+and a synchronous validated IC health reply under the no-other-startup-turn
+assumption. Nonfatal extension initialization/state errors are not proof of
+readiness; extension load errors in the inspected CLI instead cause exit before
+interactive startup.
 Fresh per-directory instruction discovery must coexist with retained historical
 messages, not assume the fork erased old project assumptions.
 
@@ -355,8 +457,10 @@ Proposed implementation paths (not created by this specification):
 - `bin/pi-restartable`: launcher source, packaged as a Home Manager executable.
 - `dotfiles/pi/extensions/pi-restart-in-dir/`: local extension and focused tests.
 - `home-modules/pi.nix`: package installation, extension link, and Fish alias.
-- `patches/pi-actor-subagents-local.patch`: readiness/identity bridge integration
-  if kept within the existing local actor-subagents patch.
+- `patches/pi-actor-subagents-local.patch`: actor-owned readiness/identity bridge
+  integration if kept within the existing local patch.
+- `patches/pi-infinite-context-nudges-disabled.patch`: validated health bridge
+  alongside the existing local IC patch, or a separate focused IC patch if clearer.
 
 Keep the external Pi CLI owned by `nix profile`, as the current module specifies.
 Home Manager installs the separately named launcher and manages extension config.
@@ -378,7 +482,7 @@ other than optional direnv are declared in the launcher package as needed.
 
 | Failure | Outcome |
 | --- | --- |
-| Missing live launcher, unsupported launch arguments, invalid target, busy state, unknown main identity, or no durable source | Refuse before shutdown; keep current Pi usable, report why, and provide applicable manual instructions. |
+| Missing live launcher, unsupported launch arguments, invalid target, observed busy state, unknown main identity, or no durable source | Refuse before shutdown; keep current Pi usable, report why, and provide applicable manual instructions. |
 | Failure during checkpoint/request preparation | Cancel intent, release lease, report the error, and keep Pi running; shutdown has not been requested. |
 | Observed checkpoint/protocol failure after shutdown begins | Invalidate the request; suppress restart and provide recovery instructions. |
 | Ordinary exit without committed request | Exit launcher; do not restart. |
@@ -387,7 +491,10 @@ other than optional direnv are declared in the launcher package as needed.
 | direnv absent | Launch plainly from target using the pinned executable. |
 | direnv present but environment load fails | Show error and manual approval/retry instructions; no bypass or automatic allow. |
 | Pinned Pi disappears or replacement fails | Stop visibly; no version substitution, endless retry, or automatic rollback. |
+| Missing required handoff-flag owner, with no conflicting registration | Pi rejects the unknown extension flag before startup; wrapper reports recovery instructions. |
+| Missing/invalid IC health, handoff marker, or unexpected target model/thinking fallback | Withhold automatic continuation, show the error, and leave user control where startup succeeded. |
 | Target extension/MCP startup warnings | Show diagnostics; do not equate process startup with complete service readiness. |
+| Hidden queued input or running user Bash missed by best-effort checks | Restart may lose unpersisted queued input or interrupt Bash; accepted limitation, not a fully idle guarantee. |
 
 The source transcript/checkpoint remains the recovery anchor. Show the requested
 restart command and an old-session recovery command on launch failure. Once the
@@ -395,29 +502,44 @@ old instance has exited, errors cannot be returned to its original tool promise.
 The launcher must forward interrupts and avoid orphaning its terminal child;
 cleanup must not remove session history or project data.
 
-## Implementation sequence and feasibility gates
+## Implementation sequence and bounded compatibility checks
 
-Before building the full wrapper, use temporary sessions and a minimal isolated
-harness to prove three compatibility gates against the installed Pi/extensions:
+The earlier strict readiness/live-settings gates were investigated and the
+contract deliberately narrowed. Full core/TUI readiness could not be proved
+through the selected public APIs; best-effort checking is now accepted instead.
+Native historical-branch settings restoration is intentional, not a failed
+requirement. These findings no longer require a Pi core change or block the
+architecture.
 
-1. **Source readiness:** pre-existing queued work causes refusal, not loss. Prove
-   coverage of custom/deferred queues as well as public pending messages; an
-   accepted isolated handoff checkpoints correctly without unintended other tool
-   execution. Verify mixed batches, actor lifecycle races, and lease release.
-2. **Target restoration:** deliberately failed IC v2 branch/fold restoration
-   prevents automatic continuation before any model request. Tool registration
-   is not sufficient; verify a positive restoration-health signal.
-3. **Current session state:** change model, thinking level, name, and selected
-   branch after launch; fork without the old overrides and prove the latest state
-   and recursive folds/IDs are restored. Explicitly capture current state only if
-   restoration cannot provide it reliably and the revised contract is reviewed.
+Before building the full wrapper, validate the scoped integration against the
+installed Pi/extensions with temporary sessions and an isolated harness:
 
-If a gate cannot be made reliable through the permitted integration, report the
-blocker and revise the contract before proceeding. A check that refuses every
-normal session is not a passed gate. Extra old-process API cost is accepted;
-lost messages, wrong-directory writes, or broken-fold continuation are not.
+1. **Best-effort source readiness:** refuse observable pending/busy work; test
+   normal quiescent acceptance, main identity, sole-tool batches, actor-owned
+   lifecycle checks/lease release, and checkpointing. Record hidden-queue limits
+   rather than claiming complete coverage or refusing every normal session.
+2. **Target restoration:** under the no-other-startup-turn requirement, failed IC
+   v2 validation prevents the marker-derived continuation before its model
+   request. Test positive health and missing guard/IC, not tool registration.
+3. **Native session state:** fork latest and historical selected histories without
+   old overrides; verify their respective recorded model/thinking, global latest
+   name, recursive folds/IDs, and new cwd/UUID. Test target availability/fallback
+   checks without synthesizing live-setting overrides.
 
-After the gates pass:
+Bounded proofs using the actual installed binary and an in-process fake provider
+already demonstrated ordinary and historical native fork behavior, positive and
+failed IC guarding, missing-flag-owner startup refusal, and early flag-only nudge
+races. Source inspection and an exact-method projection demonstrated hidden TUI
+queue gaps. These temporary proofs are not production code or complete runtime
+verification. Replace/extend them with maintained integration tests.
+
+If scoped checks reveal a new incompatibility, report and revise the integration
+instead of silently weakening durability, target cwd isolation, or fold health.
+Accepted limits are extra old-process API cost, missed hidden queues, Bash
+interruption, and the explicit startup-turn assumption. Saved history,
+no overlapping writers, and a guarded continuation remain required.
+
+After the scoped checks:
 
 1. Implement the wrapped user-command path end to end.
 2. Complete the agent-callable path and one-time continuation.
@@ -432,9 +554,11 @@ cover the following with focused tests and authorized interactive smoke tests:
 
 - Directory/path validation and quoting, including spaces/metacharacters and
   relative paths; non-Git targets and same-directory restart.
-- Busy refusal for main/swarm queues, paused inboxes, spawns, teardown, and races;
-  idle-agent acceptance, identity fail-closed behavior, child denial, and mixed
-  tool batches. Preparation failures release the lease.
+- Best-effort refusal for observable main/swarm work and actor-owned queues,
+  paused inboxes, spawns, teardown, and races; normal idle-agent acceptance,
+  identity fail-closed behavior, child denial, and mixed tool batches. Preparation
+  failures release the lease. Cover/document hidden-input gaps and permitted user
+  Bash interruption without asserting a complete core/TUI readiness proof.
 - Session-result persistence, selected-branch checkpointing, infinite-context v2
   recursive folds/IDs, source preservation, and repeated forks with new UUIDs.
 - Checkpoint/commit before shutdown, including failures that keep Pi usable.
@@ -446,11 +570,16 @@ cover the following with focused tests and authorized interactive smoke tests:
   unapproved project environments merely to satisfy a test.
 - Per-launcher executable pinning despite profile/PATH changes, missing pinned
   executable, and initial/restart argument classification: startup-only values,
-  current model/thinking/name restoration, prompt/attachment non-replay, target
-  trust isolation, carried whitelist, and unsupported-option refusal before exit.
-- User-controlled restart versus exactly-once agent continuation, no startup
-  nudge race, visible cwd, proven IC branch/fold restoration before continuation,
-  missing guard/IC refusal, fresh MCP discovery, and honest startup diagnostics.
+  native latest/historical model/thinking and global-name restoration,
+  prompt/attachment non-replay, target trust isolation, carried whitelist, and
+  unsupported-option refusal before exit. Test target fallback/clamping and
+  empty-history behavior; do not require exit-time live settings to survive `/tree`.
+- User-controlled restart versus exactly-once agent continuation, required
+  namespaced flag loading, opaque marker transformation/non-delivery to the model,
+  visible cwd, validated IC branch/fold health before continuation, missing/stale
+  guard/IC refusal, fresh MCP discovery, and honest startup diagnostics. Show that
+  a custom startup nudge bypasses input so the no-other-startup-turn assumption
+  stays explicit; do not claim a global provider gate.
 - Plain-Pi refusal/manual instructions without exit, Fish `pi`/`command pi`, and
   unchanged external RPC use.
 - Existing actor-subagent/extension tests plus repository checks applicable to
@@ -458,24 +587,25 @@ cover the following with focused tests and authorized interactive smoke tests:
   `just format-check`, and `nice -n 19 just check`; build affected packages/host
   as required. Do not switch a live system merely for verification.
 
-The extra old-process API-call limitation is explicit; zero calls is not an
-acceptance criterion. Reliable shutdown, saved history, correct target cwd/env,
-and no overlapping writers are acceptance criteria.
+Zero old-process API calls and complete hidden-queue preservation are not
+acceptance criteria. Reliable shutdown, saved history, correct target cwd/env,
+native selected-history restoration, no overlapping writers, and validated
+automatic continuation under the startup-turn assumption are acceptance criteria.
+Documentation-only edits need diff/link checks, not Nix evaluation or builds.
 
 ## Remaining implementation and PDO review questions
 
 The architecture and policy above are agreed. These details still need review or
 verification, not assumed guarantees:
 
-1. Exact actor readiness/lease API, coverage of asynchronous lifecycle work, and
-   enforcement of sole-tool-batch acceptance through the public Pi APIs. Verify
-   coverage and actual consumption of main-directed custom messages/core queues;
-   public pending-message and idle checks are not authoritative for them. If the
-   permitted integration cannot prove absence of pre-existing pending work, fail
-   closed or explicitly revise this readiness scope before implementation.
-2. Verification of settled/checkpoint/commit-before-shutdown ordering and signal
-   invalidation, live-launcher detection, and a target IC restoration health proof
-   that can withhold the startup continuation before it acts.
+1. Exact actor-owned readiness/lease API, observable installed-extension message
+   accounting, and sole-tool-batch enforcement through public Pi APIs. Best-effort
+   core readiness is settled policy; do not reopen a complete hidden-queue proof
+   or add core/TUI/custom-editor integration as an implicit requirement.
+2. Verification of settled/checkpoint/commit-before-shutdown ordering, signal
+   invalidation, live-launcher detection, and the agreed flag/marker/IC-health
+   protocol. Verify native branch-setting validation and empty-history defaults,
+   without adding fresh live-model/thinking overrides.
 3. Implement/test the bounded CLI whitelist above; unsupported resource/storage
    options refuse before shutdown rather than expanding the initial contract.
 4. Behavior of retained project/system context after a cross-project fork; the
@@ -491,10 +621,14 @@ requirements; feed them back here before changing the implementation scope.
 ## Evidence and references
 
 Behavior was inspected against installed Pi 1.0.0 and direnv 2.37.1, including
-matching published Pi runtime sources. The sibling Pi Git checkout was a different
-version and must not be treated as the installed implementation. Static inspection
-is not an end-to-end compatibility test; recheck the actual installed versions
-before implementation.
+matching published Pi runtime sources. Isolated actual-binary RPC/interactive
+proofs used temporary sessions and an in-process fake provider, without external
+provider calls, live-session mutation, or envrc execution. They covered native
+fork/restoration and guarded startup behavior; hidden-queue evidence also used
+static inspection/exact-method projections, not a full TUI race reproduction.
+The sibling Pi Git checkout was a different version and must not be treated as
+the installed implementation. Bounded proofs are not end-to-end production
+verification; recheck actual installed versions during implementation.
 
 - [Pi CLI: forks and startup prompts](https://cdn.jsdelivr.net/npm/@earendil-works/pi-coding-agent@1.0.0/docs/cli.md)
 - [Pi extension APIs and lifecycle](https://cdn.jsdelivr.net/npm/@earendil-works/pi-coding-agent@1.0.0/docs/extensions.md)
