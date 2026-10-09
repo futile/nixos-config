@@ -1,0 +1,294 @@
+#!/usr/bin/env python3
+"""Terminal Pi supervisor. No shell execution, version substitution, or retries."""
+import json
+import os
+from pathlib import Path
+import shlex
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import uuid
+
+LIMIT = 64 * 1024
+PREFIX = "PI_RESTARTABLE_"
+THINKING = {"off", "minimal", "low", "medium", "high", "xhigh", "max"}
+START_VALUE = {"--session", "--fork", "--session-id", "--model", "--provider", "--thinking", "--name", "-n"}
+START_BOOL = {"--continue", "-c", "--resume", "-r", "--approve", "-a"}
+CARRY_BOOL = {"--offline", "--no-approve", "-na", "--verbose"}
+OTHER_VALUE = {"--api-key", "--system-prompt", "--append-system-prompt", "--session-dir", "--models", "--tools", "-t", "--exclude-tools", "-xt", "--extension", "-e", "--skill", "--prompt-template", "--theme", "--use-theme"}
+COMMANDS = {"install", "remove", "uninstall", "update", "list", "config", "auth", "mcp"}
+
+
+class Invalid(ValueError):
+    pass
+
+
+def classify(argv):
+    """Bounded whitelist for installed Pi 1.0.0 dist/cli/args.js (not a CLI clone)."""
+    carry, unsupported = [], []
+    interactive = not (argv and argv[0] in COMMANDS)
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        i += 1
+        if arg == "--":
+            break
+        if arg in {"--help", "-h", "--version", "-v", "--print", "-p", "--export", "--list-models"}:
+            interactive = False
+        elif arg in CARRY_BOOL:
+            carry.append(arg)
+        elif arg in START_BOOL:
+            pass
+        elif arg in START_VALUE | OTHER_VALUE | {"--tui-mode", "--mode"}:
+            value = argv[i] if i < len(argv) else None
+            if value is not None:
+                i += 1
+            valid = value is not None
+            if arg == "--tui-mode":
+                valid = value in {"regular", "fullscreen"}
+                if valid:
+                    carry.extend((arg, value))
+            elif arg == "--thinking":
+                valid = value in THINKING
+            elif arg == "--mode":
+                valid = value in {"text", "json", "rpc"}
+                if value in {"json", "rpc"}:
+                    interactive = False
+            if not valid or arg in OTHER_VALUE:
+                unsupported.append(arg)
+        elif arg.startswith("-"):
+            # Values (including secrets in --flag=value) never enter metadata.
+            unsupported.append(arg.split("=", 1)[0])
+            if arg.startswith("--") and "=" not in arg and i < len(argv) and not argv[i].startswith(("-", "@")):
+                i += 1
+    return carry, list(dict.fromkeys(unsupported)), interactive
+
+
+def atomic_json(path, data):
+    fd, name = tempfile.mkstemp(prefix=".publish-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(data, stream, ensure_ascii=False, separators=(",", ":"))
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(name, path)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise Invalid("duplicate JSON field")
+        result[key] = value
+    return result
+
+
+def private_json(path):
+    directory = path.parent.lstat()
+    if not stat.S_ISDIR(directory.st_mode) or directory.st_uid != os.getuid() or stat.S_IMODE(directory.st_mode) != 0o700:
+        raise Invalid("invalid control directory ownership, permissions, or type")
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o600 or info.st_size > LIMIT:
+            raise Invalid("invalid request file ownership, permissions, type, or size")
+        raw = stream.read(LIMIT + 1)
+    if len(raw) > LIMIT:
+        raise Invalid("request too large")
+    try:
+        return json.loads(raw, object_pairs_hook=unique_object)
+    except (ValueError, UnicodeError, RecursionError):
+        raise Invalid("invalid request JSON") from None
+
+
+def fields(value, keys):
+    if not isinstance(value, dict) or set(value) != set(keys.split()):
+        raise Invalid("invalid request schema")
+
+
+def text(value):
+    return isinstance(value, str) and bool(value) and "\x00" not in value
+
+
+def canonical(value, directory=False):
+    if not text(value) or not os.path.isabs(value) or os.path.realpath(value) != value:
+        raise Invalid("request path is not canonical and absolute")
+    if directory and (not os.path.isdir(value) or not os.access(value, os.R_OK | os.X_OK)):
+        raise Invalid("requested directory is unavailable")
+    return value
+
+
+def request_metadata(request, child_id):
+    fields(request, "version childId source sourceCwd target invocation continue checkpointId expected prompt")
+    if type(request["version"]) is not int or request["version"] != 1 or request["childId"] != child_id:
+        raise Invalid("stale request identity or version")
+    if not text(request["checkpointId"]) or type(request["continue"]) is not bool:
+        raise Invalid("invalid checkpoint or continuation")
+    if not isinstance(request["invocation"], str) or request["invocation"] not in {"command", "tool"}:
+        raise Invalid("invalid invocation")
+    if request["continue"] != (request["invocation"] == "tool") or (request["continue"] and not text(request["prompt"])) or (not request["continue"] and request["prompt"] is not None):
+        raise Invalid("inconsistent continuation metadata")
+    fields(request["expected"], "model thinkingLevel")
+    model = request["expected"]["model"]
+    if model is not None:
+        fields(model, "provider modelId")
+        if not all(text(v) for v in model.values()):
+            raise Invalid("invalid expected model")
+    thinking = request["expected"]["thinkingLevel"]
+    if thinking is not None and (not isinstance(thinking, str) or thinking not in THINKING):
+        raise Invalid("invalid expected thinking level")
+    for key in ("source", "sourceCwd", "target"):
+        canonical(request[key])
+    return request
+
+
+def validate_request(request, child_id):
+    request_metadata(request, child_id)
+    canonical(request["target"], directory=True)
+    canonical(request["sourceCwd"], directory=True)
+    source = canonical(request["source"])
+    fd = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+            raise Invalid("source is not an owned regular session file")
+        header, leaf = None, None
+        for raw in stream:
+            if not raw.strip():
+                continue
+            try:
+                entry = json.loads(raw, object_pairs_hook=unique_object)
+            except (ValueError, UnicodeError, RecursionError):
+                raise Invalid("source session is not durable JSONL") from None
+            if not isinstance(entry, dict):
+                raise Invalid("invalid source session entry")
+            if header is None:
+                header = entry
+            else:
+                leaf = entry
+    if not header or header.get("type") != "session" or not text(header.get("id")) or not text(header.get("cwd")) or not os.path.isabs(header["cwd"]) or os.path.realpath(header["cwd"]) != request["sourceCwd"]:
+        raise Invalid("source session header mismatch")
+    data = {key: request[key] for key in ("version", "childId", "sourceCwd", "target", "invocation", "continue")}
+    if not leaf or leaf.get("type") != "custom" or leaf.get("customType") != "pi-restart-in-dir/checkpoint" or leaf.get("id") != request["checkpointId"] or leaf.get("data") != data:
+        raise Invalid("source final checkpoint mismatch")
+    if type(leaf["data"]["version"]) is not int or type(leaf["data"]["continue"]) is not bool:
+        raise Invalid("source checkpoint field types mismatch")
+    return request
+
+
+def replacement_args(carry, request):
+    selector = "--session" if request["sourceCwd"] == request["target"] else "--fork"
+    args = [*carry, selector, request["source"], "--pi-restart-in-dir-handoff", request["childId"]]
+    if request["continue"]:
+        args.append("pi-restart-in-dir:" + request["childId"])
+    return args
+
+
+def recovery(request):
+    # Never interpolate paths into executable shell input; these are display only.
+    target = shlex.quote(request["target"])
+    source = shlex.quote(request["source"])
+    selector = "--session" if request["sourceCwd"] == request["target"] else "--fork"
+    print(f"Requested restart: cd -- {target} && pi-restartable {selector} {source}", file=sys.stderr)
+    print(f"Saved source recovery: pi-restartable --session {source}", file=sys.stderr)
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    baseline = {key: value for key, value in os.environ.items() if not key.startswith(PREFIX)}
+    baseline_path = baseline.get("PATH", os.defpath)
+    found = shutil.which("pi", path=baseline_path)
+    pinned = os.path.realpath(found) if found else None
+    if not pinned or not os.path.isfile(pinned) or not os.access(pinned, os.X_OK) or pinned == os.path.realpath(__file__) or Path(pinned).name == "pi-restartable":
+        print("pi-restartable: external Pi executable is missing, unusable, or resolves to this launcher", file=sys.stderr)
+        return 1
+    carry, unsupported, cli_interactive = classify(argv)
+    interactive = cli_interactive and sys.stdin.isatty() and sys.stdout.isatty()
+    child = None
+    interrupted = None
+
+    def interrupt(signum, _frame):
+        nonlocal interrupted
+        interrupted = signum
+        if child is not None and child.poll() is None:
+            try:
+                child.send_signal(signum)
+            except ProcessLookupError:
+                pass
+
+    previous = {s: signal.signal(s, interrupt) for s in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)}
+    incoming = None
+    cwd = os.path.realpath(os.getcwd())
+    try:
+        with tempfile.TemporaryDirectory(prefix="pi-restartable-") as directory:
+            control = Path(os.path.realpath(directory))
+            while not interrupted:
+                child_id = uuid.uuid4().hex
+                atomic_json(control / "launch.json", {"version": 1, "childId": child_id, "launcherPid": os.getpid(), "unsupported": unsupported, "interactive": interactive, "incoming": incoming})
+                env = dict(baseline)
+                env.update({PREFIX + "CONTROL_DIR": str(control), PREFIX + "CHILD_ID": child_id, PREFIX + "LAUNCHER_PID": str(os.getpid())})
+                direnv = shutil.which("direnv", path=baseline_path)
+                command = [pinned, *argv]
+                if direnv:
+                    command = [os.path.abspath(direnv), "exec", ".", *command]
+                try:
+                    if not os.path.isfile(pinned) or not os.access(pinned, os.X_OK):
+                        raise OSError("pinned executable unavailable")
+                    if interrupted:
+                        break
+                    child = subprocess.Popen(command, cwd=cwd, env=env)
+                    if interrupted:
+                        child.send_signal(interrupted)
+                    status = child.wait()
+                    child = None
+                except OSError:
+                    print("pi-restartable: child launch failed; no fallback or retry", file=sys.stderr)
+                    if incoming:
+                        recovery(incoming)
+                    return 1
+                request_file = control / "request.json"
+                if interrupted:
+                    print("pi-restartable: interrupted; restart cancelled", file=sys.stderr)
+                    return 128 + interrupted
+                if status != 0:
+                    print("pi-restartable: child failed; restart cancelled (environment errors are not bypassed)", file=sys.stderr)
+                    if incoming:
+                        recovery(incoming)
+                    return status if status > 0 else 128 - status
+                if not os.path.lexists(request_file):
+                    return 0
+                recoverable = incoming
+                try:
+                    request = private_json(request_file)
+                    request_file.unlink()  # Consume once, including rejected requests.
+                    if not interactive or unsupported:
+                        raise Invalid("this invocation is not restartable")
+                    recoverable = request_metadata(request, child_id)
+                    incoming = validate_request(request, child_id)
+                except (Invalid, OSError, TypeError):
+                    print("pi-restartable: invalid or unavailable handoff; restart cancelled", file=sys.stderr)
+                    if recoverable:
+                        recovery(recoverable)
+                    return 1
+                cwd = incoming["target"]
+                argv = replacement_args(carry, incoming)
+                # The next launch witnesses incoming using fresh protocol authority.
+            return 128 + interrupted
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

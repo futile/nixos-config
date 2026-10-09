@@ -14,6 +14,7 @@ let
     chmod -R u+w "$out"
 
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-infinite-context-enable-nudges.patch}
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-infinite-context-restart.patch}
   '';
   patchedActorSubagents = pkgs.runCommand "pi-actor-subagents" { } ''
     mkdir -p "$out"
@@ -21,6 +22,7 @@ let
     chmod -R u+w "$out"
 
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-local.patch}
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-restart.patch}
   '';
 in
 {
@@ -39,7 +41,17 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Keep the Pi CLI itself in `nix profile`; Home Manager owns only its configuration.
+    # Keep the Pi CLI itself in `nix profile`; the launcher pins it per invocation.
+    home.packages = [
+      (pkgs.writeShellApplication {
+        name = "pi-restartable";
+        text = ''
+          exec ${pkgs.python3}/bin/python3 ${../bin/pi-restartable} "$@"
+        '';
+      })
+    ];
+    programs.fish.shellAliases.pi = "pi-restartable";
+
     home.file = {
       ".pi/agent/AGENTS.md".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/codex/AGENTS.md";
@@ -73,6 +85,8 @@ in
           "${config.home.homeDirectory}/.pi/agent/extensions/codex-fast"
         ];
       };
+      ".pi/agent/extensions/pi-restart-in-dir".source =
+        config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/pi-restart-in-dir";
       ".pi/agent/extensions/context-pressure".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/context-pressure";
       ".pi/agent/extensions/codex-fast".source =

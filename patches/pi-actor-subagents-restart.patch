@@ -1,0 +1,1274 @@
+diff --git a/extensions/actor-subagents/agent-record.ts b/extensions/actor-subagents/agent-record.ts
+index 66b5247..6c1d7b2 100644
+--- a/extensions/actor-subagents/agent-record.ts
++++ b/extensions/actor-subagents/agent-record.ts
+@@ -93,6 +93,8 @@ export interface AgentRecord {
+ 	currentTool?: string;
+ 	/** Context compaction remains active even while model streaming is idle. */
+ 	compacting?: boolean;
++	/** Logical child run, including retry/continuation gaps after agent_end. */
++	logicalRun?: boolean;
+ 	/** Terminal reason of the last finished turn; drives the idle-time status (error/truncated). Cleared when a new turn starts. */
+ 	stopReason?: StopReason;
+ 	/**
+diff --git a/extensions/actor-subagents/agent-tools.test.ts b/extensions/actor-subagents/agent-tools.test.ts
+index 404288f..42c175a 100644
+--- a/extensions/actor-subagents/agent-tools.test.ts
++++ b/extensions/actor-subagents/agent-tools.test.ts
+@@ -2,7 +2,7 @@ import { test } from "node:test";
+ import assert from "node:assert/strict";
+ import type { AgentHandle } from "./agent-record.ts";
+ import { Engine } from "./engine.ts";
+-import { makeAgentTools } from "./agent-tools.ts";
++import { makeAgentTools, type AgentToolsDeps } from "./agent-tools.ts";
+ 
+ const handle = (): AgentHandle => ({ deliver: async () => {}, abort: async () => {} });
+ 
+@@ -18,7 +18,7 @@ const record = (name: string) => ({
+ });
+ 
+ /** The tool `name` acting as `self`, with the surrounding shell stubbed out. */
+-function toolOf(engine: Engine, self: string, name: string) {
++function toolOf(engine: Engine, self: string, name: string, overrides: Partial<AgentToolsDeps> = {}) {
+ 	const tools = makeAgentTools(self, {
+ 		engine,
+ 		spawnAgent: async () => ({ ok: true, msg: "" }),
+@@ -27,6 +27,7 @@ function toolOf(engine: Engine, self: string, name: string) {
+ 		persistRoster: () => {},
+ 		updateStatus: () => {},
+ 		getHideThinking: async () => false,
++		...overrides,
+ 	});
+ 	const tool = tools.find((t) => t.name === name);
+ 	assert.ok(tool, `${name} tool must exist`);
+@@ -95,3 +96,40 @@ test("control tools act as the calling agent: only its subtree obeys", async ()
+ 	assert.match(textOf(await call("peer", "kill_subagents", { names: ["helper"] })) ?? "", /failed: helper: 'helper' is not in your subtree/);
+ 	assert.ok(engine.has("helper"));
+ });
++
++
++test("multicast admission remains owned between target routes", async () => {
++	const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3 });
++	engine.addAgent({ ...record("main"), sessionId: "main-id" });
++	engine.addAgent(record("a")); engine.addAgent(record("b"));
++	engine.awaitReaction = async () => ({ observed: "unwatched" as const, status: engine.statusOf("a")! });
++	let ready: boolean | undefined; let acquired: boolean | undefined; let secondNotDelivered: boolean | undefined;
++	engine.subscribe((event) => {
++		if (event.type !== "route" || event.to !== "a") return;
++		queueMicrotask(() => {
++			ready = engine.inspectRestart("main-id").ready;
++			acquired = engine.acquireRestart("main-id", "between-routes").ok;
++			secondNotDelivered = !engine.events.some((e) => e.type === "route" && e.to === "b");
++		});
++	});
++	await sendMessageTool(engine, "main").execute("send", { to: ["a", "b"], content: "message" }, undefined, undefined, undefined as never);
++	assert.equal(secondNotDelivered, true);
++	assert.equal(ready, false); assert.equal(acquired, false);
++	assert.equal(engine.inspectRestart("main-id").ready, true);
++});
++
++test("spawn/kill tool ownership includes roster persistence after the awaited operation", async () => {
++	for (const [name, args] of [["spawn_subagent", { name: "new", systemPrompt: "test", message: "task" }], ["kill_subagents", { names: ["child"] }]] as const) {
++		const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3 });
++		engine.addAgent({ ...record("main"), sessionId: "main-id" }); engine.addAgent(record("child"));
++		let persisted = false;
++		const tool = toolOf(engine, "main", name, { persistRoster: () => {
++			persisted = true;
++			assert.equal(engine.inspectRestart("main-id").ready, false);
++			assert.equal(engine.acquireRestart("main-id", "before-persist").ok, false);
++		} });
++		await tool.execute("call", args, undefined, undefined, undefined as never);
++		assert.equal(persisted, true);
++		assert.equal(engine.inspectRestart("main-id").ready, true);
++	}
++});
+diff --git a/extensions/actor-subagents/agent-tools.ts b/extensions/actor-subagents/agent-tools.ts
+index af173bb..18f325c 100644
+--- a/extensions/actor-subagents/agent-tools.ts
++++ b/extensions/actor-subagents/agent-tools.ts
+@@ -177,19 +177,22 @@ export function makeAgentTools(
+         }),
+       }),
+       execute: async (_id, args) => {
+-        const res = await spawnAgent(
+-          {
+-            name: args.name,
+-            systemPrompt: args.systemPrompt,
+-            model: args.model,
+-            thinkingLevel: args.thinkingLevel,
+-            fast: args.fast,
+-            message: args.message,
+-          },
+-          selfName,
+-        );
+-        persistRoster();
+-        return { content: [{ type: "text", text: res.msg }], details: {} };
++        const done = engine.trackActorWork();
++        try {
++          const res = await spawnAgent(
++            {
++              name: args.name,
++              systemPrompt: args.systemPrompt,
++              model: args.model,
++              thinkingLevel: args.thinkingLevel,
++              fast: args.fast,
++              message: args.message,
++            },
++            selfName,
++          );
++          persistRoster();
++          return { content: [{ type: "text", text: res.msg }], details: {} };
++        } finally { done(); }
+       },
+     }),
+     defineTool({
+@@ -220,32 +223,35 @@ export function makeAgentTools(
+         content: Type.String({ description: "Message content" }),
+       }),
+       execute: async (_id, args) => {
+-        const targets = normalizeTargets(args.to);
+-        // Route first (synchronous ordering, one feed event per target), then observe reactions.
+-        // Each target carries its OWN mark, taken immediately before its own delivery: awaitReaction
+-        // reads the event log from there, so a reaction that happens between that delivery and the
+-        // wait is observed instead of waited out, while activity a target had BEFORE its message
+-        // arrived (e.g. while an earlier target was being routed) is not mistaken for a reaction.
+-        const routed = [];
+-        for (const t of targets) {
+-          const sinceEvent = engine.events.length;
+-          const outcome = await engine.route(selfName, t, args.content);
+-          routed.push({ target: t, sinceEvent, ...outcome });
+-        }
+-        // The per-target waits run in PARALLEL: serial waits would cost timeout x targets for a
+-        // multicast, turning one bounded observation into a long block.
+-        const results: MulticastRouteOutcome[] = await Promise.all(
+-          routed.map(async (result) => {
+-            // Parked or gone: no turn can follow, so there is nothing to observe.
+-            if (result.outcome !== "delivered") return result;
+-            const reaction = await engine.awaitReaction(result.target, result.sinceEvent);
+-            return { target: result.target, outcome: result.outcome, reaction };
+-          }),
+-        );
+-        return {
+-          content: [{ type: "text", text: formatMulticastResult(results) }],
+-          details: {},
+-        };
++        const done = engine.trackActorWork();
++        try {
++          const targets = normalizeTargets(args.to);
++          // Route first (synchronous ordering, one feed event per target), then observe reactions.
++          // Each target carries its OWN mark, taken immediately before its own delivery: awaitReaction
++          // reads the event log from there, so a reaction that happens between that delivery and the
++          // wait is observed instead of waited out, while activity a target had BEFORE its message
++          // arrived (e.g. while an earlier target was being routed) is not mistaken for a reaction.
++          const routed = [];
++          for (const t of targets) {
++            const sinceEvent = engine.events.length;
++            const outcome = await engine.route(selfName, t, args.content);
++            routed.push({ target: t, sinceEvent, ...outcome });
++          }
++          // The per-target waits run in PARALLEL: serial waits would cost timeout x targets for a
++          // multicast, turning one bounded observation into a long block.
++          const results: MulticastRouteOutcome[] = await Promise.all(
++            routed.map(async (result) => {
++              // Parked or gone: no turn can follow, so there is nothing to observe.
++              if (result.outcome !== "delivered") return result;
++              const reaction = await engine.awaitReaction(result.target, result.sinceEvent);
++              return { target: result.target, outcome: result.outcome, reaction };
++            }),
++          );
++          return {
++            content: [{ type: "text", text: formatMulticastResult(results) }],
++            details: {},
++          };
++        } finally { done(); }
+       },
+     }),
+     defineTool({
+@@ -336,12 +342,15 @@ export function makeAgentTools(
+         }),
+       }),
+       execute: async (_id, args) => {
+-        const result = await engine.kill(selfName, normalizeTargets(args.names));
+-        persistRoster();
+-        return {
+-          content: [{ type: "text", text: formatControlResult("kill", result) }],
+-          details: result,
+-        };
++        const done = engine.trackActorWork();
++        try {
++          const result = await engine.kill(selfName, normalizeTargets(args.names));
++          persistRoster();
++          return {
++            content: [{ type: "text", text: formatControlResult("kill", result) }],
++            details: result,
++          };
++        } finally { done(); }
+       },
+     }),
+     defineTool({
+diff --git a/extensions/actor-subagents/engine.ts b/extensions/actor-subagents/engine.ts
+index b6d4573..3c01aff 100644
+--- a/extensions/actor-subagents/engine.ts
++++ b/extensions/actor-subagents/engine.ts
+@@ -77,6 +77,64 @@ export class Engine {
+ 	// Aborts started by pause() and not yet finished, per agent. resume() waits for them: an abort
+ 	// that lands after the agent runs again would kill the turn resume just started.
+ 	private readonly aborts = new AbortTracker();
++	private actorWork = 0;
++	private readonly mainDeliveries = new Set<string>();
++	private restartLease?: { sessionId: string; token: string };
++
++	/** Counts owned operations even after their agent records have been removed. */
++	trackActorWork(): () => void {
++		this.actorWork++;
++		let done = false;
++		return () => { if (!done) { done = true; this.actorWork--; } };
++	}
++
++	queueMainDelivery(id: string): void {
++		if (this.restartLease) throw new Error("restart handoff in progress");
++		this.mainDeliveries.add(id);
++	}
++
++	acceptMainDelivery(id: string): void { this.mainDeliveries.delete(id); }
++
++	inspectRestart(sessionId: string): { main: boolean; ready: boolean; reason?: string } {
++		const main = this.agents.get("main");
++		if (!sessionId || main?.sessionId !== sessionId)
++			return { main: false, ready: false, reason: "session is not the live main agent" };
++		const refuse = (reason: string) => ({ main: true, ready: false, reason });
++		if (this.actorWork || this.aborts.pending(() => true).length)
++			return refuse("actor operation is in flight");
++		if (this.mainDeliveries.size) return refuse("actor messages to main are queued");
++		for (const rec of this.agents.values()) {
++			if (rec.pending || rec.buffer?.length || rec.pausedInbox?.length)
++				return refuse(`agent '${rec.name}' has pending work`);
++			// Main's current turn owns the restart tool; its ordinary activity is not swarm work.
++			if (rec.compacting || (rec.name !== "main" && (rec.activity || rec.logicalRun)))
++				return refuse(`agent '${rec.name}' is not settled`);
++		}
++		return { main: true, ready: true };
++	}
++
++	acquireRestart(sessionId: string, token: string): CheckResult {
++		if (typeof token !== "string" || !token) return { ok: false, reason: "invalid restart token" };
++		const state = this.inspectRestart(sessionId);
++		if (!state.ready) return { ok: false, reason: state.reason ?? "actor is not ready" };
++		if (this.restartLease && (this.restartLease.sessionId !== sessionId || this.restartLease.token !== token))
++			return { ok: false, reason: "another restart handoff is in progress" };
++		this.restartLease = { sessionId, token };
++		return { ok: true };
++	}
++
++	releaseRestart(sessionId: string, token: string): void {
++		if (this.restartLease?.sessionId === sessionId && this.restartLease.token === token)
++			this.restartLease = undefined;
++	}
++
++	endRestartSession(): void {
++		this.restartLease = undefined;
++		this.mainDeliveries.clear();
++		const main = this.agents.get("main");
++		if (main) main.sessionId = undefined;
++	}
++
+ 
+ 	// Note: no TS parameter properties — Node's strip-only mode (node --test on .ts)
+ 	// does not support them.
+@@ -112,6 +170,7 @@ export class Engine {
+ 	}
+ 
+ 	canSpawn(name: string, spawnerDepth: number): CheckResult {
++		if (this.restartLease) return { ok: false, reason: "restart handoff in progress" };
+ 		if (RESERVED.has(name)) return { ok: false, reason: `name '${name}' is reserved` };
+ 		if (!NAME_RE.test(name)) return { ok: false, reason: `invalid name '${name}' (use [a-zA-Z0-9_-])` };
+ 		if (this.agents.has(name)) return { ok: false, reason: `agent '${name}' already exists` };
+@@ -199,7 +258,12 @@ export class Engine {
+ 		// a paused agent would start a turn that recordTurnStart aborts, leaving them unread with
+ 		// nobody to re-trigger — so they join the paused inbox, ahead of anything buffered later.
+ 		if (this.isStopped(rec)) rec.pausedInbox = [...buffered, ...(rec.pausedInbox ?? [])];
+-		else for (const t of buffered) void opts.handle.deliver(t);
++		else for (const t of buffered) void this.deliverTracked(opts.handle, t);
++	}
++
++	private async deliverTracked(handle: AgentHandle, message: RoutedAgentMessage): Promise<void> {
++		const done = this.trackActorWork();
++		try { await handle.deliver(message); } finally { done(); }
+ 	}
+ 
+ 	/** Release a reservation (session creation failed). */
+@@ -209,6 +273,7 @@ export class Engine {
+ 
+ 	/** Close a removed record without letting one faulty child block registry cleanup. */
+ 	private async closeRecord(rec: AgentRecord): Promise<void> {
++		const done = this.trackActorWork();
+ 		try {
+ 			await rec.close?.();
+ 		} catch (error) {
+@@ -218,7 +283,7 @@ export class Engine {
+ 				reason: `runtime cleanup failed: ${error instanceof Error ? error.message : String(error)}`,
+ 				ts: Date.now(),
+ 			});
+-		}
++		} finally { done(); }
+ 	}
+ 
+ 	/**
+@@ -232,36 +297,44 @@ export class Engine {
+ 	 * reader (Second-Order Thinking). Killing individual leaves stays possible: name them.
+ 	 */
+ 	async kill(by: string, names: string[]): Promise<ControlResult> {
+-		const results: TargetOutcome[] = [];
+-		const affected: string[] = [];
+-		for (const target of names) {
+-			// Already taken down with an ancestor named earlier in this call: done, not unknown.
+-			if (affected.includes(target)) {
++		if (this.restartLease)
++			return { results: names.map((target) => ({ target, ok: false, reason: "restart handoff in progress" })), affected: [] };
++		const done = this.trackActorWork();
++		try {
++			const results: TargetOutcome[] = [];
++			const affected: string[] = [];
++			for (const target of names) {
++				// Already taken down with an ancestor named earlier in this call: done, not unknown.
++				if (affected.includes(target)) {
++					results.push({ target, ok: true });
++					continue;
++				}
++				const check = authorize(this.agents, by, target);
++				if (!check.ok) {
++					results.push({ target, ok: false, reason: check.reason });
++					continue;
++				}
+ 				results.push({ target, ok: true });
+-				continue;
++				affected.push(...(await this.killSubtree(target)));
+ 			}
+-			const check = authorize(this.agents, by, target);
+-			if (!check.ok) {
+-				results.push({ target, ok: false, reason: check.reason });
+-				continue;
+-			}
+-			results.push({ target, ok: true });
+-			affected.push(...(await this.killSubtree(target)));
+-		}
+-		return { results, affected };
++			return { results, affected };
++		} finally { done(); }
+ 	}
+ 
+ 	/** Kill `name` and its subtree (post-order), returning every name taken down. */
+ 	private async killSubtree(name: string): Promise<string[]> {
+-		const subtree = subtreePostOrder(this.agents, name);
++		const done = this.trackActorWork();
++		try {
++			const subtree = subtreePostOrder(this.agents, name);
+ 
+-		// Inversion: remove first so no new message can enter a runtime while it closes.
+-		for (const r of subtree) this.agents.delete(r.name);
+-		for (const r of subtree) {
+-			await this.closeRecord(r);
+-			this.emit({ type: "kill", name: r.name, ts: Date.now() });
+-		}
+-		return subtree.map((r) => r.name);
++			// Inversion: remove first so no new message can enter a runtime while it closes.
++			for (const r of subtree) this.agents.delete(r.name);
++			for (const r of subtree) {
++				await this.closeRecord(r);
++				this.emit({ type: "kill", name: r.name, ts: Date.now() });
++			}
++			return subtree.map((r) => r.name);
++		} finally { done(); }
+ 	}
+ 
+ 	/**
+@@ -276,21 +349,25 @@ export class Engine {
+ 		name: string,
+ 		change: { model?: ModelChange; thinkingLevel?: ThinkingLevel },
+ 	): Promise<RetuneResult> {
+-		if (name === "main") return { ok: false, reason: "cannot retune 'main' (use pi's own model controls)" };
+-		// An agent may tune itself: escalating its own effort is its call, unlike stopping itself.
+-		const check = authorize(this.agents, by, name, "self");
+-		if (!check.ok) return check;
+-		const rec = this.agents.get(name);
+-		if (!rec?.reconfigure) return { ok: false, reason: `agent '${name}' is still spawning` };
++		if (this.restartLease) return { ok: false, reason: "restart handoff in progress" };
++		const done = this.trackActorWork();
+ 		try {
+-			const tuning = await rec.reconfigure(change);
+-			if (tuning.model) rec.model = tuning.model;
+-			rec.thinkingLevel = tuning.thinkingLevel;
+-			rec.lastActivity = Date.now();
+-			return { ok: true, tuning };
+-		} catch (error) {
+-			return { ok: false, reason: error instanceof Error ? error.message : String(error) };
+-		}
++			if (name === "main") return { ok: false, reason: "cannot retune 'main' (use pi's own model controls)" };
++			// An agent may tune itself: escalating its own effort is its call, unlike stopping itself.
++			const check = authorize(this.agents, by, name, "self");
++			if (!check.ok) return check;
++			const rec = this.agents.get(name);
++			if (!rec?.reconfigure) return { ok: false, reason: `agent '${name}' is still spawning` };
++			try {
++				const tuning = await rec.reconfigure(change);
++				if (tuning.model) rec.model = tuning.model;
++				rec.thinkingLevel = tuning.thinkingLevel;
++				rec.lastActivity = Date.now();
++				return { ok: true, tuning };
++			} catch (error) {
++				return { ok: false, reason: error instanceof Error ? error.message : String(error) };
++			}
++		} finally { done(); }
+ 	}
+ 
+ 	/** Kill all agents except 'main': main's children, each with its subtree. */
+@@ -303,9 +380,12 @@ export class Engine {
+ 	 * path so persisted membership remains authoritative and can be restored in the next session.
+ 	 */
+ 	async shutdownAll(): Promise<void> {
+-		const records = [...this.agents.values()].filter((rec) => rec.name !== "main");
+-		for (const rec of records) this.agents.delete(rec.name);
+-		await Promise.all(records.map((rec) => this.closeRecord(rec)));
++		const done = this.trackActorWork();
++		try {
++			const records = [...this.agents.values()].filter((rec) => rec.name !== "main");
++			for (const rec of records) this.agents.delete(rec.name);
++			await Promise.all(records.map((rec) => this.closeRecord(rec)));
++		} finally { done(); }
+ 	}
+ 
+ 	/** Every agent except 'main'. */
+@@ -440,6 +520,8 @@ export class Engine {
+ 	 */
+ 	pause(by: string, names?: string[]): ControlResult {
+ 		const { results, recs } = this.controlTargets(by, names);
++		if (this.restartLease)
++			return { results: results.map((r) => ({ target: r.target, ok: false, reason: "restart handoff in progress" })), affected: [] };
+ 		const before = this.pausedSet();
+ 		const flagged: string[] = [];
+ 		for (const rec of recs) {
+@@ -482,66 +564,77 @@ export class Engine {
+ 	 * Nothing cleared means no event.
+ 	 */
+ 	async resume(by: string, names?: string[]): Promise<EngineResumeResult> {
+-		const { results, recs } = this.controlTargets(by, names);
+-		const before = this.pausedSet();
+-		const cleared = recs.filter((rec) => rec.paused === true);
+-		for (const rec of cleared) rec.paused = false;
+-		for (const result of results) {
+-			const rec = this.agents.get(result.target);
+-			const holder = result.ok && rec ? pausedBy(this.agents, rec) : undefined;
+-			if (holder) result.reason = `still paused by '${holder}'`;
++		if (this.restartLease) {
++			const { results } = this.controlTargets(by, names);
++			return { results: results.map((r) => ({ target: r.target, ok: false, reason: "restart handoff in progress" })), affected: [], interrupted: [], bufferedMessages: 0 };
+ 		}
+-		if (cleared.length === 0) return { results, affected: [], interrupted: [], bufferedMessages: 0 };
+-
+-		const released = this.background().filter((rec) => before.has(rec.name) && !this.isAgentPaused(rec));
+-		this.emit({ type: "resume", names: cleared.map((rec) => rec.name), ts: Date.now() });
+-
+-		// The released agents that still run now: not killed (or respawned) and not paused again.
+-		const running = () => released.filter((rec) => this.agents.get(rec.name) === rec && !this.isAgentPaused(rec));
+-		// Re-scan after every wait: a pause and resume in between can start a new abort. No await
+-		// follows the last scan, so nothing can land between it and the release below.
+-		for (;;) {
+-			const names = new Set(running().map((rec) => rec.name));
+-			const pending = this.aborts.pending((name) => names.has(name));
+-			if (pending.length === 0) break;
+-			await Promise.all(pending);
+-		}
+-		const interrupted: string[] = [];
+-		let bufferedMessages = 0;
+-		for (const rec of running()) {
+-			if (rec.pausedMidTurn) interrupted.push(rec.name);
+-			rec.pausedMidTurn = false;
+-			// Release paused inboxes in FIFO order. Delivery is intentionally fire-and-forget,
+-			// so the result counts released messages rather than claiming they completed.
+-			const inbox = rec.pausedInbox;
+-			if (inbox && inbox.length > 0) {
+-				rec.pausedInbox = undefined;
+-				bufferedMessages += inbox.length;
+-				// KISS + Inversion: one atomic batch preserves every message and avoids racing
+-				// several idle-session starts, which can accept the first prompt and drop the rest.
+-				void rec.handle.deliver(mergeRoutedAgentMessages(inbox));
++		const done = this.trackActorWork();
++		try {
++			const { results, recs } = this.controlTargets(by, names);
++			const before = this.pausedSet();
++			const cleared = recs.filter((rec) => rec.paused === true);
++			for (const rec of cleared) rec.paused = false;
++			for (const result of results) {
++				const rec = this.agents.get(result.target);
++				const holder = result.ok && rec ? pausedBy(this.agents, rec) : undefined;
++				if (holder) result.reason = `still paused by '${holder}'`;
++			}
++			if (cleared.length === 0) return { results, affected: [], interrupted: [], bufferedMessages: 0 };
++
++			const released = this.background().filter((rec) => before.has(rec.name) && !this.isAgentPaused(rec));
++			this.emit({ type: "resume", names: cleared.map((rec) => rec.name), ts: Date.now() });
++
++			// The released agents that still run now: not killed (or respawned) and not paused again.
++			const running = () => released.filter((rec) => this.agents.get(rec.name) === rec && !this.isAgentPaused(rec));
++			// Re-scan after every wait: a pause and resume in between can start a new abort. No await
++			// follows the last scan, so nothing can land between it and the release below.
++			for (;;) {
++				const names = new Set(running().map((rec) => rec.name));
++				const pending = this.aborts.pending((name) => names.has(name));
++				if (pending.length === 0) break;
++				await Promise.all(pending);
++			}
++			const interrupted: string[] = [];
++			let bufferedMessages = 0;
++			for (const rec of running()) {
++				if (rec.pausedMidTurn) interrupted.push(rec.name);
++				rec.pausedMidTurn = false;
++				// Release paused inboxes in FIFO order. Delivery is intentionally fire-and-forget,
++				// so the result counts released messages rather than claiming they completed.
++				const inbox = rec.pausedInbox;
++				if (inbox && inbox.length > 0) {
++					rec.pausedInbox = undefined;
++					bufferedMessages += inbox.length;
++					// KISS + Inversion: one atomic batch preserves every message and avoids racing
++					// several idle-session starts, which can accept the first prompt and drop the rest.
++					void this.deliverTracked(rec.handle, mergeRoutedAgentMessages(inbox));
++				}
+ 			}
+-		}
+ 
+-		return { results, affected: released.map((rec) => rec.name), interrupted, bufferedMessages };
++			return { results, affected: released.map((rec) => rec.name), interrupted, bufferedMessages };
++		} finally { done(); }
+ 	}
+ 
+ 	async route(from: string, to: string, content: string): Promise<RouteResult> {
+-		const target = this.agents.get(to);
+-		if (!target) return { outcome: "failed", reason: `unknown agent '${to}'` };
+-		const message = createRoutedAgentMessage(from, content);
+-		// One tail for both outcomes: a paused target parks the message, a live one takes it.
+-		// Everything after that (edge count, activity, feed event) is identical, so it is written once.
+-		// The pause state is read ONCE, before the delivery await, and the reported outcome comes from
+-		// that same decision: a pause landing while `deliver` is in flight must not turn a message the
+-		// session already has into a "buffered" report (the map has to match what actually happened).
+-		const paused = this.isStopped(target);
+-		if (paused) (target.pausedInbox ??= []).push(message);
+-		else await target.handle.deliver(message);
+-		target.lastActivity = Date.now();
+-		this.countEdge(from, to);
+-		this.emit({ type: "route", from, to, preview: previewOf(content), buffered: paused, ts: Date.now() });
+-		return paused ? { outcome: "buffered" } : { outcome: "delivered" };
++		if (this.restartLease) return { outcome: "failed", reason: "restart handoff in progress" };
++		const done = this.trackActorWork();
++		try {
++			const target = this.agents.get(to);
++			if (!target) return { outcome: "failed", reason: `unknown agent '${to}'` };
++			const message = createRoutedAgentMessage(from, content);
++			// One tail for both outcomes: a paused target parks the message, a live one takes it.
++			// Everything after that (edge count, activity, feed event) is identical, so it is written once.
++			// The pause state is read ONCE, before the delivery await, and the reported outcome comes from
++			// that same decision: a pause landing while `deliver` is in flight must not turn a message the
++			// session already has into a "buffered" report (the map has to match what actually happened).
++			const paused = this.isStopped(target);
++			if (paused) (target.pausedInbox ??= []).push(message);
++			else await this.deliverTracked(target.handle, message);
++			target.lastActivity = Date.now();
++			this.countEdge(from, to);
++			this.emit({ type: "route", from, to, preview: previewOf(content), buffered: paused, ts: Date.now() });
++			return paused ? { outcome: "buffered" } : { outcome: "delivered" };
++		} finally { done(); }
+ 	}
+ 
+ 	/**
+@@ -552,6 +645,7 @@ export class Engine {
+ 	 * text unread with nobody to re-trigger it.
+ 	 */
+ 	deliverUser(to: string, text: string): DeliverUserResult {
++		if (this.restartLease) return { outcome: "refused", reason: "restart handoff in progress" };
+ 		// 'main' IS the chat the human is typing in; there is no child session to hand a turn to.
+ 		if (to === "main") return { outcome: "refused", reason: "'main' is the chat you are typing in" };
+ 		const target = this.agents.get(to);
+@@ -561,9 +655,10 @@ export class Engine {
+ 			return { outcome: "refused", reason: `'${to}' is paused — resume it first` };
+ 		if (this.isStopped(target))
+ 			return { outcome: "refused", reason: `'${to}' is still stopping — try again in a moment` };
++		const done = this.trackActorWork();
+ 		void target.handle.deliverUser(text).catch((error) => {
+ 			this.reportError(to, error instanceof Error ? error.message : String(error));
+-		});
++		}).finally(done);
+ 		target.lastActivity = Date.now();
+ 		this.countEdge("main", to);
+ 		this.emit({ type: "route", from: "main", to, preview: previewOf(text), buffered: false, ts: Date.now() });
+diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
+index 94f4391..0cf0fba 100644
+--- a/extensions/actor-subagents/index.ts
++++ b/extensions/actor-subagents/index.ts
+@@ -4,6 +4,7 @@
+  * + commands for the 'main' agent and creates background agents via the SDK.
+  * Design: ../../../DESIGN.md
+  */
++import { randomUUID } from "node:crypto";
+ import * as fs from "node:fs";
+ import * as path from "node:path";
+ import {
+@@ -31,6 +32,7 @@ import { makeAgentTools } from "./agent-tools.ts";
+ import type { AgentHandle } from "./agent-record.ts";
+ import type { EngineResumeResult } from "./control-result.ts";
+ import { Engine } from "./engine.ts";
++import { createRestartBridge, RESTART_BRIDGE_KEY } from "./restart-bridge.ts";
+ import { readFastState, setFastDesired } from "./fast-control.ts";
+ import { errorNotification } from "./error-notification.ts";
+ import {
+@@ -166,7 +168,8 @@ const RESUME_NUDGE = (now: Date) => {
+ //      resume is async, waiting for those aborts. A v25 instance would keep a swarm-wide pause this code can no longer lift.
+ // v27: the live session UUID and compaction flags join AgentRecord; old singleton records
+ //      cannot supply Fast ownership or accurate activity after a same-process reload.
+-const ENGINE_KEY = "__subagentsEngine_v27";
++// v28: restart handoff tracks owned operations and logical runs independently of visible records.
++const ENGINE_KEY = "__subagentsEngine_v28";
+ const AGENT_NAME_LOOKUP_KEY = Symbol.for("futile.pi.subagents.agent-name-lookup.v1");
+ 
+ function getEngine(): Engine {
+@@ -182,13 +185,15 @@ function getEngine(): Engine {
+     // stays on disk in roster.json, so the next pi start restores the swarm.
+     // Fire-and-forget: nothing here can await, and a faulty old runtime must not block the new
+     // engine — shutdownAll already isolates per-child failures.
++    const next = new Engine(readSettings().caps);
+     for (const key of Object.keys(g)) {
+       if (key === ENGINE_KEY || !key.startsWith("__subagentsEngine_v")) continue;
+       const previous = g[key] as { shutdownAll?: () => Promise<void> };
+       delete g[key];
+-      void previous?.shutdownAll?.().catch(() => {});
++      const done = next.trackActorWork();
++      void Promise.resolve(previous?.shutdownAll?.()).catch(() => {}).finally(done);
+     }
+-    g[ENGINE_KEY] = new Engine(readSettings().caps);
++    g[ENGINE_KEY] = next;
+   }
+   return g[ENGINE_KEY] as Engine;
+ }
+@@ -259,6 +264,7 @@ function disposeProcessHooks(dispose: () => void): void {
+ 
+ export default function subagents(pi: ExtensionAPI) {
+   const engine = getEngine();
++  (globalThis as Record<symbol, unknown>)[RESTART_BRIDGE_KEY] = createRestartBridge(engine);
+   // Context-pressure resolves retained child session IDs through this live, reload-safe bridge.
+   (globalThis as Record<symbol, unknown>)[AGENT_NAME_LOOKUP_KEY] = (sessionId: string) =>
+     engine.list().find((agent) => agent.sessionId === sessionId)?.name;
+@@ -288,12 +294,27 @@ export default function subagents(pi: ExtensionAPI) {
+   // loop: with "followUp" the replies queue while main streams and main never observes
+   // them mid-loop (polls forever). "steer" injects them before main's next LLM call so it
+   // sees the replies. triggerTurn preserves immediate delivery while main is idle.
+-  setMainSink((message) =>
+-    pi.sendMessage(toCustomAgentMessage(message), {
+-      triggerTurn: true,
+-      deliverAs: "steer",
+-    }),
+-  );
++  setMainSink((message) => {
++    const restartDeliveryId = randomUUID();
++    engine.queueMainDelivery(restartDeliveryId);
++    try {
++      const custom = toCustomAgentMessage(message);
++      pi.sendMessage({ ...custom, details: { ...custom.details, restartDeliveryId } }, {
++        triggerTurn: true,
++        deliverAs: "steer",
++      });
++    } catch (error) {
++      engine.acceptMainDelivery(restartDeliveryId);
++      throw error;
++    }
++  });
++  // A queued steer is owned work only until accepted, not for the duration of main's turn.
++  pi.on("message_start", (event) => {
++    const message = event.message as { customType?: string; details?: { restartDeliveryId?: unknown } };
++    const id = message.details?.restartDeliveryId;
++    if (message.customType === AGENT_MESSAGE_CUSTOM_TYPE && typeof id === "string")
++      engine.acceptMainDelivery(id);
++  });
+ 
+   // Process-global model services built once (same creds as the foreground).
+   // pi 0.80.10 SDK: AuthStorage was removed and ModelRegistry now wraps an async
+@@ -801,11 +822,14 @@ export default function subagents(pi: ExtensionAPI) {
+   // the interrupted ones among those are re-triggered in `by`'s name, so their reply goes to the
+   // agent that resumed them.
+   const resumeAgents = async (by: string, names?: string[]): Promise<EngineResumeResult> => {
+-    const result = await engine.resume(by, names);
+-    const nudge = RESUME_NUDGE(new Date());
+-    for (const name of result.interrupted) void engine.route(by, name, nudge);
+-    updateStatus();
+-    return result;
++    const done = engine.trackActorWork();
++    try {
++      const result = await engine.resume(by, names);
++      const nudge = RESUME_NUDGE(new Date());
++      for (const name of result.interrupted) void engine.route(by, name, nudge);
++      updateStatus();
++      return result;
++    } finally { done(); }
+   };
+ 
+   // Swarm control commands take an optional agent-name list; empty means all of main's children.
+@@ -917,7 +941,8 @@ export default function subagents(pi: ExtensionAPI) {
+       const main = engine.get("main");
+       if (main) main.sessionId = mainSessionId;
+     }
+-    await restoreSwarm();
++    const done = engine.trackActorWork();
++    try { await restoreSwarm(); } finally { done(); }
+     updateActivitySource(true);
+     await activityPublisher.refreshTerminalProgress();
+     updateStatus();
+@@ -934,6 +959,7 @@ export default function subagents(pi: ExtensionAPI) {
+     const previousSubDir = subDir;
+     subDir = undefined;
+     await engine.shutdownAll();
++    engine.endRestartSession();
+     // Publish the inactive snapshot before detaching this runtime's publisher.
+     updateActivitySource(true);
+     updateStatus();
+@@ -1039,11 +1065,14 @@ export default function subagents(pi: ExtensionAPI) {
+   pi.registerCommand("subagents-kill", {
+     description: "Terminate agents by name, each with its subtree (empty = all except 'main').",
+     handler: async (args, ctx) => {
+-      const names = parseNames(args);
+-      const result = names.length ? await engine.kill("main", names) : await engine.killAll();
+-      persistRoster();
+-      ctx.ui.notify(formatControlResult("kill", result), "info");
+-      updateStatus();
++      const done = engine.trackActorWork();
++      try {
++        const names = parseNames(args);
++        const result = names.length ? await engine.kill("main", names) : await engine.killAll();
++        persistRoster();
++        ctx.ui.notify(formatControlResult("kill", result), "info");
++        updateStatus();
++      } finally { done(); }
+     },
+   });
+ 
+diff --git a/extensions/actor-subagents/restart-bridge.test.ts b/extensions/actor-subagents/restart-bridge.test.ts
+new file mode 100644
+index 0000000..77c7e60
+--- /dev/null
++++ b/extensions/actor-subagents/restart-bridge.test.ts
+@@ -0,0 +1,331 @@
++import assert from "node:assert/strict";
++import { test } from "node:test";
++import { readFileSync } from "node:fs";
++import { stripTypeScriptTypes } from "node:module";
++import type { EngineResumeResult } from "./control-result.ts";
++import type { AgentRecord } from "./agent-record.ts";
++import { createRoutedAgentMessage } from "./agent-message.ts";
++import { Engine } from "./engine.ts";
++import { createRestartBridge, RESTART_BRIDGE_KEY } from "./restart-bridge.ts";
++import { createSpawner, type SessionLike } from "./spawner.ts";
++
++function deferred() {
++	let resolve!: () => void;
++	const promise = new Promise<void>((done) => { resolve = done; });
++	return { promise, resolve };
++}
++function record(name: string): AgentRecord {
++	return { name, sessionId: `${name}-id`, model: "test/model", spawnedBy: "main", depth: name === "main" ? 0 : 1,
++		createdAt: 0, turns: 0, lastActivity: 0, handle: { deliver: async () => {}, abort: async () => {} } };
++}
++function fixture() {
++	const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3 });
++	engine.addAgent(record("main"));
++	return { engine, bridge: createRestartBridge(engine) };
++}
++
++class Session implements SessionLike {
++	sessionId = "child-id";
++	thinkingLevel = "high" as const;
++	messages: unknown[] = [];
++	listeners = new Set<(event: { type: string }) => void>();
++	shutdownGate?: Promise<void>;
++	disposed = false;
++	sendAgentMessage(): void | Promise<void> {}
++	sendUserMessage() {}
++	abort() {}
++	abortBash() {}
++	shutdown() { return this.shutdownGate; }
++	dispose() { this.disposed = true; }
++	async setModel() {}
++	setThinkingLevel() {}
++	subscribe(listener: (event: { type: string }) => void) { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
++	emit(type: string) { for (const listener of this.listeners) listener({ type }); }
++	getToolDefinition() { return undefined; }
++	getContextUsage() { return undefined; }
++}
++
++function spawner(engine: Engine, create: () => Promise<{ session: Session }>) {
++	return createSpawner({ engine, resolveModel: () => ({ provider: "test", id: "model", model: {} }), createSession: create });
++}
++
++test("restart bridge is fail-closed for unknown/child identities and permits main's own tool turn", () => {
++	const { engine, bridge } = fixture();
++	assert.equal(RESTART_BRIDGE_KEY, Symbol.for("futile.pi.subagents.restart-in-dir.v1"));
++	engine.addAgent(record("child"));
++	assert.deepEqual(bridge.inspect("main-id"), { main: true, ready: true });
++	for (const id of ["child-id", "unknown", ""]) {
++		assert.equal(bridge.inspect(id).main, false);
++		assert.equal(bridge.acquire(id, "token").ok, false);
++	}
++	engine.setActivity("main", "tool", "restart_in_dir");
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++test("queued actor delivery to main is busy until acceptance, not until main settles", () => {
++	const { engine, bridge } = fixture();
++	engine.beginTurn("main");
++	engine.queueMainDelivery("delivery");
++	assert.equal(bridge.inspect("main-id").ready, false);
++	engine.acceptMainDelivery("unrelated");
++	assert.equal(bridge.inspect("main-id").ready, false);
++	engine.acceptMainDelivery("delivery");
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++test("reservations, buffered messages, paused inboxes and compaction refuse, idle paused records allow", async () => {
++	const { engine, bridge } = fixture();
++	assert.equal(engine.reserve("pending", "main").ok, true);
++	assert.equal(bridge.acquire("main-id", "token").ok, false);
++	engine.release("pending");
++	const child = record("child");
++	child.paused = true;
++	engine.addAgent(child);
++	assert.equal(bridge.inspect("main-id").ready, true);
++	await engine.route("main", "child", "queued");
++	assert.equal(bridge.inspect("main-id").ready, false);
++	child.pausedInbox = undefined;
++	child.buffer = [createRoutedAgentMessage("main", "pending")];
++	assert.equal(bridge.inspect("main-id").ready, false);
++	child.buffer = undefined;
++	child.compacting = true;
++	assert.equal(bridge.inspect("main-id").ready, false);
++	child.compacting = false;
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++test("lease is same-token idempotent, blocks admission, and wrong-token release cannot unlock", async () => {
++	const { engine, bridge } = fixture();
++	const child = record("child"); child.paused = true; engine.addAgent(child);
++	assert.equal(bridge.acquire("main-id", "lease").ok, true);
++	assert.equal(bridge.acquire("main-id", "lease").ok, true);
++	assert.equal(bridge.inspect("main-id").ready, true);
++	assert.equal(bridge.acquire("main-id", "other").ok, false);
++	assert.equal(engine.reserve("new", "main").ok, false);
++	assert.equal((await engine.route("main", "child", "no")).outcome, "failed");
++	assert.equal(engine.deliverUser("child", "no").outcome, "refused");
++	assert.equal((await engine.resume("main")).results[0]?.ok, false);
++	assert.equal(child.paused, true);
++	assert.equal(child.pausedInbox, undefined);
++	assert.throws(() => engine.queueMainDelivery("no"), /handoff/);
++	bridge.release("child-id", "lease"); bridge.release("main-id", "other");
++	assert.equal(engine.reserve("new", "main").ok, false);
++	bridge.release("main-id", "lease");
++	assert.equal(engine.reserve("new", "main").ok, true);
++});
++
++test("in-flight delivery remains owned after target removal", async () => {
++	const { engine, bridge } = fixture();
++	const gate = deferred(); const child = record("child");
++	child.handle.deliver = () => gate.promise; engine.addAgent(child);
++	const delivery = engine.route("main", "child", "work");
++	await engine.kill("main", ["child"]);
++	assert.equal(engine.has("child"), false);
++	assert.equal(bridge.inspect("main-id").ready, false);
++	gate.resolve(); await delivery;
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++test("removed reservations remain busy through orphan creation and cleanup", async () => {
++	const { engine, bridge } = fixture();
++	const creation = deferred(); const cleanup = deferred(); const session = new Session();
++	session.shutdownGate = cleanup.promise;
++	const runtime = spawner(engine, async () => { await creation.promise; return { session }; });
++	const spawn = runtime.spawnAgent({ name: "child", systemPrompt: "test" }, "main");
++	await engine.kill("main", ["child"]);
++	assert.equal(engine.has("child"), false);
++	assert.equal(bridge.inspect("main-id").ready, false);
++	creation.resolve();
++	await Promise.resolve(); await Promise.resolve();
++	assert.equal(bridge.acquire("main-id", "lease").ok, false);
++	cleanup.resolve();
++	assert.equal((await spawn).ok, false);
++	assert.equal(session.disposed, true);
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++test("lease allows ordered normal shutdown and removed-record cleanup remains busy", async () => {
++	const { engine, bridge } = fixture();
++	const cleanup = deferred(); const child = record("child");
++	child.close = () => cleanup.promise; engine.addAgent(child);
++	assert.equal(bridge.acquire("main-id", "lease").ok, true);
++	const closing = engine.shutdownAll();
++	assert.equal(engine.has("child"), false);
++	assert.equal(bridge.inspect("main-id").ready, false);
++	cleanup.resolve(); await closing;
++	assert.equal(bridge.inspect("main-id").ready, true);
++	engine.endRestartSession();
++	assert.equal(bridge.inspect("main-id").main, false);
++	engine.get("main")!.sessionId = "next-id";
++	assert.equal(engine.reserve("next", "main").ok, true);
++});
++
++test("agent_end/retry gap is not settled; only agent_settled closes child work", async () => {
++	const { engine, bridge } = fixture(); const session = new Session();
++	const runtime = spawner(engine, async () => ({ session }));
++	assert.equal((await runtime.spawnAgent({ name: "child", systemPrompt: "test" }, "main")).ok, true);
++	session.emit("agent_start"); session.emit("agent_end");
++	assert.equal(engine.get("child")?.activity, undefined);
++	assert.equal(bridge.inspect("main-id").ready, false);
++	session.emit("agent_settled");
++	assert.equal(bridge.inspect("main-id").ready, true);
++	await engine.route("main", "child", "work");
++	assert.equal(bridge.inspect("main-id").ready, false);
++	session.emit("agent_start"); session.emit("agent_end"); session.emit("agent_settled");
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++test("pause aborts and resume waits are readiness work", async () => {
++	const { engine, bridge } = fixture(); const abort = deferred(); const child = record("child");
++	child.handle.abort = () => abort.promise; engine.addAgent(child);
++	engine.pause("main");
++	assert.equal(bridge.inspect("main-id").ready, false);
++	const resumed = engine.resume("main");
++	assert.equal(bridge.inspect("main-id").ready, false);
++	abort.resolve(); await resumed;
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++
++test("delivery failure clears speculative work but cannot hide an already active logical run", async () => {
++	const { engine, bridge } = fixture(); const session = new Session();
++	const runtime = spawner(engine, async () => ({ session }));
++	await runtime.spawnAgent({ name: "child", systemPrompt: "test" }, "main");
++	session.sendAgentMessage = async () => { throw new Error("delivery failed"); };
++	await engine.route("main", "child", "failure before start");
++	assert.equal(bridge.inspect("main-id").ready, true);
++	session.emit("agent_start");
++	await engine.route("main", "child", "failure during run");
++	assert.equal(bridge.inspect("main-id").ready, false);
++	session.emit("agent_end");
++	assert.equal(bridge.inspect("main-id").ready, false);
++	session.emit("agent_settled");
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++
++test("one failing pre-start delivery cannot hide another in-flight child admission", async () => {
++	const { engine, bridge } = fixture(); const session = new Session(); const admission = deferred();
++	const runtime = spawner(engine, async () => ({ session }));
++	await runtime.spawnAgent({ name: "child", systemPrompt: "test" }, "main");
++	let calls = 0;
++	session.sendAgentMessage = () => ++calls === 1 ? admission.promise : Promise.reject(new Error("concurrent admission failed"));
++	await engine.route("main", "child", "pending preflight");
++	await engine.route("main", "child", "failed preflight");
++	assert.equal(engine.get("child")?.activity, undefined);
++	assert.equal(bridge.inspect("main-id").ready, false);
++	await engine.kill("main", ["child"]);
++	assert.equal(bridge.inspect("main-id").ready, false);
++	admission.resolve();
++	await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++
++test("lease refuses external pause/kill/killAll without abort, close, or roster mutation", async () => {
++	const { engine, bridge } = fixture(); const child = record("child");
++	let aborted = 0; let closed = 0;
++	child.handle.abort = async () => { aborted++; };
++	child.close = async () => { closed++; };
++	engine.addAgent(child);
++	assert.equal(bridge.acquire("main-id", "lease").ok, true);
++	for (const control of [engine.pause("main"), await engine.kill("main", ["child"]), await engine.killAll()]) {
++		assert.deepEqual(control.affected, []);
++		assert.deepEqual(control.results, [{ target: "child", ok: false, reason: "restart handoff in progress" }]);
++	}
++	assert.equal(engine.get("child"), child);
++	assert.equal(child.paused, undefined);
++	assert.equal(aborted, 0); assert.equal(closed, 0);
++	assert.equal(bridge.inspect("main-id").ready, true);
++	await engine.shutdownAll();
++	assert.equal(engine.has("child"), false);
++	assert.equal(closed, 1);
++});
++
++
++test("multi-target kill stays busy between subtree cleanup awaits", async () => {
++	const { engine, bridge } = fixture();
++	engine.addAgent(record("a")); engine.addAgent(record("b"));
++	const sample = deferred();
++	let ready: boolean | undefined; let acquired: boolean | undefined; let secondStillPresent: boolean | undefined;
++	const unsubscribe = engine.subscribe((event) => {
++		if (event.type !== "kill" || event.name !== "a") return;
++		queueMicrotask(() => {
++			ready = bridge.inspect("main-id").ready;
++			acquired = bridge.acquire("main-id", "mid-kill").ok;
++			secondStillPresent = engine.has("b");
++			sample.resolve();
++		});
++	});
++	const killing = engine.kill("main", ["a", "b"]);
++	await sample.promise;
++	assert.equal(secondStillPresent, true);
++	assert.equal(ready, false);
++	assert.equal(acquired, false);
++	await killing; unsubscribe();
++	assert.equal(engine.has("b"), false);
++	assert.equal(bridge.inspect("main-id").ready, true);
++	assert.equal(bridge.acquire("main-id", "after-kill").ok, true);
++});
++
++
++// index.ts starts a model runtime on import; execute only its exact source wrapper in this headless test.
++function sourceWrapper(marker: string, endMarker: string) {
++	const source = readFileSync(new URL("./index.ts", import.meta.url), "utf8");
++	const start = source.indexOf(marker);
++	assert.notEqual(start, -1);
++	const end = source.indexOf(endMarker, start);
++	assert.notEqual(end, -1);
++	return source.slice(start, end);
++}
++
++test("exact foreground resume wrapper owns the gap before interrupted-work nudges", async () => {
++	const { engine, bridge } = fixture(); const child = record("child"); const admission = deferred(); const sampled = deferred();
++	child.paused = true; child.pausedMidTurn = true;
++	let deliveries = 0;
++	child.handle.deliver = () => { deliveries++; return admission.promise; };
++	engine.addAgent(child);
++	const code = sourceWrapper("  const resumeAgents =", "\n  // Swarm control commands");
++	const resume = new Function("engine", "RESUME_NUDGE", "updateStatus", stripTypeScriptTypes(code) + "; return resumeAgents;")(
++		engine, () => "resume nudge", () => {},
++	) as (by: string, names?: string[]) => Promise<EngineResumeResult>;
++	let ready: boolean | undefined; let acquired: boolean | undefined; let beforeNudge: boolean | undefined;
++	engine.subscribe((event) => {
++		if (event.type !== "resume") return;
++		queueMicrotask(() => {
++			ready = bridge.inspect("main-id").ready;
++			acquired = bridge.acquire("main-id", "before-nudge").ok;
++			beforeNudge = deliveries === 0;
++			sampled.resolve();
++		});
++	});
++	const resumed = resume("main");
++	await sampled.promise;
++	assert.equal(beforeNudge, true); assert.equal(ready, false); assert.equal(acquired, false);
++	assert.deepEqual((await resumed).interrupted, ["child"]);
++	assert.equal(deliveries, 1);
++	assert.equal(bridge.inspect("main-id").ready, false);
++	admission.resolve();
++	await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
++
++test("exact foreground kill command owns roster persistence after engine cleanup", async () => {
++	const { engine, bridge } = fixture(); engine.addAgent(record("child"));
++	const section = sourceWrapper('  pi.registerCommand("subagents-kill",', "\n  });");
++	const handlerStart = section.indexOf("handler: async");
++	const handlerEnd = section.lastIndexOf("\n    },");
++	assert.notEqual(handlerStart, -1); assert.notEqual(handlerEnd, -1);
++	const code = "const command = " + section.slice(handlerStart + "handler: ".length, handlerEnd) + "\n};";
++	let persisted = false;
++	const command = new Function("engine", "parseNames", "persistRoster", "formatControlResult", "updateStatus", stripTypeScriptTypes(code) + "; return command;")(
++		engine, (args: string) => args.split(" "), () => {
++			persisted = true;
++			assert.equal(bridge.inspect("main-id").ready, false);
++			assert.equal(bridge.acquire("main-id", "before-persist").ok, false);
++		}, () => "killed", () => {},
++	) as (args: string, ctx: { ui: { notify: () => void } }) => Promise<void>;
++	await command("child", { ui: { notify() {} } });
++	assert.equal(persisted, true);
++	assert.equal(bridge.inspect("main-id").ready, true);
++});
+diff --git a/extensions/actor-subagents/restart-bridge.ts b/extensions/actor-subagents/restart-bridge.ts
+new file mode 100644
+index 0000000..807313a
+--- /dev/null
++++ b/extensions/actor-subagents/restart-bridge.ts
+@@ -0,0 +1,12 @@
++import type { Engine } from "./engine.ts";
++
++export const RESTART_BRIDGE_KEY = Symbol.for("futile.pi.subagents.restart-in-dir.v1");
++
++/** Only actor-owned readiness/admission; not a core or TUI queue guarantee. */
++export function createRestartBridge(engine: Engine) {
++	return {
++		inspect: (sessionId: string) => engine.inspectRestart(sessionId),
++		acquire: (sessionId: string, token: string) => engine.acquireRestart(sessionId, token),
++		release: (sessionId: string, token: string) => engine.releaseRestart(sessionId, token),
++	};
++}
+diff --git a/extensions/actor-subagents/set-agent-model.test.ts b/extensions/actor-subagents/set-agent-model.test.ts
+index 3d6f7cd..50d2b76 100644
+--- a/extensions/actor-subagents/set-agent-model.test.ts
++++ b/extensions/actor-subagents/set-agent-model.test.ts
+@@ -79,3 +79,18 @@ test("engine refusals (unknown agent, main) surface verbatim", async () => {
+ 	assert.match((await set("main", { name: "ghost", thinkingLevel: "high" })).msg, /unknown agent 'ghost'/);
+ 	assert.match((await set("main", { name: "main", thinkingLevel: "high" })).msg, /cannot retune 'main'/);
+ });
++
++
++test("retune wrapper remains owned through roster persistence", async () => {
++	const { engine } = engineWithChild();
++	engine.addAgent({ name: "main", sessionId: "main-id", model: "test/model", handle: handle(), spawnedBy: "main", depth: 0, createdAt: 0, turns: 0, lastActivity: 0 });
++	let persisted = false;
++	const setter = createAgentModelSetter({ engine, resolveModel: () => undefined, unknownModel: () => "unknown", persistRoster: () => {
++		persisted = true;
++		assert.equal(engine.inspectRestart("main-id").ready, false);
++		assert.equal(engine.acquireRestart("main-id", "before-persist").ok, false);
++	} });
++	await setter("main", { name: "w", thinkingLevel: "high" });
++	assert.equal(persisted, true);
++	assert.equal(engine.inspectRestart("main-id").ready, true);
++});
+diff --git a/extensions/actor-subagents/set-agent-model.ts b/extensions/actor-subagents/set-agent-model.ts
+index dc775b5..07f2ed6 100644
+--- a/extensions/actor-subagents/set-agent-model.ts
++++ b/extensions/actor-subagents/set-agent-model.ts
+@@ -35,23 +35,26 @@ export interface SetAgentModelDeps {
+ export function createAgentModelSetter(deps: SetAgentModelDeps) {
+ 	// `by` is the acting agent (the panel acts as 'main'); the engine decides whether it may.
+ 	return async (by: string, spec: SetAgentModelSpec): Promise<{ ok: boolean; msg: string }> => {
+-		// Nothing to apply is a caller mistake, not a no-op success: saying so beats silently
+-		// reporting the unchanged tuning as if something had happened.
+-		if (!spec.model && !spec.thinkingLevel) {
+-			return { ok: false, msg: "error: nothing to change — pass model, thinkingLevel or both" };
+-		}
+-		let model: ModelChange | undefined;
+-		if (spec.model) {
+-			model = deps.resolveModel(spec.model);
+-			if (!model) return { ok: false, msg: `error: ${deps.unknownModel(spec.model)}` };
+-		}
+-		const result = await deps.engine.retune(by, spec.name, { model, thinkingLevel: spec.thinkingLevel });
+-		if (!result.ok) return { ok: false, msg: `error: ${result.reason}` };
+-		deps.persistRoster();
+-		const rec = deps.engine.get(spec.name);
+-		// Report the record's own state, so the message shows the effective level even when the
+-		// target model clamped the requested one.
+-		return { ok: true, msg: `retuned '${spec.name}' to ${formatModelThinking(rec?.model ?? "?", rec?.thinkingLevel)}` };
++		const done = deps.engine.trackActorWork();
++		try {
++			// Nothing to apply is a caller mistake, not a no-op success: saying so beats silently
++			// reporting the unchanged tuning as if something had happened.
++			if (!spec.model && !spec.thinkingLevel) {
++				return { ok: false, msg: "error: nothing to change — pass model, thinkingLevel or both" };
++			}
++			let model: ModelChange | undefined;
++			if (spec.model) {
++				model = deps.resolveModel(spec.model);
++				if (!model) return { ok: false, msg: `error: ${deps.unknownModel(spec.model)}` };
++			}
++			const result = await deps.engine.retune(by, spec.name, { model, thinkingLevel: spec.thinkingLevel });
++			if (!result.ok) return { ok: false, msg: `error: ${result.reason}` };
++			deps.persistRoster();
++			const rec = deps.engine.get(spec.name);
++			// Report the record's own state, so the message shows the effective level even when the
++			// target model clamped the requested one.
++			return { ok: true, msg: `retuned '${spec.name}' to ${formatModelThinking(rec?.model ?? "?", rec?.thinkingLevel)}` };
++		} finally { done(); }
+ 	};
+ }
+ 
+diff --git a/extensions/actor-subagents/spawner.ts b/extensions/actor-subagents/spawner.ts
+index e3ccac0..7ba4c68 100644
+--- a/extensions/actor-subagents/spawner.ts
++++ b/extensions/actor-subagents/spawner.ts
+@@ -174,10 +174,15 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 		name: string,
+ 		session: SessionLike,
+ 		streamingRef: { msg: unknown },
+-		run: { abortRequested: boolean },
++		run: { abortRequested: boolean; active: boolean },
+ 	): (() => void) => {
+ 		return session.subscribe((ev) => {
+-			if (ev.type === "agent_start") run.abortRequested = false;
++			if (ev.type === "agent_start") {
++				run.abortRequested = false;
++				run.active = true;
++				const rec = engine.get(name);
++				if (rec) rec.logicalRun = true;
++			}
+ 			if (ev.type === "turn_start") {
+ 				const r = engine.recordTurnStart(name);
+ 				if (r.abort) run.abortRequested = true;
+@@ -216,6 +221,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 				engine.endTurn(name);
+ 			}
+ 			if (ev.type === "agent_settled") {
++				run.active = false;
++				const rec = engine.get(name);
++				if (rec) rec.logicalRun = false;
+ 				// The SDK emits agent_end for every retry attempt. Only agent_settled closes the
+ 				// logical run, so deriving its outcome here produces one parent notification.
+ 				const outcome = lastAssistantOutcome(session.messages);
+@@ -242,7 +250,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 		session: SessionLike,
+ 		systemPrompt: string,
+ 	): { handle: AgentHandle; view: AgentView; close: () => Promise<void>; reconfigure: NonNullable<AgentRecord["reconfigure"]> } => {
+-		const run = { abortRequested: false };
++		const run = { abortRequested: false, active: false };
+ 		const handle: AgentHandle = {
+ 			// Fire-and-forget: Pi's custom-message delivery awaits the prompted turn. Awaiting it
+ 			// would block the caller (e.g. the spawn_subagent tool) until the target agent finishes.
+@@ -257,21 +265,35 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 				// event-loop gap before a delivered turn starts. A delivery failure clears only this
+ 				// speculative phase; compaction remains active until its own end event.
+ 				engine.beginTurn(name);
++				const rec = engine.get(name);
++				if (rec) rec.logicalRun = true;
+ 				onActivity?.();
+-				void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch((e) => {
++				// The SDK can await preflight/the child run. Keep that owned work visible even
++				// if another delivery fails before agent_start, or the record is removed.
++				const done = engine.trackActorWork();
++				const failed = (e: unknown) => {
++					if (rec) rec.logicalRun = run.active;
+ 					engine.reportError(name, e instanceof Error ? e.message : String(e));
+ 					onActivity?.();
+-				});
++				};
++				try {
++					void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch(failed).finally(done);
++				} catch (error) {
++					try { failed(error); } finally { done(); }
++				}
+ 			},
+ 			// A human-authored turn, steered in like peer traffic so a busy agent picks it up at its
+ 			// next turn boundary instead of only when it fully stops. The promise resolves with the
+ 			// prompted turn; the engine calls this fire-and-forget and reports a late failure.
+ 			deliverUser: async (text) => {
+ 				engine.beginTurn(name);
++				const rec = engine.get(name);
++				if (rec) rec.logicalRun = true;
+ 				onActivity?.();
+ 				try {
+ 					await session.sendUserMessage(text);
+ 				} catch (error) {
++					if (rec) rec.logicalRun = run.active;
+ 					engine.reportError(name, error instanceof Error ? error.message : String(error));
+ 					onActivity?.();
+ 					throw error;
+@@ -339,7 +361,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 		});
+ 	};
+ 
+-	const spawnAgent = async (spec: SpawnSpec, spawnerName: string): Promise<{ ok: boolean; msg: string }> => {
++	const spawnReserved = async (spec: SpawnSpec, spawnerName: string): Promise<{ ok: boolean; msg: string }> => {
+ 		const spawner = engine.get(spawnerName);
+ 		const inheritRef = spec.model ?? spawner?.model;
+ 		// The Map Is Not the Territory: inherit the observed effective level, not prior intent.
+@@ -455,5 +477,10 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 		return { ok: true, msg: `spawned '${spec.name}' (model ${model}${fast})${sent}` };
+ 	};
+ 
++	const spawnAgent: Spawner["spawnAgent"] = async (spec, spawnerName) => {
++		const done = engine.trackActorWork();
++		try { return await spawnReserved(spec, spawnerName); } finally { done(); }
++	};
++
+ 	return { spawnAgent, restoreAgent };
+ }

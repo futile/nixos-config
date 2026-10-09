@@ -1,9 +1,34 @@
 # Pi restart-in-directory design
 
-Status: agreed best-effort implementation plan, not yet implemented. This
+Status: implemented and verified against Pi 1.0.0 under the agreed best-effort contract. This
 records the latest Pi decisions, bounded compatibility proofs, independent source
 review, and PDO fit feedback. Implementation belongs in this repository, not in
 PDO. No Pi core/TUI changes are planned.
+
+## Usage and maintained checks
+
+After applying the Home Manager configuration, interactive Fish `pi` runs
+`pi-restartable`; `command pi` still bypasses it. Use
+`/restart-in-dir /path/to/directory` or the main-agent `restart-in-dir` tool with
+`{ "directory": "/path/to/directory" }`. The command treats its entire argument
+as a directory, including spaces; it is not a shell expression. `/restart-in-dir .`
+resumes the current session, while a different canonical directory forks it.
+
+Maintained verification entrypoints:
+
+- `python3 -m unittest discover -s tests -p 'test_pi_*.py'`: launcher and existing RPC tests.
+- `scripts/test-pi-context.sh`: patched IC, context-pressure and restart-extension
+  typecheck/lint/tests against the pinned Pi 1.0.0 SDK in a disposable workspace.
+  Upstream's own 0.87.0 development dependency pins are not changed.
+- `scripts/test-pi-restart.py --ic-source <patched-IC-root> --actor-source <patched-actor-root>`:
+  isolated actual-Pi PTY tests with a fake provider, including native same-directory
+  resume/paused swarm, cross-directory forks, recursive folds, historical settings,
+  one-shot tool continuation (including extension reload/marker replay) and
+  failed/missing guards. `--help` lists executable
+  overrides. No real provider or project envrc is executed.
+
+Build/check verification does not activate the configuration. Activation remains
+an explicit operator action; do not switch the live system just to test this feature.
 
 ## Goal and scope
 
@@ -11,8 +36,9 @@ Move a foreground, interactive Pi conversation to another directory by gracefull
 exiting Pi and starting a replacement in the same terminal. Git worktrees are an
 important use case, but the target can be any existing directory.
 
-The conversation is retained through a fork; each restart gets a new session ID.
-The replacement rebuilds cwd-bound tools, instructions, project configuration,
+Cross-directory restarts retain the conversation through a fork with a new
+session ID. Same-directory restarts resume the exact current session file with
+its existing ID. Both rebuild tools, instructions, project configuration,
 environment, and extension services instead of mutating a running workspace.
 
 This is independent of `pi-worktree`. It does not create/remove worktrees, change
@@ -61,7 +87,8 @@ Check public main idle/pending state and the available installed-extension
 signals. Actor-owned readiness covers queued swarm messages, active work,
 compaction/retries, paused or buffered inboxes, pending spawns, reserved names,
 and in-flight teardown. An idle agent record alone does not make the swarm busy;
-idle subagents can be left behind under the policy below.
+idle subagents can be left behind on cross-directory forks or restored paused
+on same-directory resumes under the policy below.
 
 A small actor-subagents integration supplies a synchronous readiness check and
 handoff lease for actor-owned work. Once acquired, new swarm work is refused
@@ -179,7 +206,9 @@ into `PATH`: its absence must remain a real, supported case.
 
 The initial child receives the user's original arguments unchanged. Restart
 arguments are built deliberately: use the pinned executable and
-`--fork <exact-source-session-file>`, with the target as OS cwd. Replacement argv
+`--fork <exact-source-session-file>` for a different directory or
+`--session <exact-source-session-file>` when canonical target and current session
+cwd are equal, with the target as OS cwd. Replacement argv
 also contains the wrapper-owned namespaced handoff flag and, only for automatic
 continuation, an opaque positional startup marker as specified below. These are
 generated protocol arguments, not replayed user flags or prompts.
@@ -191,8 +220,8 @@ printing secret values. Add support only for a demonstrated caller.
 
 | Classification | Initial supported options | Restart behavior |
 | --- | --- | --- |
-| Startup-only | `--session`, `--continue`, `--resume`, `--fork`, `--session-id`; positional prompts and `@file` inputs | Do not replay. Fork the currently active session, not the original selection; do not repeat prompts/attachments. |
-| Startup state overrides | `--model`, `--provider`, `--thinking`, `--name` | Do not replay. Use native fork restoration of the selected conversation history; do not generate fresh live-setting overrides. |
+| Startup-only | `--session`, `--continue`, `--resume`, `--fork`, `--session-id`; positional prompts and `@file` inputs | Do not replay. Fork/resume the exact currently active session, not the original selection; do not repeat prompts/attachments. |
+| Startup state overrides | `--model`, `--provider`, `--thinking`, `--name` | Do not replay. Use native fork/resume restoration of the selected conversation history; do not generate fresh live-setting overrides. |
 | Source-project approval | `--approve` | Do not replay or extend approval to the target. Reevaluate target trust normally. |
 | Persistent launch configuration | `--offline`, `--no-approve`, `--tui-mode`, `--verbose` | Carry forward with their values/semantics unchanged. |
 | Initially unsupported | Explicit resource paths/disabling flags; system-prompt overrides; tool-selection/restriction flags; `--session-dir`, `--no-session`, `--api-key`, `--models`; unknown extension flags | Refuse restart while leaving the original Pi usable. |
@@ -255,8 +284,9 @@ same-user code that can read Pi's environment or files.
    consumes the committed request once, revalidates the target and source, and
    launches the replacement. Use fresh child protocol metadata; stale requests
    cannot restart it again.
-7. The replacement forks into the target cwd using native selected-history
-   settings and displays/records the active directory and handoff outcome. The
+7. The replacement forks into a different target cwd or resumes the same-directory
+   session, using native selected-history settings. It displays/records the active
+   directory and handoff outcome. The
    required handoff flag witnesses guard loading. If continuation is requested,
    process the opaque startup marker after initialization, validate restoration,
    and transform it into exactly one continuation prompt.
@@ -308,20 +338,28 @@ recovery cases. Do not execute project environments twice merely to probe them.
 
 ## Session and continuation semantics
 
-### Fork, never force a historical cwd rewrite
+### Fork across directories; resume within the same directory
 
-Use `--fork`, not `cd target && pi --session old-file`: ordinary resume uses the
-cwd recorded in the source session and can mix old project context with the new
-environment. CLI forking uses the new startup cwd and new session identity while
-copying non-header entries and their IDs, including extension custom entries.
+For different directories, use `--fork`, not `cd target && pi --session old-file`:
+ordinary resume uses the cwd recorded in the source session and can mix old
+project context with the new environment. CLI forking uses the new startup cwd
+and new session identity while copying non-header entries and their IDs,
+including extension custom entries.
+
+When canonical target equals canonical current session cwd (including
+`/restart-in-dir .`), use `--session <exact-current-session-file>` instead.
+The old writer must still exit before the replacement opens the file. This
+preserves the session ID; it is a process/environment restart, not a fork.
+Canonicalize recorded cwd for comparison without rewriting the header.
 
 Do not rewrite JSONL headers, migrate historical sessions, use native compaction,
 or transfer SQLite/session sidecars by copying directory trees. The old session
-remains available; the fork is the active conversation in the target.
+remains available after a fork; a same-directory resume continues the original
+session file.
 
 ### Native model/thinking/name restoration
 
-Keep Pi's native fork semantics rather than capturing and overriding the live
+Keep Pi's native fork/resume semantics rather than capturing and overriding the live
 model/thinking settings. Do not replay the original `--model`, `--provider`,
 `--thinking`, or `--name`, and do not synthesize replacement flags from current
 runtime values. Ordinary latest-history forks restore the latest recorded
@@ -349,7 +387,12 @@ need explicit test coverage, not a live-settings-preservation promise.
 | Main-agent `restart-in-dir` tool | Supply one opaque startup marker, transformed into one validated continuation prompt |
 
 Scope continuation to this one consumed handoff; ordinary resumes must not
-repeatedly nudge the agent. The real prompt is derived from private handoff
+repeatedly nudge the agent. A private durable consumption receipt binds the
+current launcher child and incoming handoff, surviving session-start events and
+extension reloads; a fresh replacement child has independent authority. Claim
+it synchronously after main identity/launcher validation, before awaited
+restoration/authentication work. Failed validation also consumes the intent.
+The real prompt is derived from private handoff
 metadata, not copied from the original CLI prompt or attachments. It says that
 the restart reached the requested directory, identifies source/target, and asks
 the agent to verify cwd/project instructions and relevant environment/MCP routing
@@ -415,22 +458,24 @@ reported by the new instance; no transparent pending-tool reconnection protocol
 is planned. "Started in target" is not a promise that every external service or
 extension initialized successfully; nonfatal startup diagnostics remain visible.
 
-### Subagents are not transferred
+### Cross-directory forks do not transfer subagents
 
-A fork's new main-session ID starts with an empty swarm. Idle agents are left
-behind too. Their saved transcripts/roster stay under the old session ID; no
-migration or deletion is performed. Resuming the original session can restore its
-saved agents paused, but transient queues/inboxes are not a durable transfer
-mechanism. This is why readiness includes buffered and lifecycle work.
+A cross-directory fork's new main-session ID starts with an empty swarm. Idle
+agents are left behind too. Their saved transcripts/roster stay under the old
+session ID; no migration or deletion is performed. The continuing main agent can
+create new agents for the target as needed.
 
-The continuing main agent can create new agents for the target as needed.
+Same-directory restart retains the main-session ID and lets actor-subagents
+restore its saved swarm as paused. Transient queues/inboxes are not a durable
+transfer mechanism in either case. This is why readiness includes buffered and
+lifecycle work.
 
 ## Compatibility with the existing configuration
 
 | Component | Required behavior / limit |
 | --- | --- |
 | Infinite-context v2 | Fork preserves entry IDs and recursive fold custom entries; target must load compatible v2. Anchor the selected leaf before exit. No v1/native-compacted migration. |
-| Actor-subagents | Add actor-owned readiness/lease and main-identity integration, not a core/TUI readiness guarantee; exclude restart extension from children. New fork has no swarm. |
+| Actor-subagents | Add actor-owned readiness/lease and main-identity integration, not a core/TUI readiness guarantee; exclude restart extension from children. Cross-directory fork has no swarm; same-directory resume restores the saved swarm paused. |
 | pi-mcp-adapter 5 | Normal shutdown attempts owned-resource cleanup; replacement discovers target config/trust and process env. Preserve explicit configured server cwd semantics. |
 | Serena / CBM | Fresh launch does not prove correct external project routing. Serena URLs/servers and CBM project IDs remain project responsibilities. |
 | Context-pressure | Persisted policy state can follow forked custom entries; verify session-ID rekeying. Its nudges explain the termination limitation. |
@@ -452,15 +497,15 @@ messages, not assume the fork erased old project assumptions.
 
 ## Repository / Home Manager deployment
 
-Proposed implementation paths (not created by this specification):
+Implementation paths:
 
 - `bin/pi-restartable`: launcher source, packaged as a Home Manager executable.
 - `dotfiles/pi/extensions/pi-restart-in-dir/`: local extension and focused tests.
 - `home-modules/pi.nix`: package installation, extension link, and Fish alias.
-- `patches/pi-actor-subagents-local.patch`: actor-owned readiness/identity bridge
-  integration if kept within the existing local patch.
-- `patches/pi-infinite-context-nudges-disabled.patch`: validated health bridge
-  alongside the existing local IC patch, or a separate focused IC patch if clearer.
+- `patches/pi-actor-subagents-restart.patch`: actor-owned readiness/identity bridge,
+  applied after the existing actor local patch.
+- `patches/pi-infinite-context-restart.patch`: validated health bridge, applied
+  after the existing `pi-infinite-context-enable-nudges.patch`.
 
 Keep the external Pi CLI owned by `nix profile`, as the current module specifies.
 Home Manager installs the separately named launcher and manages extension config.
@@ -560,7 +605,8 @@ cover the following with focused tests and authorized interactive smoke tests:
   failures release the lease. Cover/document hidden-input gaps and permitted user
   Bash interruption without asserting a complete core/TUI readiness proof.
 - Session-result persistence, selected-branch checkpointing, infinite-context v2
-  recursive folds/IDs, source preservation, and repeated forks with new UUIDs.
+  recursive folds/IDs, source preservation, repeated cross-directory forks with
+  new UUIDs, and same-directory resumes with the existing UUID/paused swarm.
 - Checkpoint/commit before shutdown, including failures that keep Pi usable.
   Clean exit versus crash/signal, direct-child SIGTERM/SIGHUP that exits 0, wrapper
   interrupts, atomic commit, stale/malformed requests, duplicate consumption,
@@ -583,7 +629,7 @@ cover the following with focused tests and authorized interactive smoke tests:
 - Plain-Pi refusal/manual instructions without exit, Fish `pi`/`command pi`, and
   unchanged external RPC use.
 - Existing actor-subagent/extension tests plus repository checks applicable to
-  future script/Nix changes. Nix changes require `just format`,
+  script/Nix changes. Nix changes require `just format`,
   `just format-check`, and `nice -n 19 just check`; build affected packages/host
   as required. Do not switch a live system merely for verification.
 
@@ -593,30 +639,26 @@ native selected-history restoration, no overlapping writers, and validated
 automatic continuation under the startup-turn assumption are acceptance criteria.
 Documentation-only edits need diff/link checks, not Nix evaluation or builds.
 
-## Remaining implementation and PDO review questions
+## Operational requirements and remaining limits
 
-The architecture and policy above are agreed. These details still need review or
-verification, not assumed guarantees:
+The launcher, extension, actor-owned readiness/lease, IC health bridge and bounded
+CLI whitelist are implemented. Automated tests cover the scoped lifecycle and
+restoration contract; they do not prove every live project/service configuration.
 
-1. Exact actor-owned readiness/lease API, observable installed-extension message
-   accounting, and sole-tool-batch enforcement through public Pi APIs. Best-effort
-   core readiness is settled policy; do not reopen a complete hidden-queue proof
-   or add core/TUI/custom-editor integration as an implicit requirement.
-2. Verification of settled/checkpoint/commit-before-shutdown ordering, signal
-   invalidation, live-launcher detection, and the agreed flag/marker/IC-health
-   protocol. Verify native branch-setting validation and empty-history defaults,
-   without adding fresh live-model/thinking overrides.
-3. Implement/test the bounded CLI whitelist above; unsupported resource/storage
-   options refuse before shutdown rather than expanding the initial contract.
-4. Behavior of retained project/system context after a cross-project fork; the
-   agent must use newly discovered instructions and revalidate absolute paths.
-5. PDO fit: can each target's approved environment provide its correct runtime
-   routing without side effects? Are project services independently prepared, and
-   do fresh instructions identify the correct Serena/CBM/runtime targets?
+1. Readiness remains best-effort: hidden queued input can be lost and running user
+   Bash interrupted. There is no Pi core/TUI queue bridge or global provider latch.
+2. Target extensions must not start a model turn during restart startup. The
+   required handoff flag namespace must have only the trusted extension owner.
+3. Retained historical context does not establish target correctness. Revalidate
+   newly discovered instructions, absolute paths, environment and MCP routing.
+4. Project services, port/database ownership, worktree creation/removal and PDO
+   lifecycle hooks remain external responsibilities. An approved environment must
+   provide the intended routing without requiring this extension to start services.
+5. Unsupported CLI resource/storage/policy options intentionally refuse restart.
+   The pinned executable is not a GC root, and extensions/settings remain mutable.
 
-PDO service setup, port/database ownership, worktree creation/removal, and project
-lifecycle hooks remain outside this extension. Review may reveal additional
-requirements; feed them back here before changing the implementation scope.
+Real project envrc/MCP/provider smoke tests and live Home Manager activation were
+not performed. The maintained PTY tests use isolated sessions and a fake provider.
 
 ## Evidence and references
 
@@ -639,6 +681,3 @@ verification; recheck actual installed versions during implementation.
 - [Current Pi Home Manager module](../home-modules/pi.nix)
 - [Current Fish module](../home-modules/fish.nix)
 - [Pi context-maintenance guidance](pi-context-maintenance.md)
-- [Initial investigation notes](../pi-worktree-runtime-investigation.md): background
-  research, including PDO concerns and earlier alternatives; this proposal
-  supersedes its unresolved Pi choices. The notes are currently untracked.

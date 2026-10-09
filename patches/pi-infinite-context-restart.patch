@@ -1,0 +1,292 @@
+diff --git a/README.md b/README.md
+index 36debdd..ef78142 100644
+--- a/README.md
++++ b/README.md
+@@ -78,3 +78,19 @@ See [DESIGN.md](DESIGN.md) for the data model and exact tool rules.
+ ## License
+ 
+ [MIT](LICENSE)
++
++## Restart health bridge
++
++For guarded restart continuation, public `pi.events` supports a synchronous
++`pi-restart-in-dir:ic-health-request` with `{ requestId, sessionId, leafId }`.
++IDs are nonempty strings; `leafId` may also be `null` for an empty session.
++The reply on `pi-restart-in-dir:ic-health-response` is
++`{ requestId, version: 2, ok, sessionId, leafId, error?: string }`, echoing the
++request's correlation fields. A positive reply revalidates the current branch,
++fold ownership and session projection; registered tools alone are not health.
++
++Malformed requests and requests for other sessions on a shared actor bus are
++ignored. A matching session with a stale selected leaf or invalid IC state replies
++with `ok: false` and an error. The listener is disposed at session shutdown and
++registered again on a fresh session start. This bridge never starts a model turn;
++it is not a global startup-turn or extension-readiness gate.
+diff --git a/extensions/infinite-context/index.test.ts b/extensions/infinite-context/index.test.ts
+index 2c43da7..694f928 100644
+--- a/extensions/infinite-context/index.test.ts
++++ b/extensions/infinite-context/index.test.ts
+@@ -45,6 +45,7 @@ function harness(initial: SessionEntry[]) {
+   const notifications: string[] = [];
+   let appended = 0;
+   const pi = {
++    events: { on: () => () => {}, emit() {} },
+     on(name: string, handler: Handler) {
+       const current = handlers.get(name) ?? [];
+       current.push(handler);
+diff --git a/extensions/infinite-context/index.ts b/extensions/infinite-context/index.ts
+index 9639203..1ec3d61 100644
+--- a/extensions/infinite-context/index.ts
++++ b/extensions/infinite-context/index.ts
+@@ -102,6 +102,8 @@ export default function infiniteContext(pi: ExtensionAPI) {
+   let loaded = false;
+   let lastNudgedBand = 0;
+   let enableNudges: boolean | undefined;
++  let healthContext: ExtensionContext | undefined;
++  let removeHealth: (() => void) | undefined;
+ 
+   const branch = (ctx: ExtensionContext): SessionEntry[] =>
+     ctx.sessionManager.getBranch();
+@@ -159,11 +161,45 @@ export default function infiniteContext(pi: ExtensionAPI) {
+     pi.appendEntry(INFINITE_CONTEXT_ENTRY, snapshot(roots));
+   };
+ 
++  const registerHealth = (ctx: ExtensionContext) => {
++    healthContext = ctx;
++    removeHealth ??= pi.events.on("pi-restart-in-dir:ic-health-request", (data) => {
++      // Ignore uncorrelatable input and other sessions sharing this bus (actor children).
++      if (!healthContext || typeof data !== "object" || data === null || Array.isArray(data)) return;
++      const { requestId, sessionId, leafId } = data as Record<string, unknown>;
++      if (typeof requestId !== "string" || !requestId || typeof sessionId !== "string" || !sessionId ||
++          !(leafId === null || (typeof leafId === "string" && leafId))) return;
++      const active = healthContext;
++      if (sessionId !== active.sessionManager.getSessionId()) return;
++      let error: string | undefined;
++      try {
++        if (leafId !== active.sessionManager.getLeafId())
++          throw new Error("Infinite-context health request selected leaf is stale");
++        current(active); // Revalidate the branch, fold ownership and projection, not tool registration.
++      } catch (cause) {
++        error = cause instanceof Error ? cause.message : String(cause);
++      }
++      pi.events.emit("pi-restart-in-dir:ic-health-response", {
++        requestId, version: 2, ok: error === undefined, sessionId, leafId,
++        ...(error === undefined ? {} : { error }),
++      });
++    });
++  };
++
+   pi.on("session_start", async (_event, ctx) => {
+     enableNudges = loadNudgesEnabled();
+     load(ctx);
++    registerHealth(ctx);
++  });
++  pi.on("session_tree", async (_event, ctx) => {
++    load(ctx);
++    registerHealth(ctx);
++  });
++  pi.on("session_shutdown", async () => {
++    removeHealth?.();
++    removeHealth = undefined;
++    healthContext = undefined;
+   });
+-  pi.on("session_tree", async (_event, ctx) => load(ctx));
+ 
+   pi.on("context", async (event, ctx) => {
+     if (stateError) return;
+diff --git a/extensions/infinite-context/nudges-config.test.ts b/extensions/infinite-context/nudges-config.test.ts
+index b1a3672..78c7d78 100644
+--- a/extensions/infinite-context/nudges-config.test.ts
++++ b/extensions/infinite-context/nudges-config.test.ts
+@@ -33,6 +33,7 @@ function harness(t: TestContext, config?: string) {
+     ui: { notify: (text: string) => notifications.push(text) },
+   } as unknown as ExtensionContext;
+   infiniteContext({
++    events: { on: () => () => {}, emit() {} },
+     on: (name: string, handler: Handler) => handlers.set(name, handler),
+     registerTool: (tool: Tool) => tools.set(tool.name, tool),
+     sendMessage: (message: unknown) => sent.push(message),
+@@ -44,7 +45,7 @@ function harness(t: TestContext, config?: string) {
+   const emit = async (name: string, event: Record<string, unknown> = {}) => handlers.get(name)?.(event, ctx);
+   return {
+     tools, sent, notifications, entries, setConfig, emit,
+-    execute: (name: string, params: Record<string, unknown>) => tools.get(name)!.execute("call", params, undefined, undefined, ctx),
++    execute: (name: string, params: Record<string, unknown>) => tools.get(name)!.execute("call", params, undefined, undefined, ctx as Parameters<Tool["execute"]>[4]),
+     async continueAt(percent: number) {
+       tokens = percent;
+       await emit("turn_end", { message: { stopReason: "toolUse" }, toolResults: [{}] });
+diff --git a/extensions/infinite-context/restart-health.test.ts b/extensions/infinite-context/restart-health.test.ts
+new file mode 100644
+index 0000000..04d53b0
+--- /dev/null
++++ b/extensions/infinite-context/restart-health.test.ts
+@@ -0,0 +1,169 @@
++import assert from "node:assert/strict";
++import { test } from "node:test";
++import {
++  createEventBus,
++  type ExtensionAPI,
++  type ExtensionContext,
++  type SessionEntry,
++} from "@earendil-works/pi-coding-agent";
++import infiniteContext from "./index.ts";
++import { assistantMessage, messageEntry, projectionOf, toolResultMessage, userMessage } from "./pi-test-fixtures.ts";
++
++const REQUEST = "pi-restart-in-dir:ic-health-request";
++const RESPONSE = "pi-restart-in-dir:ic-health-response";
++const original = (id: string) => messageEntry(id, userMessage(id));
++type Handler = (event: Record<string, unknown>, ctx: ExtensionContext) => unknown;
++type Tool = Parameters<ExtensionAPI["registerTool"]>[0];
++type Reply = { requestId: string; version: number; ok: boolean; sessionId: string; leafId: string | null; error?: string };
++
++function harness(initial: SessionEntry[], session = "main", events = createEventBus()) {
++  let entries = initial;
++  let sessionId = session;
++  let projection = () => projectionOf(entries);
++  const hooks = new Map<string, Handler>();
++  const tools = new Map<string, Tool>();
++  const sent: unknown[] = [];
++  const ctx = {
++    sessionManager: {
++      getSessionId: () => sessionId,
++      getLeafId: () => entries.at(-1)?.id ?? null,
++      getBranch: () => entries,
++      buildSessionProjection: () => projection(),
++    },
++    ui: { notify() {} },
++  } as unknown as ExtensionContext;
++  infiniteContext({
++    events,
++    on: (name: string, handler: Handler) => hooks.set(name, handler),
++    registerTool: (tool: Tool) => tools.set(tool.name, tool),
++    sendMessage: (message: unknown) => sent.push(message),
++    appendEntry: (customType: string, data: unknown) => entries.push({
++      type: "custom", id: `state-${entries.length}`, parentId: entries.at(-1)?.id ?? null,
++      timestamp: new Date(0).toISOString(), customType, data,
++    }),
++  } as unknown as ExtensionAPI);
++  return {
++    events, ctx, sent, tools,
++    emit: (name: string) => hooks.get(name)?.({}, ctx),
++    setEntries: (next: SessionEntry[]) => { entries = next; },
++    setSession: (id: string) => { sessionId = id; },
++    setProjection: (next: typeof projection) => { projection = next; },
++    request(data: unknown = { requestId: "health-1", sessionId, leafId: ctx.sessionManager.getLeafId() }) {
++      const replies: Reply[] = [];
++      const remove = events.on(RESPONSE, (reply) => replies.push(reply as Reply));
++      events.emit(REQUEST, data);
++      remove();
++      return replies; // No await: public EventBus dispatch must reply synchronously.
++    },
++    execute: (name: string, params: Record<string, unknown>) => tools.get(name)!.execute("call", params, undefined, undefined, ctx as Parameters<Tool["execute"]>[4]),
++  };
++}
++
++test("health is synchronous v2 for empty and recursively restored folded histories; startup sends no message", async () => {
++  const h = harness([]);
++  await h.emit("session_start");
++  assert.deepEqual(h.request(), [{ requestId: "health-1", version: 2, ok: true, sessionId: "main", leafId: null }]);
++  h.setEntries([original("a"), original("b")]);
++  await h.emit("session_tree");
++  const fold = await h.execute("context_fold", { items: [{ from: "a", to: "b", summary: "inner" }] });
++  const id = (fold.details as { ids: string[] }).ids[0];
++  await h.execute("context_fold", { items: [{ from: id, summary: "outer" }] });
++  await h.emit("session_start");
++  assert.deepEqual(h.request(), [{ requestId: "health-1", version: 2, ok: true, sessionId: "main", leafId: "state-3" }]);
++  assert.deepEqual(h.sent, []);
++});
++
++test("registered tools do not certify a failed snapshot restoration", async () => {
++  const h = harness([original("a"), {
++    type: "custom", id: "bad", parentId: "a", timestamp: new Date(0).toISOString(),
++    customType: "infinite-context", data: { spans: [] },
++  }]);
++  await h.emit("session_start");
++  assert.equal(h.tools.size, 5);
++  const [reply] = h.request();
++  assert.equal(reply.ok, false);
++  assert.match(reply.error!, /Unsupported/);
++  assert.equal(reply.leafId, "bad");
++});
++
++test("health reruns current branch and projection invariants instead of caching success", async () => {
++  const h = harness([original("a")]);
++  await h.emit("session_start");
++  assert.equal(h.request()[0].ok, true);
++  h.setProjection(() => { throw new Error("projection broken"); });
++  assert.match(h.request()[0].error!, /projection broken/);
++  h.setProjection(() => projectionOf([original("a")]));
++  h.setEntries([original("a"), {
++    type: "compaction", id: "c", parentId: "a", timestamp: new Date(0).toISOString(),
++    summary: "native", firstKeptEntryId: "a", tokensBefore: 1,
++  }]);
++  assert.match(h.request()[0].error!, /Native compaction is incompatible/);
++});
++
++test("health catches newly split tool-call/fold ownership after initially valid restoration", async () => {
++  const entries = [
++    messageEntry("call", assistantMessage([{ type: "toolCall", id: "c", name: "read", arguments: {} }])),
++    messageEntry("later", assistantMessage([{ type: "text", text: "abandoned" }], 2)),
++  ];
++  const h = harness(entries);
++  await h.emit("session_start");
++  await h.execute("context_fold", { items: [{ from: "call", summary: "abandoned call" }] });
++  assert.equal(h.request()[0].ok, true);
++  entries.push(messageEntry("result", toolResultMessage("c", "late", 3)));
++  assert.equal(h.request()[0].ok, false);
++  assert.match(h.request()[0].error!, /Snapshot splits the tool call/);
++});
++
++test("stale leaf fails with exact request correlation; tree selection refreshes health", async () => {
++  const h = harness([original("old")]);
++  await h.emit("session_start");
++  h.setEntries([original("new")]);
++  await h.emit("session_tree");
++  assert.deepEqual(h.request({ requestId: "stale", sessionId: "main", leafId: "old" }), [{
++    requestId: "stale", version: 2, ok: false, sessionId: "main", leafId: "old",
++    error: "Infinite-context health request selected leaf is stale",
++  }]);
++  assert.equal(h.request()[0].ok, true);
++});
++
++test("shared main/child bus answers only the selected session, including changed session identity", async () => {
++  const main = harness([original("main-leaf")]);
++  const child = harness([original("child-leaf")], "child", main.events);
++  await main.emit("session_start");
++  await child.emit("session_start");
++  assert.deepEqual(child.request(), [{ requestId: "health-1", version: 2, ok: true, sessionId: "child", leafId: "child-leaf" }]);
++  assert.deepEqual(main.request(), [{ requestId: "health-1", version: 2, ok: true, sessionId: "main", leafId: "main-leaf" }]);
++  child.setSession("fresh-child");
++  await child.emit("session_start");
++  assert.deepEqual(main.request({ requestId: "old-child", sessionId: "child", leafId: "child-leaf" }), []);
++  assert.equal(child.request()[0].sessionId, "fresh-child");
++});
++
++test("repeated lifecycle events keep one reply and shutdown disposes callbacks until fresh start", async () => {
++  const h = harness([original("a")]);
++  assert.deepEqual(h.request(), []);
++  await h.emit("session_start");
++  await h.emit("session_start");
++  await h.emit("session_tree");
++  assert.equal(h.request().length, 1);
++  await h.emit("session_shutdown");
++  assert.deepEqual(h.request(), []);
++  await h.emit("session_shutdown");
++  h.setSession("fresh");
++  await h.emit("session_start");
++  assert.deepEqual(h.request({ requestId: "old", sessionId: "main", leafId: "a" }), []);
++  assert.equal(h.request().length, 1);
++  assert.equal(h.request()[0].sessionId, "fresh");
++});
++
++test("malformed uncorrelatable requests and other sessions are ignored", async () => {
++  const h = harness([]);
++  await h.emit("session_start");
++  for (const data of [null, [], "health", {}, { requestId: "r", sessionId: "main" },
++    { requestId: "", sessionId: "main", leafId: null },
++    { requestId: "r", sessionId: "main", leafId: 7 },
++    { requestId: "r", sessionId: "main", leafId: "" },
++    { requestId: "r", sessionId: "old-session", leafId: null }]) {
++    assert.deepEqual(h.request(data), []);
++  }
++});
