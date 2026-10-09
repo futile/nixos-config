@@ -60,7 +60,12 @@ function soleTool(ctx: ExtensionContext, id: string): void {
 function expected(ctx: ExtensionContext, branch: any[]) {
   return nativeExpected(branch, ctx.sessionManager.buildSessionProjection().messages.length > 0, (provider, id) => ctx.modelRegistry.find(provider, id));
 }
-function errorText(error: unknown): string { return error instanceof Error ? error.message : String(error); }
+function errorText(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message === "actor operation is in flight"
+    ? `${message}: subagent work or a control operation (spawn, message delivery, stop/pause, or model change) is still running or finishing. Let it settle before retrying restart-in-dir; when waiting for a child's reply, end your turn instead of polling`
+    : message;
+}
 class RestartCancelled extends Error {}
 
 export default function restartInDir(pi: ExtensionAPI): void {

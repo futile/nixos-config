@@ -253,6 +253,26 @@ test("actor missing readiness bridge fails closed; busy bridge blocks and failed
   } finally { f.cleanup(); }
 });
 
+test("in-flight actor refusal explains subagent work and safe retry in tool errors and command notifications", async () => {
+  for (const refusal of ["inspect", "acquire"] as const) {
+    const f = fixture(); try {
+      globals[ACTOR] = {
+        inspect: () => ({ main: true, ready: refusal !== "inspect", reason: "actor operation is in flight" }),
+        acquire: () => ({ ok: false, reason: "actor operation is in flight" }),
+        release: () => { assert.fail("no lease was acquired"); },
+      };
+      const guidance = /actor operation is in flight: subagent work or a control operation.*still running or finishing.*settle before retrying restart-in-dir.*end your turn instead of polling/;
+      f.toolBatch();
+      await assert.rejects(f.pi.tool.execute("switch", { directory: f.target }, undefined, undefined, f.ctx), guidance);
+      assert.match(f.notices.at(-1)!, guidance);
+      await f.pi.command.handler(f.target, f.ctx);
+      assert.match(f.notices.at(-1)!, guidance);
+      assert.equal(f.didShutdown(), false); assert.equal(f.pi.ledger.length, 0);
+      assert.equal(existsSync(join(f.control, "request.json")), false);
+    } finally { f.cleanup(); }
+  }
+});
+
 test("final readiness changes, missing durable tool result, and persistence failures cancel handoff without shutdown", async () => {
   for (const mutate of [
     (f: any) => { f.pending(true); },
