@@ -366,7 +366,7 @@ load_plugins {
 // Choose the theme that is specified in the themes section.
 // Default: default
 //
-theme "catppuccin-latte"
+theme "noctalia"
 
 // Themes to use when the host terminal reports a dark or light color palette.
 // Both must be set for automatic switching to take place, otherwise `theme`
