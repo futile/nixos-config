@@ -245,6 +245,26 @@ in
     stateVersion = "22.11";
   };
 
+  systemd.user.services.sccache = {
+    Unit.Description = "sccache compiler cache";
+
+    Service = {
+      Type = "simple";
+      ExecStart = "${pkgs.sccache}/bin/sccache";
+      Environment = [
+        "SCCACHE_START_SERVER=1"
+        "SCCACHE_NO_DAEMON=1"
+        "SCCACHE_IDLE_TIMEOUT=0"
+        "SCCACHE_DIR=${config.xdg.cacheHome}/sccache"
+        "SCCACHE_CACHE_SIZE=${config.home.sessionVariables.SCCACHE_CACHE_SIZE}"
+      ];
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+
+    Install.WantedBy = [ "default.target" ];
+  };
+
   my.nixProfileSnapshot = {
     enable = true;
     hostName = "nixos-work";

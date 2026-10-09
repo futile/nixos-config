@@ -9,6 +9,33 @@ packages changes derivation identities and can lose binary cache hits from
 substituters. Prefer listing only packages that are expensive and commonly
 rebuilt locally.
 
+## User Service on nixos-work
+
+Home Manager defines `sccache.service` in `hosts/nixos-work/home.nix` for
+ordinary user Rust builds. It starts with the systemd user manager, runs in the
+foreground without idle shutdown, and restarts on failure. It retains the user
+cache at `~/.cache/sccache` with the existing `50G` limit. This service does not
+manage the separate Nix sandbox servers or their cache below.
+
+Before the first switch, wait for user builds to finish and prevent new ones
+from starting, then stop the old auto-started daemon with `sccache --stop-server`.
+Keep builds paused until `just switch` has completed and the user service is
+running. Otherwise a build can auto-start another daemon and occupy the port
+before the service starts. Do not stop the daemon during active builds.
+
+After switching, inspect the service and user cache statistics with:
+
+```bash
+systemctl --user status sccache.service
+journalctl --user -u sccache.service
+sccache --show-stats
+```
+
+Use systemd to stop or restart the managed daemon, rather than
+`sccache --stop-server`; the latter is a clean exit and does not trigger
+`Restart=on-failure`. New compiler invocations can still auto-start a daemon
+when the service is stopped.
+
 ## Current Cache Location
 
 The local Nix build cache directory is:
