@@ -1,5 +1,32 @@
 # Pi standalone upstream migration
 
+## Current: OpenAI provider routing (2026-10-11)
+
+The work-host Pi settings now use `openai` for the default provider and the
+Astra/Sol/Luna model allowlist after switching to the new ChatGPT OAuth login.
+The canonical routing guidance in `dotfiles/codex/AGENTS.md` likewise uses
+`openai/gpt-6-luna` and `openai/gpt-6.1-sol`, with the existing reasoning levels
+unchanged. Both `~/.pi/agent/AGENTS.md` and `~/.codex/AGENTS.md` point to this
+shared file; no separate deployed instruction file needs editing. Start a new
+Pi session to pick up the changed defaults and instructions.
+
+This is a routing/configuration migration only. The pinned statusline still
+uses legacy Codex credentials and quota polling, so numerical budgets are not
+restored by changing the provider ID. New OpenAI OAuth uses the public API and
+opaque account metadata; the documented plan-usage view is
+[ChatGPT Settings → Usage](https://chatgpt.com/settings/usage). Keep legacy
+Codex quota caches and history separate rather than relabeling them as OpenAI
+usage.
+
+The local `codex-fast` extension also still requires `openai-codex` for model
+eligibility. Its implementation and tests are unchanged; Fast support for the
+new login must be established separately before broadening eligibility.
+Historical provider references below and in the older design/research snapshots
+are not current routing instructions.
+
+Sources: [OpenAI token reference](https://developers.openai.com/siwc/token-sharing-open-source/token-reference),
+[account profiles and usage](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions).
+
 ## Current: extension pins (2026-10-01)
 
 The main-session pins in `dotfiles/pi/hosts/nixos-work/settings.json` and the

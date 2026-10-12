@@ -1,7 +1,7 @@
 {
   "defaultModel": "gpt-6.1-sol",
   "defaultThinkingLevel": "high",
-  "defaultProvider": "openai-codex",
+  "defaultProvider": "openai",
   "lastChangelogVersion": "1.0.0",
   "theme": "light/dark",
   "packages": [
@@ -21,11 +21,12 @@
   "showCacheMissNotices": true,
   "tuiMode": "regular",
   "enabledModels": [
-    "openai-codex/gpt-6-astra",
-    "openai-codex/gpt-6.1-sol",
-    "openai-codex/gpt-6-luna"
+    "openai/gpt-6-astra",
+    "openai/gpt-6.1-sol",
+    "openai/gpt-6-luna"
   ],
   "extensions": [
     "-builtin:mcp"
-  ]
+  ],
+  "deviceId": "a8506262-30db-4855-8372-a8f7024a4222"
 }
