@@ -1,7 +1,7 @@
 {
-  "defaultModel": "gpt-6.1-sol",
+  "defaultModel": "claude-opus-5-5",
   "defaultThinkingLevel": "high",
-  "defaultProvider": "openai",
+  "defaultProvider": "anthropic",
   "lastChangelogVersion": "1.0.0",
   "theme": "light/dark",
   "packages": [
@@ -17,14 +17,17 @@
   "terminal": {
     "showTerminalProgress": true
   },
-  "hideThinkingBlock": false,
+  "hideThinkingBlock": true,
   "followUpMode": "all",
   "showCacheMissNotices": true,
   "tuiMode": "regular",
   "enabledModels": [
     "openai/gpt-6-astra",
     "openai/gpt-6.1-sol",
-    "openai/gpt-6-luna"
+    "openai/gpt-6-luna",
+    "anthropic/claude-opus-5-5",
+    "anthropic/claude-sonnet-5-5",
+    "anthropic/claude-haiku-5-5"
   ],
   "extensions": [
     "-builtin:mcp"
