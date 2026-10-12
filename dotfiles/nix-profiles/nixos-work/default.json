@@ -44,6 +44,17 @@
       ],
       "url": "path:/nix/store/620xykwgxg0a2hzn1sc48nwxylvyql6a-source?lastModified=1780246643&narHash=sha256-4T1KWX7xWGQMs9hNZ24IOY3aYOi8D6%2B5WtkNRBSttB8%3D&rev=3109eaae18e09d0b8aef23dc2579e7d94b8d4b4e"
     },
+    "claude-code": {
+      "active": true,
+      "attrPath": "packages.x86_64-linux.claude-code",
+      "originalUrl": "github:numtide/llm-agents.nix",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/ayk84nr7kdln5yrg3raxbbfyvamglm01-claude-code-2.1.296"
+      ],
+      "url": "github:numtide/llm-agents.nix/493c34b1bed086861b0e968a40d00bd06522f003?narHash=sha256-lvEyxEmXv/8gwiWE2%2BrxTuL59EFq5wwXxX%2BrtbxjwLo%3D"
+    },
     "codex": {
       "active": true,
       "attrPath": "packages.x86_64-linux.codex",
