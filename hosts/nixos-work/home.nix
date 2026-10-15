@@ -257,6 +257,10 @@ in
         "SCCACHE_IDLE_TIMEOUT=0"
         "SCCACHE_DIR=${config.xdg.cacheHome}/sccache"
         "SCCACHE_CACHE_SIZE=${config.home.sessionVariables.SCCACHE_CACHE_SIZE}"
+        # Diagnose hung compile requests (suspected jobserver token leak, mozilla/sccache#2874, #2887).
+        # No SCCACHE_ERROR_LOG: in no-daemon mode stderr goes to journald, which rotates.
+        "SCCACHE_LOG=sccache=debug"
+        "SCCACHE_LOG_MILLIS=1"
       ];
       Restart = "on-failure";
       RestartSec = "5s";
