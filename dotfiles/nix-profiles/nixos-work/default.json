@@ -66,6 +66,17 @@
       ],
       "url": "github:numtide/llm-agents.nix/04ffd26c6e2b14983cbc70adf7310dedd13a55ab?narHash=sha256-3RDqiALS5KeLXZ2se5xxns0ylWRps2DMpfz4cF5Yk3A%3D"
     },
+    "context-efficiency-metrics": {
+      "active": true,
+      "attrPath": "packages.x86_64-linux.default",
+      "originalUrl": "github:fdietze/context-efficiency-metrics",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/shxyr37anya1ch19c535fnnqcvnq52yf-context-efficiency-metrics-0.1.0"
+      ],
+      "url": "github:fdietze/context-efficiency-metrics/2f196c69b57e5af09e394e321c578212d2613bad?narHash=sha256-tEOeQHU2VCMedZalC2nSdS//5Bv%2Bdd5Wvskxhbcsg/E%3D"
+    },
     "gh": {
       "active": true,
       "attrPath": "legacyPackages.x86_64-linux.gh",
