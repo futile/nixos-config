@@ -84,7 +84,9 @@ let
 
   genSymlinkCursors = lib.concatLines (
     lib.mapAttrsToList (
-      newCursorName: existingCursorName: ''ln -s "${existingCursorName}" "${newCursorName}"''
+      # skip cursors upstream already ships (e.g. `dnd-ask` since a phinger-cursors update)
+      newCursorName: existingCursorName:
+      ''[ -e "${newCursorName}" ] || [ -L "${newCursorName}" ] || ln -s "${existingCursorName}" "${newCursorName}"''
     ) extraSymlinkedCursors
   );
 in

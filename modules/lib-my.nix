@@ -36,11 +36,30 @@ let
       // otherArgs
     );
 
+  # Newest linuxPackages_X_Y whose ZFS kernel module isn't marked broken.
+  # reference: https://wiki.nixos.org/wiki/ZFS
+  latestZfsCompatibleKernelPackages =
+    final: zfsPackage:
+    let
+      lib = final.lib;
+      attr = zfsPackage.kernelModuleAttribute;
+      compatible = lib.filterAttrs (
+        name: kp:
+        builtins.match "linux_[0-9]+_[0-9]+" name != null
+        && (builtins.tryEval kp).success
+        && !kp.${attr}.meta.broken
+      ) final.linuxKernel.packages;
+    in
+    lib.last (
+      lib.sort (a: b: lib.versionOlder a.kernel.version b.kernel.version) (builtins.attrValues compatible)
+    );
+
   lib-my-overlay = final: prev: {
     lib = prev.lib // {
       my = {
         editorTools = mkEditorTools final;
         mkWrappedWithDeps = mkWrappedWithDeps final prev;
+        latestZfsCompatibleKernelPackages = latestZfsCompatibleKernelPackages final;
       };
     };
   };

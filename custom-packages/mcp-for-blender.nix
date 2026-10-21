@@ -31,7 +31,11 @@ python3.pkgs.buildPythonApplication rec {
     httpx
   ];
 
-  makeWrapperArgs = [ "--set DISABLE_TELEMETRY true" ];
+  makeWrapperArgs = [
+    "--set"
+    "DISABLE_TELEMETRY"
+    "true"
+  ];
 
   postInstall = ''
     install -Dm644 src/blender_mcp/bundled/addon.py \

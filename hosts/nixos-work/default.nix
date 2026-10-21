@@ -118,6 +118,38 @@ in
   hardware.openrazer = {
     enable = true;
     users = [ "felix" ];
+    # shortcut: backport of nixpkgs#576293 (install via modules_install so kmodigest emits the
+    # `.ko.cer` files aggregateModules now requires); drop once it reaches nixos-unstable.
+    packages.kernel = config.boot.kernelPackages.openrazer.overrideAttrs (old: {
+      makeFlags = old.makeFlags ++ [
+        "INSTALL_MOD_PATH=${placeholder "out"}"
+        "INSTALL_MOD_DIR=kernel/drivers/hid"
+        "INSTALL_MOD_STRIP=1"
+        "DEPMOD=true"
+      ];
+      installTargets = [ "modules_install" ];
+      installFlags = [
+        "-C"
+        "${config.boot.kernelPackages.kernel.dev}/lib/modules/${config.boot.kernelPackages.kernel.modDirVersion}/build"
+        "M=$(PWD)/driver"
+      ];
+      # empty string makes stdenv fall back to its default (make-based) installPhase
+      installPhase = "";
+      postInstall = ''
+        RAZER_MOUNT_OUT="$out/bin/razer_mount"
+        RAZER_RULES_OUT="$out/etc/udev/rules.d/99-razer.rules"
+        install -m 644 -v -D install_files/udev/99-razer.rules $RAZER_RULES_OUT
+        install -m 755 -v -D install_files/udev/razer_mount $RAZER_MOUNT_OUT
+        substituteInPlace $RAZER_RULES_OUT \
+          --replace razer_mount $RAZER_MOUNT_OUT \
+          --replace plugdev openrazer
+        substituteInPlace $RAZER_MOUNT_OUT \
+          --replace /usr/bin/logger ${pkgs.util-linux}/bin/logger \
+          --replace chgrp ${pkgs.coreutils}/bin/chgrp \
+          --replace "PATH='/sbin:/bin:/usr/sbin:/usr/bin'" "" \
+          --replace plugdev openrazer
+      '';
+    });
   };
 
   boot = {
@@ -131,7 +163,8 @@ in
     # 2025-12-24 USB wifi stick "Archer TX10UB Nano" requires at least this kernel for wifi to work
     # 2026-01-05 That wifi stick isn't working anyway, even with 6.17, but let's try 6.18 -> no zfs yet
     # 2026-01-30 6.18 still no zfs
-    kernelPackages = pkgs.linuxPackages_latest;
+    # 2026-05: linuxPackages_latest (7.3) broke zfs 2.4.4; track newest zfs-compatible kernel instead
+    kernelPackages = pkgs.lib.my.latestZfsCompatibleKernelPackages config.boot.zfs.package;
   };
 
   i18n.inputMethod = {
@@ -282,6 +315,11 @@ in
     # think it's nice together with nix-alien
     nix-ld.enable = true;
   };
+
+  # shortcut: upstream programs.ccache wraps a Perl script setgid, which the new
+  # ensure-wrapper-integrity check rejects (non-ELF); re-enable once nixpkgs ships an ELF helper.
+  # Stats meanwhile: `sudo env CCACHE_DIR=/var/cache/ccache ccache -s`
+  security.wrappers.nix-ccache.enable = false;
 
   my.rustSccache = {
     enable = true;

@@ -95,9 +95,17 @@ python3.pkgs.buildPythonApplication rec {
   ];
 
   makeWrapperArgs = [
-    "--prefix PATH : ${lib.makeBinPath [ ast-grep ]}"
-    "--set ORT_DYLIB_PATH ${lib.getLib onnxruntime}/lib/libonnxruntime.so"
-    "--prefix LD_LIBRARY_PATH : ${lib.getLib onnxruntime}/lib"
+    "--prefix"
+    "PATH"
+    ":"
+    (lib.makeBinPath [ ast-grep ])
+    "--set"
+    "ORT_DYLIB_PATH"
+    "${lib.getLib onnxruntime}/lib/libonnxruntime.so"
+    "--prefix"
+    "LD_LIBRARY_PATH"
+    ":"
+    "${lib.getLib onnxruntime}/lib"
   ];
 
   pythonImportsCheck = [
