@@ -285,7 +285,7 @@ function yieldList(decision: PressureDecision): string {
 }
 
 function reminderText(decision: PressureDecision): string {
-  const context = `Context ${percent(decision.percent)}`;
+  const context = `Context ${percent(decision.percent)} (~${compactTokens(decision.tokens)} tokens)`;
   switch (decision.kind) {
     case "advisory":
       return `<context-maintenance>\n${context} (+${Math.round(decision.growthTokens).toLocaleString()} tokens since maintenance; +${points(decision.interactionGrowthPoints)} interaction). If a meaningful completed/superseded batch and more work remain, piggy-back context_map + batched context_fold; otherwise continue (no-op valid).\n</context-maintenance>`;

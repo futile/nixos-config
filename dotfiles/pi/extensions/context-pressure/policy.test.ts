@@ -47,7 +47,7 @@ test("advisory and firm use maintenance/interaction growth, while urgent stays p
   let result = evaluatePressure(first.state, first.current);
   assert.equal(result.decision?.kind, "advisory");
 
-  first = ready(800_000, 80, 1_000_000);
+  first = ready(160_000, 80, 200_000);
   result = evaluatePressure(first.state, first.current);
   assert.equal(result.decision?.kind, "urgent");
   result = evaluatePressure(result.state, first.current);
@@ -57,7 +57,7 @@ test("advisory and firm use maintenance/interaction growth, while urgent stays p
     "unrelated continuation must not satisfy urgent maintenance",
   );
 
-  const cooled = observeUsage(result.state, usage(740_000, 74, 1_000_000));
+  const cooled = observeUsage(result.state, usage(148_000, 74, 200_000));
   result = evaluatePressure(cooled, first.current);
   assert.equal(
     result.decision?.kind,
@@ -65,7 +65,7 @@ test("advisory and firm use maintenance/interaction growth, while urgent stays p
     "usage movement without recorded maintenance must leave urgent pending",
   );
 
-  const firm = ready(760_000, 76, 1_000_000);
+  const firm = ready(152_000, 76, 200_000);
   result = evaluatePressure(firm.state, firm.current);
   assert.equal(result.decision?.kind, "firm");
   result = evaluatePressure(result.state, firm.current);
@@ -87,34 +87,34 @@ test("pending critical and urgent requests repeat while firm suppresses advisory
   const cases = [
     {
       name: "critical becomes a pending urgent request below critical",
-      armed: 980_000,
-      current: 970_000,
+      armed: 196_000,
+      current: 175_000,
       expected: "urgent",
     },
     {
       name: "urgent remains pending below its threshold",
-      armed: 800_000,
-      current: 790_000,
+      armed: 160_000,
+      current: 158_000,
       expected: "urgent",
     },
     {
       name: "firm suppresses advisory",
-      armed: 760_000,
-      current: 740_000,
+      armed: 152_000,
+      current: 148_000,
       expected: undefined,
     },
   ];
 
   for (const { name, armed, current, expected } of cases) {
-    const prepared = ready(armed, undefined, 1_000_000);
+    const prepared = ready(armed, undefined, 200_000);
     const armedResult = evaluatePressure(
       prepared.state,
-      usage(armed, undefined, 1_000_000),
+      usage(armed, undefined, 200_000),
     );
     assert.ok(armedResult.decision, `${name} must arm its higher level`);
     const lowerResult = evaluatePressure(
       armedResult.state,
-      usage(current, undefined, 1_000_000),
+      usage(current, undefined, 200_000),
     );
     assert.equal(lowerResult.decision?.kind, expected, name);
   }
@@ -124,34 +124,34 @@ test("each latch can legitimately retrigger after its five-point rearm", () => {
   const cases = [
     {
       name: "critical rearm permits urgent",
-      armed: 980_000,
-      current: 900_000,
+      armed: 196_000,
+      current: 170_000,
       expected: "urgent",
     },
     {
       name: "urgent rearm permits advisory",
-      armed: 800_000,
-      current: 740_000,
+      armed: 160_000,
+      current: 148_000,
       expected: "urgent",
     },
     {
       name: "firm rearm permits advisory",
-      armed: 760_000,
-      current: 700_000,
+      armed: 152_000,
+      current: 140_000,
       expected: "advisory",
     },
   ] as const;
 
   for (const { name, armed, current, expected } of cases) {
-    const prepared = ready(armed, undefined, 1_000_000);
+    const prepared = ready(armed, undefined, 200_000);
     const armedResult = evaluatePressure(
       prepared.state,
-      usage(armed, undefined, 1_000_000),
+      usage(armed, undefined, 200_000),
     );
     assert.ok(armedResult.decision, `${name} must arm its higher level`);
     const retriggered = evaluatePressure(
       armedResult.state,
-      usage(current, undefined, 1_000_000),
+      usage(current, undefined, 200_000),
     );
     assert.equal(retriggered.decision?.kind, expected, name);
   }
@@ -312,45 +312,45 @@ test("failed, no-op, and saving collapse attempts populate a three-sample ring",
 });
 
 test("an advisory latch can escalate upward to firm without rearming", () => {
-  let { state } = ready(740_000, 74, 1_000_000);
-  let result = evaluatePressure(state, usage(740_000, 74, 1_000_000));
+  let { state } = ready(148_000, 74, 200_000);
+  let result = evaluatePressure(state, usage(148_000, 74, 200_000));
   assert.equal(result.decision?.kind, "advisory");
   state = result.state;
-  result = evaluatePressure(state, usage(755_000, 75.5, 1_000_000));
+  result = evaluatePressure(state, usage(151_000, 75.5, 200_000));
   assert.equal(result.decision?.kind, "firm");
 });
 
 test("tiny positive maintenance retains urgent latch, while a five-point drop rearms it", () => {
-  let { state } = ready(800_000, 80, 1_000_000);
-  let result = evaluatePressure(state, usage(800_000, 80, 1_000_000));
+  let { state } = ready(160_000, 80, 200_000);
+  let result = evaluatePressure(state, usage(160_000, 80, 200_000));
   assert.equal(result.decision?.kind, "urgent");
   state = result.state;
   const tiny = makeYieldSample(
-    { action: "fold", ok: true, deltaTokens: 10_000 },
-    1_000_000,
+    { action: "fold", ok: true, deltaTokens: 2_000 },
+    200_000,
     1,
   );
   if (!tiny) throw new Error("expected valid sample");
   state = recordCollapse(state, tiny);
-  state = observeUsage(state, usage(790_000, 79, 1_000_000));
-  result = evaluatePressure(state, usage(810_000, 81, 1_000_000));
+  state = observeUsage(state, usage(158_000, 79, 200_000));
+  result = evaluatePressure(state, usage(162_000, 81, 200_000));
   assert.equal(result.decision?.kind, "retention");
-  result = evaluatePressure(result.state, usage(810_000, 81, 1_000_000));
+  result = evaluatePressure(result.state, usage(162_000, 81, 200_000));
   assert.equal(result.decision, undefined, "the urgent latch remains armed");
 
   const larger = makeYieldSample(
-    { action: "fold", ok: true, deltaTokens: 10_000 },
-    1_000_000,
+    { action: "fold", ok: true, deltaTokens: 2_000 },
+    200_000,
     2,
   );
   if (!larger) throw new Error("expected valid sample");
   state = recordCollapse(result.state, larger);
-  state = observeUsage(state, usage(750_000, 75, 1_000_000));
-  result = evaluatePressure(state, usage(810_000, 81, 1_000_000));
+  state = observeUsage(state, usage(150_000, 75, 200_000));
+  result = evaluatePressure(state, usage(162_000, 81, 200_000));
   assert.equal(result.decision?.kind, "retention");
   result = evaluatePressure(
     result.state,
-    usage(810_000, 81, 1_000_000),
+    usage(162_000, 81, 200_000),
   );
   assert.equal(result.decision?.kind, "urgent");
 });
@@ -450,33 +450,33 @@ test("a failed broader pass repeats handoff instead of downgrading to urgent", (
 });
 
 test("urgent survives failed maintenance and clears only after a productive collapse", () => {
-  let { state } = ready(800_000, 80, 1_000_000);
-  let result = evaluatePressure(state, usage(800_000, 80, 1_000_000));
+  let { state } = ready(160_000, 80, 200_000);
+  let result = evaluatePressure(state, usage(160_000, 80, 200_000));
   assert.equal(result.decision?.kind, "urgent");
   state = result.state;
 
   const failed = makeYieldSample(
     { action: "fold", ok: false, deltaTokens: 0 },
-    1_000_000,
+    200_000,
     1,
   );
   if (!failed) throw new Error("expected valid sample");
   state = recordCollapse(state, failed);
-  result = evaluatePressure(state, usage(800_000, 80, 1_000_000));
+  result = evaluatePressure(state, usage(160_000, 80, 200_000));
   assert.equal(result.decision?.kind, "urgent");
 
   const productive = makeYieldSample(
-    { action: "fold", ok: true, deltaTokens: 250_000 },
-    1_000_000,
+    { action: "fold", ok: true, deltaTokens: 50_000 },
+    200_000,
     2,
   );
   if (!productive) throw new Error("expected valid sample");
   state = observeUsage(
     recordCollapse(result.state, productive),
-    usage(550_000, 55, 1_000_000),
+    usage(110_000, 55, 200_000),
   );
   assert.equal(state.urgentPending, false);
-  assert.equal(evaluatePressure(state, usage(550_000, 55, 1_000_000)).decision, undefined);
+  assert.equal(evaluatePressure(state, usage(110_000, 55, 200_000)).decision, undefined);
 });
 
 test("high post-collapse utilization is independent of a large yield", () => {
@@ -516,4 +516,59 @@ test("a positive collapse waits for a fresh reading, and reset retains yields", 
   assert.equal(fresh.pendingBaseline, false);
   assert.equal(fresh.maintenance?.tokens, 60_000);
   assert.equal(resetPressure(fresh).yields.length, 1);
+});
+
+test("large windows use token tiers: advisory 150k, firm 200k, urgent 300k", () => {
+  const big = (tokens: number) => usage(tokens, undefined, 1_000_000);
+  let { state } = ready(140_000, undefined, 1_000_000);
+  const steps: [number, string | undefined][] = [
+    [140_000, undefined],
+    [150_000, "advisory"],
+    [165_000, undefined],
+    [170_000, "advisory"], // +20k rearms
+    [200_000, "firm"],
+    [215_000, undefined], // firm suppresses advisory
+    [220_000, "firm"],
+    [299_000, "firm"],
+    [300_000, "urgent"],
+  ];
+  for (const [tokens, expected] of steps) {
+    const result = evaluatePressure(state, big(tokens));
+    assert.equal(result.decision?.kind, expected, `${tokens}`);
+    if (result.decision) assert.equal(result.decision.tokens, tokens);
+    state = result.state;
+  }
+
+  for (const [after, expected] of [
+    [210_000, "retention"],
+    [190_000, undefined],
+  ] as const) {
+    const fold = makeYieldSample(
+      { action: "fold", ok: true, deltaTokens: 300_000 - after },
+      1_000_000,
+      1,
+    );
+    if (!fold) throw new Error("expected valid sample");
+    const folded = observeUsage(recordCollapse(state, fold), big(after));
+    assert.equal(evaluatePressure(folded, big(after)).decision?.kind, expected);
+  }
+});
+
+test("large windows judge fold yields in tokens of a 200k reference window", () => {
+  for (const [saved, broader] of [
+    [5_000, true],
+    [10_000, false],
+  ] as const) {
+    const { state: ready300 } = ready(300_000, undefined, 1_000_000);
+    const sample = makeYieldSample(
+      { action: "fold", ok: true, deltaTokens: saved },
+      1_000_000,
+      1,
+    );
+    if (!sample) throw new Error("expected valid sample");
+    const state = { ...ready300, yields: [sample, sample, sample] };
+    const result = evaluatePressure(state, usage(300_000, undefined, 1_000_000));
+    assert.equal(result.decision?.kind, "urgent");
+    assert.equal(result.decision?.broaderYield !== undefined, broader, `${saved}`);
+  }
 });

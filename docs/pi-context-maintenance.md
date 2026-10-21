@@ -1,5 +1,16 @@
 # Pi context maintenance: triggers, economics, and reminder design
 
+Current thresholds (2026-10-21): each tier starts at its window share or a
+token count, whichever comes first, so large windows (1M) are judged in tokens:
+advisory `min(60%, 150k)`, firm `min(75%, 200k)`, urgent `min(80%, 300k)`,
+post-collapse residual `min(60%, 200k)`. Percentage-point gates (growth, rearm
+drop, low fold yield) are measured on at most a 200k reference window. Windows
+up to 200k behave as before. Upstream infinite-context (pinned at `b3a5815`)
+no longer has `context_summary`; revising a summary is a singleton
+`context_fold`. Its own 150k nudges are disabled through
+`~/.pi/agent/infinite-context/settings.json` (`nudgeAtPercent: 100`) instead of
+a local patch. Sections below describe the original design.
+
 Current integration (2026-09-15): `dotfiles/pi/extensions/context-pressure/`
 supports infinite-context v2 on Pi 0.85.1. See
 [the v2 preparation and fresh-session procedure](pi-upstream-migration.md#current-infinite-context-v2-preparation-2026-09-15).

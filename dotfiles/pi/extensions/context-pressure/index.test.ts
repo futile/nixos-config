@@ -217,7 +217,7 @@ for (const toolName of ["context_fold", "context_summary"]) {
     const session = fakeContext(false, [], 1_000_000);
     await pi.emit("session_start", {}, session.ctx);
     await pi.emit("agent_start", {}, session.ctx);
-    session.setUsage(810_000);
+    session.setUsage(310_000);
     await pi.emit("turn_end", turn, session.ctx);
     assert.equal(pi.sent.at(-1).message.details.kind, "urgent");
     await pi.emit("tool_result", { toolName, details: { ...target, deltaTokens: -260_000 }, isError: false }, session.ctx);
@@ -229,7 +229,7 @@ for (const toolName of ["context_fold", "context_summary"]) {
     // Same-turn usage can be stale; do not establish the baseline here.
     await pi.emit("turn_end", turn, session.ctx);
     assert.equal(pi.entries.at(-1).data.pendingBaseline, true);
-    session.setUsage(550_000);
+    session.setUsage(50_000);
     await pi.emit("turn_end", turn, session.ctx);
     assert.equal(pi.entries.at(-1).data.pendingBaseline, false);
     assert.equal(pi.sent.length, 1);
@@ -242,7 +242,7 @@ for (const toolName of ["context_fold", "context_summary"]) {
     const session = fakeContext(false, [], 1_000_000);
     await pi.emit("session_start", {}, session.ctx);
     await pi.emit("agent_start", {}, session.ctx);
-    session.setUsage(810_000);
+    session.setUsage(310_000);
     await pi.emit("turn_end", turn, session.ctx);
     for (const [details, isError, expectedDelta] of [
       [undefined, true, 0],
@@ -539,12 +539,12 @@ test("restored ordinary latches stay quiet while urgent and critical remain pend
   const cases = [
     {
       name: "advisory",
-      percent: 64,
-      tokens: 640_000,
+      percent: 16,
+      tokens: 160_000,
       contextWindow: 1_000_000,
     },
-    { name: "firm", percent: 76, tokens: 760_000, contextWindow: 1_000_000 },
-    { name: "urgent", percent: 81, tokens: 810_000, contextWindow: 1_000_000 },
+    { name: "firm", percent: 21, tokens: 210_000, contextWindow: 1_000_000 },
+    { name: "urgent", percent: 31, tokens: 310_000, contextWindow: 1_000_000 },
     {
       name: "critical",
       percent: 98,
@@ -716,9 +716,9 @@ test("candidate clears below urgent and later urgent is ordinary, not handoff", 
     session.ctx,
   );
   await pi.emit("agent_start", { type: "agent_start" }, session.ctx);
-  session.setUsage(790_000, 79);
+  session.setUsage(290_000, 29);
   await pi.emit("turn_end", turn, session.ctx);
-  session.setUsage(810_000, 81);
+  session.setUsage(310_000, 31);
   await pi.emit("turn_end", turn, session.ctx);
   assert.equal(pi.sent.length, 1);
   assert.doesNotMatch(
@@ -783,9 +783,9 @@ test("model, compaction, and tree resets anchor the next interaction baseline", 
     await pi.emit("agent_settled", { type: "agent_settled" }, session.ctx);
 
     await pi.emit(eventName, { type: eventName }, session.ctx);
-    session.setUsage(210_000);
+    session.setUsage(60_000);
     await pi.emit("agent_start", { type: "agent_start" }, session.ctx);
-    session.setUsage(700_000);
+    session.setUsage(190_000);
     await pi.emit("turn_end", turn, session.ctx);
     await pi.emit("turn_end", turn, session.ctx);
 
@@ -812,10 +812,10 @@ test("model selection preserves urgent pending while compaction clears it", asyn
       session.ctx,
     );
     await pi.emit("agent_start", { type: "agent_start" }, session.ctx);
-    session.setUsage(810_000, 81);
+    session.setUsage(310_000, 31);
     await pi.emit("turn_end", turn, session.ctx);
     await pi.emit(eventName, { type: eventName }, session.ctx);
-    session.setUsage(700_000, 70);
+    session.setUsage(250_000, 25);
     await pi.emit("turn_end", turn, session.ctx);
     assert.equal(pi.sent.length, expected, eventName);
   }
@@ -831,7 +831,7 @@ test("urgent repeats through unrelated work and clears after productive maintena
     session.ctx,
   );
   await pi.emit("agent_start", { type: "agent_start" }, session.ctx);
-  session.setUsage(810_000, 81);
+  session.setUsage(310_000, 31);
   await pi.emit("turn_end", turn, session.ctx);
   await pi.emit("turn_end", turn, session.ctx);
   assert.equal(pi.sent.length, 2);
@@ -851,7 +851,7 @@ test("urgent repeats through unrelated work and clears after productive maintena
     session.ctx,
   );
   await pi.emit("turn_end", turn, session.ctx);
-  session.setUsage(550_000, 55);
+  session.setUsage(50_000, 5);
   await pi.emit("turn_end", turn, session.ctx);
   assert.equal(pi.sent.length, 2);
 });

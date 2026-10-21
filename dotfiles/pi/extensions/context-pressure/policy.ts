@@ -5,6 +5,31 @@ export const REARM_GROWTH_TOKENS = 20_000;
 export const COLLAPSE_COOLDOWN_TOKENS = 5_000;
 export const RECENT_YIELD_LIMIT = 3;
 export const HIGH_RESIDUAL_PERCENT = 60;
+export const HIGH_RESIDUAL_TOKENS = 200_000;
+export const ADVISORY_TOKENS = 150_000;
+export const FIRM_TOKENS = 200_000;
+export const URGENT_TOKENS = 300_000;
+/** Window-share gates are measured on at most this window, so large windows are judged in tokens. */
+export const REFERENCE_WINDOW_TOKENS = 200_000;
+
+/** `points` percent of the window, capped at the same share of the reference window. */
+function share(points: number, contextWindow: number): number {
+  return (points / 100) * Math.min(contextWindow, REFERENCE_WINDOW_TOKENS);
+}
+
+/** A tier starts at a window share or a token count, whichever comes first. */
+function reached(current: UsageBaseline, percent: number, tokens: number): boolean {
+  return current.percent >= percent || current.tokens >= tokens;
+}
+
+/** `points` of the reference window, expressed as points of this window. */
+function scaledPoints(points: number, contextWindow: number): number {
+  return (points * Math.min(contextWindow, REFERENCE_WINDOW_TOKENS)) / contextWindow;
+}
+
+function lowYield(sample: YieldSample): boolean {
+  return sample.percentagePoints < scaledPoints(3, sample.contextWindow);
+}
 
 export type PressureLevel = "advisory" | "firm" | "urgent" | "critical";
 export type ReminderKind = PressureLevel | "retention" | "handoff";
@@ -80,6 +105,7 @@ export interface PersistentPressureState {
 export interface PressureDecision {
   kind: ReminderKind;
   percent: number;
+  tokens: number;
   headroomTokens: number;
   growthTokens: number;
   interactionGrowthPoints: number;
@@ -186,10 +212,7 @@ export function isPersistentPressureState(
   )
     return false;
   if (snapshot.pendingBaseline && snapshot.residualPending) return false;
-  if (
-    snapshot.residualPending &&
-    (snapshot.lastPostCollapsePercent ?? 0) < HIGH_RESIDUAL_PERCENT
-  )
+  if (snapshot.residualPending && snapshot.lastPostCollapsePercent === undefined)
     return false;
   if (snapshot.broaderPassPending && snapshot.handoffCandidate) return false;
   if (
@@ -202,7 +225,7 @@ export function isPersistentPressureState(
     .find((sample) => sample.broader);
   return (
     !snapshot.handoffCandidate ||
-    (latestBroader !== undefined && latestBroader.percentagePoints < 3)
+    (latestBroader !== undefined && lowYield(latestBroader))
   );
 }
 
@@ -347,7 +370,7 @@ function latestBroaderSample(state: PressureState): YieldSample | undefined {
 
 function reconcilePhase(state: PressureState): PressureState {
   const broader = latestBroaderSample(state);
-  if (state.handoffCandidate && (!broader || broader.percentagePoints >= 3)) {
+  if (state.handoffCandidate && (!broader || !lowYield(broader))) {
     return { ...state, handoffCandidate: false };
   }
   return state;
@@ -359,9 +382,11 @@ function rearm(state: PressureState, current: UsageBaseline): PressureState {
     const latch = latches[level];
     if (
       latch &&
-      (current.percent <= latch.percent - REARM_DROP_PERCENT ||
-        (current.contextWindow === latch.contextWindow &&
-          current.tokens - latch.tokens >= REARM_GROWTH_TOKENS))
+      (current.contextWindow === latch.contextWindow
+        ? latch.tokens - current.tokens >=
+            share(REARM_DROP_PERCENT, current.contextWindow) ||
+          current.tokens - latch.tokens >= REARM_GROWTH_TOKENS
+        : current.percent <= latch.percent - REARM_DROP_PERCENT)
     )
       delete latches[level];
   }
@@ -384,7 +409,11 @@ export function observeUsage(
         interaction: observed.interactionActive ? current : null,
         pendingBaseline: false,
         cooldownUntilTokens: null,
-        residualPending: current.percent >= HIGH_RESIDUAL_PERCENT,
+        residualPending: reached(
+          current,
+          HIGH_RESIDUAL_PERCENT,
+          HIGH_RESIDUAL_TOKENS,
+        ),
         lastPostCollapsePercent: current.percent,
       },
       current,
@@ -520,7 +549,7 @@ export function recordCollapse(
       ? null
       : state.lastPostCollapsePercent,
     handoffCandidate: broader
-      ? sample.percentagePoints < 3
+      ? lowYield(sample)
       : state.handoffCandidate,
     handoffSent: broader ? false : state.handoffSent,
     cooldownUntilTokens: productive
@@ -539,9 +568,11 @@ function lowYieldEscalation(state: PressureState): boolean {
     return false;
   if (state.yields.length < RECENT_YIELD_LIMIT) return false;
   const recent = state.yields.slice(-RECENT_YIELD_LIMIT);
+  const window = recent[recent.length - 1].contextWindow;
   return (
-    recent.every((sample) => sample.percentagePoints < 3) ||
-    recent.reduce((sum, sample) => sum + sample.percentagePoints, 0) < 6
+    recent.every(lowYield) ||
+    recent.reduce((sum, sample) => sum + sample.percentagePoints, 0) <
+      scaledPoints(6, window)
   );
 }
 
@@ -555,6 +586,7 @@ function decision(
   return {
     kind,
     percent: current.percent,
+    tokens: current.tokens,
     headroomTokens: Math.max(0, current.contextWindow - current.tokens),
     growthTokens: Math.max(0, current.tokens - maintenance.tokens),
     interactionGrowthPoints: interaction
@@ -579,11 +611,10 @@ export function evaluatePressure(
   const maintenance = next.maintenance ?? current;
   const interaction = next.interaction;
   const growthTokens = current.tokens - maintenance.tokens;
-  const growthPoints = (100 * growthTokens) / current.contextWindow;
-  const interactionGrowthPoints = interaction
-    ? (100 * (current.tokens - interaction.tokens)) / current.contextWindow
+  const interactionGrowthTokens = interaction
+    ? current.tokens - interaction.tokens
     : 0;
-  const urgent = current.percent >= 80;
+  const urgent = reached(current, 80, URGENT_TOKENS);
   const critical =
     current.contextWindow - current.tokens <=
     CONTEXT_RESERVE_TOKENS + CRITICAL_EXTRA_TOKENS;
@@ -721,7 +752,9 @@ export function evaluatePressure(
   const cooldown = next.cooldownUntilTokens;
   if (cooldown != null && current.tokens < cooldown) return { state: next };
 
-  const firm = current.percent >= 75 && growthPoints >= 5;
+  const firm =
+    reached(current, 75, FIRM_TOKENS) &&
+    growthTokens >= share(5, current.contextWindow);
   if (firm) {
     if (next.latches.firm) return { state: next };
     next = { ...next, latches: { ...next.latches, firm: current } };
@@ -739,8 +772,9 @@ export function evaluatePressure(
   if (next.latches.firm) return { state: next };
 
   const advisory =
-    current.percent >= 60 &&
-    (growthTokens >= 24_000 || interactionGrowthPoints >= 8);
+    reached(current, 60, ADVISORY_TOKENS) &&
+    (growthTokens >= 24_000 ||
+      interactionGrowthTokens >= share(8, current.contextWindow));
   if (advisory) {
     if (next.latches.advisory) return { state: next };
     next = { ...next, latches: { ...next.latches, advisory: current } };
