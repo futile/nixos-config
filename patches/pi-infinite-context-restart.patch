@@ -1,11 +1,11 @@
 diff --git a/README.md b/README.md
-index 36debdd..ef78142 100644
+index c6952b2..f850ef5 100644
 --- a/README.md
 +++ b/README.md
-@@ -78,3 +78,19 @@ See [DESIGN.md](DESIGN.md) for the data model and exact tool rules.
- ## License
- 
- [MIT](LICENSE)
+@@ -53,3 +53,19 @@ Measured on the author's sessions: 89,000 requests, 92 sessions with 502 folds,
+ - **Only the first request after a fold misses**: 50% cached instead of 98%. A fold happens about once per 56 requests.
+ - **A fold shrinks the context** from 121k to 47k tokens (median). The cache miss pays for itself after about 3 to 6 requests for folds that free 15k tokens or more. Folds that free less than 15k often never pay off, so the reminders ask for 15k or more.
+ - After 5 minutes idle, only 18% of input is cached.
 +
 +## Restart health bridge
 +
@@ -23,10 +23,10 @@ index 36debdd..ef78142 100644
 +registered again on a fresh session start. This bridge never starts a model turn;
 +it is not a global startup-turn or extension-readiness gate.
 diff --git a/extensions/infinite-context/index.test.ts b/extensions/infinite-context/index.test.ts
-index 2c43da7..694f928 100644
+index e542942..63aeb3c 100644
 --- a/extensions/infinite-context/index.test.ts
 +++ b/extensions/infinite-context/index.test.ts
-@@ -45,6 +45,7 @@ function harness(initial: SessionEntry[]) {
+@@ -54,6 +54,7 @@ function harness(initial: SessionEntry[]) {
    const notifications: string[] = [];
    let appended = 0;
    const pi = {
@@ -35,22 +35,24 @@ index 2c43da7..694f928 100644
        const current = handlers.get(name) ?? [];
        current.push(handler);
 diff --git a/extensions/infinite-context/index.ts b/extensions/infinite-context/index.ts
-index 9639203..1ec3d61 100644
+index d4942e9..800cff4 100644
 --- a/extensions/infinite-context/index.ts
 +++ b/extensions/infinite-context/index.ts
-@@ -102,6 +102,8 @@ export default function infiniteContext(pi: ExtensionAPI) {
+@@ -98,6 +98,8 @@ export default function infiniteContext(pi: ExtensionAPI) {
+   let stateError: Error | undefined;
    let loaded = false;
    let lastNudgedBand = 0;
-   let enableNudges: boolean | undefined;
 +  let healthContext: ExtensionContext | undefined;
 +  let removeHealth: (() => void) | undefined;
  
    const branch = (ctx: ExtensionContext): SessionEntry[] =>
      ctx.sessionManager.getBranch();
-@@ -159,11 +161,45 @@ export default function infiniteContext(pi: ExtensionAPI) {
+@@ -166,8 +168,44 @@ export default function infiniteContext(pi: ExtensionAPI) {
      pi.appendEntry(INFINITE_CONTEXT_ENTRY, snapshot(roots));
    };
  
+-  pi.on("session_start", async (_event, ctx) => load(ctx));
+-  pi.on("session_tree", async (_event, ctx) => load(ctx));
 +  const registerHealth = (ctx: ExtensionContext) => {
 +    healthContext = ctx;
 +    removeHealth ??= pi.events.on("pi-restart-in-dir:ic-health-request", (data) => {
@@ -76,9 +78,8 @@ index 9639203..1ec3d61 100644
 +    });
 +  };
 +
-   pi.on("session_start", async (_event, ctx) => {
-     enableNudges = loadNudgesEnabled();
-     load(ctx);
++  pi.on("session_start", async (_event, ctx) => {
++    load(ctx);
 +    registerHealth(ctx);
 +  });
 +  pi.on("session_tree", async (_event, ctx) => {
@@ -89,38 +90,16 @@ index 9639203..1ec3d61 100644
 +    removeHealth?.();
 +    removeHealth = undefined;
 +    healthContext = undefined;
-   });
--  pi.on("session_tree", async (_event, ctx) => load(ctx));
++  });
  
    pi.on("context", async (event, ctx) => {
      if (stateError) return;
-diff --git a/extensions/infinite-context/nudges-config.test.ts b/extensions/infinite-context/nudges-config.test.ts
-index b1a3672..78c7d78 100644
---- a/extensions/infinite-context/nudges-config.test.ts
-+++ b/extensions/infinite-context/nudges-config.test.ts
-@@ -33,6 +33,7 @@ function harness(t: TestContext, config?: string) {
-     ui: { notify: (text: string) => notifications.push(text) },
-   } as unknown as ExtensionContext;
-   infiniteContext({
-+    events: { on: () => () => {}, emit() {} },
-     on: (name: string, handler: Handler) => handlers.set(name, handler),
-     registerTool: (tool: Tool) => tools.set(tool.name, tool),
-     sendMessage: (message: unknown) => sent.push(message),
-@@ -44,7 +45,7 @@ function harness(t: TestContext, config?: string) {
-   const emit = async (name: string, event: Record<string, unknown> = {}) => handlers.get(name)?.(event, ctx);
-   return {
-     tools, sent, notifications, entries, setConfig, emit,
--    execute: (name: string, params: Record<string, unknown>) => tools.get(name)!.execute("call", params, undefined, undefined, ctx),
-+    execute: (name: string, params: Record<string, unknown>) => tools.get(name)!.execute("call", params, undefined, undefined, ctx as Parameters<Tool["execute"]>[4]),
-     async continueAt(percent: number) {
-       tokens = percent;
-       await emit("turn_end", { message: { stopReason: "toolUse" }, toolResults: [{}] });
 diff --git a/extensions/infinite-context/restart-health.test.ts b/extensions/infinite-context/restart-health.test.ts
 new file mode 100644
-index 0000000..04d53b0
+index 0000000..7acd917
 --- /dev/null
 +++ b/extensions/infinite-context/restart-health.test.ts
-@@ -0,0 +1,169 @@
+@@ -0,0 +1,170 @@
 +import assert from "node:assert/strict";
 +import { test } from "node:test";
 +import {
@@ -160,7 +139,8 @@ index 0000000..04d53b0
 +    on: (name: string, handler: Handler) => hooks.set(name, handler),
 +    registerTool: (tool: Tool) => tools.set(tool.name, tool),
 +    sendMessage: (message: unknown) => sent.push(message),
-+    appendEntry: (customType: string, data: unknown) => entries.push({
++    // Settings records are upstream's concern; skipping them keeps these leaf ids readable.
++    appendEntry: (customType: string, data: unknown) => customType !== "infinite-context:settings" && entries.push({
 +      type: "custom", id: `state-${entries.length}`, parentId: entries.at(-1)?.id ?? null,
 +      timestamp: new Date(0).toISOString(), customType, data,
 +    }),
@@ -202,7 +182,7 @@ index 0000000..04d53b0
 +    customType: "infinite-context", data: { spans: [] },
 +  }]);
 +  await h.emit("session_start");
-+  assert.equal(h.tools.size, 5);
++  assert.equal(h.tools.size, 4);
 +  const [reply] = h.request();
 +  assert.equal(reply.ok, false);
 +  assert.match(reply.error!, /Unsupported/);

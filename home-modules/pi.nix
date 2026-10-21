@@ -13,7 +13,6 @@ let
     cp -R "${flake-inputs.pi-infinite-context}/." "$out/"
     chmod -R u+w "$out"
 
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-infinite-context-enable-nudges.patch}
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-infinite-context-restart.patch}
   '';
   patchedActorSubagents = pkgs.runCommand "pi-actor-subagents" { } ''
@@ -68,8 +67,10 @@ in
 
       ".pi/agent/extensions/infinite-context".source =
         "${patchedInfiniteContext}/extensions/infinite-context";
-      ".pi/agent/extensions/infinite-context.json".text = builtins.toJSON {
-        enableNudges = false;
+      # context-pressure owns reminders; upstream only nudges once the window is full.
+      ".pi/agent/infinite-context/settings.json".text = builtins.toJSON {
+        nudgeAtTokens = 1000000000;
+        nudgeAtPercent = 100;
       };
       ".pi/agent/extensions/actor-subagents".source =
         "${patchedActorSubagents}/extensions/actor-subagents";

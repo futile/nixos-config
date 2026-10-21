@@ -1,5 +1,17 @@
 # Pi standalone upstream migration
 
+## Current: infinite-context `b3a5815` (2026-10-21)
+
+`pi-infinite-context` is pinned to upstream `main` at `b3a5815`. Upstream
+removed `context_summary` (revise a summary with a singleton `context_fold`) and
+added its own 150k/75% nudges. Those are disabled through
+`~/.pi/agent/infinite-context/settings.json` (`nudgeAtPercent: 100`), so
+`patches/pi-infinite-context-enable-nudges.patch` and the old
+`extensions/infinite-context.json` are gone; only the restart patch remains.
+`context-pressure` now starts its tiers at token caps on large windows; see
+[pi-context-maintenance.md](pi-context-maintenance.md). References to the
+nudge patch below are historical.
+
 ## Current: OpenAI provider routing (2026-10-11)
 
 The work-host Pi settings now use `openai` for the default provider and the

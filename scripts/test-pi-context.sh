@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify locked upstream/local code against Pi 1.0.0 without loading live extensions.
+# Verify locked upstream/local code against Pi 1.3.0 without loading live extensions.
 set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 work=$(mktemp -d "${TMPDIR:-/tmp}/nixos-pi-context-test.XXXXXX")
@@ -8,8 +8,6 @@ source=$(nice -n 19 nix eval --impure --raw --expr \
   "(builtins.getFlake \"$repo\").inputs.pi-infinite-context.outPath")
 cp -R "$source" "$work/upstream"
 chmod -R u+w "$work/upstream"
-patch -d "$work/upstream" --batch --fuzz=0 -p1 \
-  < "$repo/patches/pi-infinite-context-enable-nudges.patch"
 patch -d "$work/upstream" --batch --fuzz=0 -p1 \
   < "$repo/patches/pi-infinite-context-restart.patch"
 cp -R "$repo/dotfiles/pi/extensions/context-pressure" "$work/upstream/extensions/context-pressure"
@@ -22,10 +20,11 @@ nice -n 19 nix develop --no-write-lock-file -c bash -euo pipefail -c '
     import { readFileSync, writeFileSync } from "node:fs";
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     for (const name of ["pi-ai", "pi-agent-core", "pi-coding-agent", "pi-tui"])
-      pkg.devDependencies[`@earendil-works/${name}`] = "1.0.0";
+      pkg.devDependencies[`@earendil-works/${name}`] = "1.3.0";
     writeFileSync("package.json", JSON.stringify(pkg, null, 2));
   '\''
   npm install --ignore-scripts --no-audit --no-fund --package-lock=false
   npm ls @earendil-works/pi-coding-agent @earendil-works/pi-ai @earendil-works/pi-agent-core @earendil-works/pi-tui --depth=0
-  npm run ci
+  # Upstream `ci` also runs actionlint, which needs a git checkout.
+  npm run typecheck && npm run lint && npm test
 ' 2>&1 | tee "$work/ci.log"

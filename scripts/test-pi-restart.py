@@ -266,7 +266,7 @@ class Suite:
         self.actor = extension_path(args.actor_source, "actor-subagents")
         self.results = []
         (self.root / "manifest.json").write_text(json.dumps({
-            "piVersion":"1.0.0", "pi":str(Path(args.pi).resolve()),
+            "piVersion":"1.3.0", "pi":str(Path(args.pi).resolve()),
             "launcher":str(Path(args.launcher).resolve()), "ic":str(self.ic), "actor":str(self.actor),
             "startedUTC":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),
             "offline":True, "retained":True,
@@ -295,13 +295,14 @@ class Suite:
         (actor_settings / "settings.json").write_text(json.dumps({"childExtensions":[str(fast)]}))
         settings = {"defaultProvider":"proof", "defaultModel":"old", "defaultThinkingLevel":"low",
                     "packages":[], "extensions":[], "compaction":{"enabled":False},
-                    "cacheWarm":{"enabled":False}, "infiniteContext":{"enableNudges":False}}
+                    "cacheWarm":{"enabled":False}}
         (agent / "settings.json").write_text(json.dumps(settings))
         models = {"providers":{"proof":{"api":"proof-api", "baseUrl":"http://127.0.0.1:1/never",
                   "apiKey":"offline-fixture", "models":[{"id":m,"name":m,"reasoning":True,
                   "contextWindow":200000,"maxTokens":1000} for m in ("old", "new")]}}}
         (agent / "models.json").write_text(json.dumps(models))
-        (extensions / "infinite-context.json").write_text(json.dumps({"enableNudges":False}))
+        (agent / "infinite-context").mkdir()
+        (agent / "infinite-context" / "settings.json").write_text(json.dumps({"nudgeAtTokens":10**9, "nudgeAtPercent":100}))
         # Deliberately do not inherit credentials, Pi extensions, HOME or user config.
         env = {"PATH":str(self.bin), "HOME":str(case), "XDG_CONFIG_HOME":str(case / "config"),
                "PI_CODING_AGENT_DIR":str(agent), "PI_TELEMETRY":"0", "PI_SKIP_VERSION_CHECK":"1",
@@ -603,7 +604,7 @@ class Suite:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pi",default=shutil.which("pi"),help="external Pi executable (must be 1.0.0)")
+    parser.add_argument("--pi",default=shutil.which("pi"),help="external Pi executable (must be 1.3.0)")
     parser.add_argument("--ic-source",required=True,help="patched IC output or extension directory")
     parser.add_argument("--actor-source",required=True,help="patched actor output or extension directory")
     parser.add_argument("--launcher",type=Path,default=REPO / "bin/pi-restartable")
@@ -614,7 +615,7 @@ def main():
     # No model or extension is started by --version. Suppress user discovery anyway.
     version=subprocess.run([args.pi,"--version"],capture_output=True,text=True,timeout=10,
                            env={"PATH":os.defpath,"PI_TELEMETRY":"0","PI_SKIP_VERSION_CHECK":"1"})
-    require(version.returncode==0 and version.stdout.strip()=="1.0.0", f"Pi 1.0.0 required, got {version.stdout!r} {version.stderr!r}")
+    require(version.returncode==0 and version.stdout.strip()=="1.3.0", f"Pi 1.3.0 required, got {version.stdout!r} {version.stderr!r}")
     return Suite(args).run()
 
 
