@@ -24,8 +24,11 @@ let
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-restart.patch}
     # Upstream: https://github.com/fdietze/pi-actor-subagents/pull/6
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-pause-refused-turn.patch}
+    # Roster/list_subagents/kill show bash-async jobs (pairs with pi-bash-async-jobs-signal.patch).
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-background-jobs.patch}
   '';
-  # Async background bash jobs; patched so /reload hands running jobs over instead of killing them.
+  # Async background bash jobs; patched so /reload hands running jobs over instead of killing them
+  # and so running jobs are announced to actor-subagents and the statusline.
   patchedBashAsync =
     pkgs.runCommand "pi-bash-async-0.4.1"
       {
@@ -41,8 +44,14 @@ let
         chmod -R u+w "$out"
 
         patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-reload.patch}
+        # Announces unsettled jobs on pi.events and as the "bash-async" footer status (⏳/⏳N).
+        patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-jobs-signal.patch}
+        # Shows the command in the call row and widget; default title = whole command, not its first word.
+        patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-command-display.patch}
         BASH_ASYNC_DIR="$out" HOME="$TMPDIR" node --experimental-transform-types --no-warnings \
-          --import ${../tests/pi-bash-async}/register.mjs --test ${../tests/pi-bash-async}/reload.test.mjs
+          --import ${../tests/pi-bash-async}/register.mjs --test \
+          ${../tests/pi-bash-async}/reload.test.mjs ${../tests/pi-bash-async}/jobs-signal.test.mjs \
+          ${../tests/pi-bash-async}/command-display.test.mjs
       '';
 in
 {

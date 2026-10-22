@@ -151,7 +151,17 @@ that way, since #8225 shows upstream reluctance.
   Other shutdown reasons still kill jobs.
 - `patches/pi-actor-subagents-pause-refused-turn.patch` implements the pause fix (upstream PR: https://github.com/fdietze/pi-actor-subagents/pull/6)
   above.
-- Run tests manually: `BASH_ASYNC_DIR=<patched pkg> node --experimental-transform-types --import tests/pi-bash-async/register.mjs --test tests/pi-bash-async/reload.test.mjs`.
+- Jobs-signal patch (`patches/pi-bash-async-jobs-signal.patch`): on every job
+  transition bash-async emits `pi.bash-async.v1:jobs` `{version: 1, running, jobs: [{id, title}]}`
+  (queued + running jobs) on `pi.events`, re-emits on `pi.bash-async.v1:request`, and in the TUI sets the
+  `bash-async` footer status to `⏳` (one job) / `⏳N` (more), which pi-statusline shows.
+  `patches/pi-actor-subagents-background-jobs.patch` listens on main's and every child's bus (a child
+  extension factory, keyed by session id) and shows the count in a roster column after the status, in the
+  swarm state line, in `list_subagents` (`idle · 2 bg jobs`), and in kill results (jobs stopped with the agent).
+- Command-display patch (`patches/pi-bash-async-command-display.patch`): the call row shows `$ <command>`
+  (3 lines collapsed, all when expanded); a missing `title` defaults to the one-line command clipped to 60
+  chars instead of its first word; the widget below the editor adds `$ <command…>` after an explicit title.
+- Run tests manually: `BASH_ASYNC_DIR=<patched pkg> node --experimental-transform-types --import tests/pi-bash-async/register.mjs --test tests/pi-bash-async/{reload,jobs-signal,command-display}.test.mjs`.
 - Optional env: `PI_BASH_ASYNC_SYNC_WINDOW_MS`, `PI_BASH_ASYNC_MAX_CONCURRENCY`.
 - Nothing stops the agent from still running `cmd &` in plain `bash`.
   Only guidance prevents it (or a `tool_call` hook that rejects trailing `&`).

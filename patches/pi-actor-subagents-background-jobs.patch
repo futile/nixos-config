@@ -1,0 +1,454 @@
+diff --git a/extensions/actor-subagents/agent-record.ts b/extensions/actor-subagents/agent-record.ts
+index 6c1d7b2..8254405 100644
+--- a/extensions/actor-subagents/agent-record.ts
++++ b/extensions/actor-subagents/agent-record.ts
+@@ -4,6 +4,7 @@
+  */
+ import type { RoutedAgentMessage } from "./agent-message.ts";
+ import type { AgentActivity, StopReason } from "./agent-status.ts";
++import type { BackgroundJob } from "./background-jobs.ts";
+ import type { ThinkingLevel } from "./thinking-level.ts";
+ 
+ export interface AgentHandle {
+@@ -89,6 +90,8 @@ export interface AgentRecord {
+ 	customStatus?: string;
+ 	/** Absolute target time (epoch ms) for the agent's ETA, rendered as clock time. Set via set_status's etaMinutes; cleared when omitted. In-memory; resets on restart. */
+ 	etaTs?: number;
++	/** Unsettled bash-async jobs of this agent's session (background-jobs.ts); in-memory, absent when none. */
++	backgroundJobs?: BackgroundJob[];
+ 	/** Tool name while `activity === "tool"`. */
+ 	currentTool?: string;
+ 	/** Context compaction remains active even while model streaming is idle. */
+diff --git a/extensions/actor-subagents/agent-tools.ts b/extensions/actor-subagents/agent-tools.ts
+index 18f325c..18ab2ac 100644
+--- a/extensions/actor-subagents/agent-tools.ts
++++ b/extensions/actor-subagents/agent-tools.ts
+@@ -36,6 +36,7 @@ import type { Spawner } from "./spawner.ts";
+ import { collapseBlock, toolPreviewParts } from "./tool-preview.ts";
+ import { THINKING_LEVELS } from "./thinking-level.ts";
+ import { notifyActivity } from "./activity.ts";
++import { killedJobsDetails } from "./background-jobs.ts";
+ 
+ // Tool-call preview that shows the FULL parameter content. Without a custom renderCall,
+ // pi's fallback for registered tools shows only the tool name (see ToolExecutionComponent
+@@ -344,10 +345,12 @@ export function makeAgentTools(
+       execute: async (_id, args) => {
+         const done = engine.trackActorWork();
+         try {
++          const jobsBefore = new Map(engine.list().map((a) => [a.name, a.backgroundJobs]));
+           const result = await engine.kill(selfName, normalizeTargets(args.names));
+           persistRoster();
++          const jobs = killedJobsDetails(jobsBefore, result.affected);
+           return {
+-            content: [{ type: "text", text: formatControlResult("kill", result) }],
++            content: [{ type: "text", text: formatControlResult("kill", result, jobs) }],
+             details: result,
+           };
+         } finally { done(); }
+diff --git a/extensions/actor-subagents/background-jobs.test.ts b/extensions/actor-subagents/background-jobs.test.ts
+new file mode 100644
+index 0000000..5263af1
+--- /dev/null
++++ b/extensions/actor-subagents/background-jobs.test.ts
+@@ -0,0 +1,73 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import {
++	BASH_ASYNC_JOBS_EVENT,
++	BASH_ASYNC_JOBS_REQUEST_EVENT,
++	jobsIndicator,
++	killedJobsDetails,
++	parseJobsUpdate,
++	watchBackgroundJobs,
++} from "./background-jobs.ts";
++
++test("jobsIndicator: empty for none, glyph alone for one, glyph+count for more", () => {
++	assert.equal(jobsIndicator(0), "");
++	assert.equal(jobsIndicator(1), "⏳");
++	assert.equal(jobsIndicator(4), "⏳4");
++});
++
++test("parseJobsUpdate accepts v1 payloads and rejects anything else", () => {
++	assert.deepEqual(parseJobsUpdate({ version: 1, running: 1, jobs: [{ id: "j", title: "t" }] }), [
++		{ id: "j", title: "t" },
++	]);
++	assert.deepEqual(parseJobsUpdate({ version: 1, running: 0, jobs: [] }), []);
++	assert.equal(parseJobsUpdate({ version: 2, jobs: [] }), undefined);
++	assert.equal(parseJobsUpdate({ version: 1, jobs: [{ title: "no id" }] }), undefined);
++	assert.equal(parseJobsUpdate(null), undefined);
++});
++
++test("watchBackgroundJobs requests a snapshot at session_start and applies updates by session id", () => {
++	const handlers = new Map<string, (data: unknown) => void>();
++	const emitted: string[] = [];
++	let start: ((e: unknown, ctx: { sessionManager: { getSessionId(): string } }) => void) | undefined;
++	const applied: [string, number][] = [];
++	watchBackgroundJobs(
++		{
++			on: (_event, handler) => {
++				start = handler;
++			},
++			events: {
++				on: (channel, handler) => {
++					handlers.set(channel, handler);
++					return () => {};
++				},
++				emit: (channel) => emitted.push(channel),
++			},
++		},
++		(sessionId, jobs) => applied.push([sessionId, jobs.length]),
++	);
++	const announce = (n: number) =>
++		handlers.get(BASH_ASYNC_JOBS_EVENT)?.({ version: 1, running: n, jobs: Array.from({ length: n }, (_, i) => ({ id: `j${i}` })) });
++	announce(1);
++	assert.deepEqual(applied, [], "nothing applied before the session is known");
++	start?.({}, { sessionManager: { getSessionId: () => "s1" } });
++	assert.deepEqual(emitted, [BASH_ASYNC_JOBS_REQUEST_EVENT]);
++	announce(2);
++	announce(0);
++	handlers.get(BASH_ASYNC_JOBS_EVENT)?.({ version: 9 });
++	assert.deepEqual(applied, [
++		["s1", 0], // reset at session_start, so jobs from before a /reload can't linger unanswered
++		["s1", 2],
++		["s1", 0],
++	]);
++});
++
++test("killedJobsDetails names only killed agents that had jobs", () => {
++	const before = new Map([
++		["a", [{ id: "1", title: "npm test" }, { id: "2", title: "" }]],
++		["b", undefined],
++		["c", [{ id: "3", title: "x".repeat(60) }]],
++	]);
++	assert.deepEqual(killedJobsDetails(before, ["a", "b"]), ['stopped background jobs of a: "npm test", "2"']);
++	assert.match(killedJobsDetails(before, ["c"])[0], /x…"$/);
++	assert.deepEqual(killedJobsDetails(before, ["b"]), []);
++});
+diff --git a/extensions/actor-subagents/background-jobs.ts b/extensions/actor-subagents/background-jobs.ts
+new file mode 100644
+index 0000000..b2f0bda
+--- /dev/null
++++ b/extensions/actor-subagents/background-jobs.ts
+@@ -0,0 +1,84 @@
++/**
++ * Background jobs an agent still waits on, as announced by the bash-async extension
++ * (`pi.bash-async.v1`, a local patch of @ryan_nookpi/pi-extension-bash-async). An idle agent with
++ * unsettled jobs is not done: their completions will wake it. SDK-free like the rest of the engine.
++ */
++export const BASH_ASYNC_JOBS_EVENT = "pi.bash-async.v1:jobs";
++export const BASH_ASYNC_JOBS_REQUEST_EVENT = "pi.bash-async.v1:request";
++
++export interface BackgroundJob {
++	id: string;
++	title: string;
++}
++
++/** Validates a bus payload; anything malformed or from another version is ignored. */
++export function parseJobsUpdate(value: unknown): BackgroundJob[] | undefined {
++	if (!value || typeof value !== "object") return undefined;
++	const update = value as { version?: unknown; jobs?: unknown };
++	if (update.version !== 1 || !Array.isArray(update.jobs)) return undefined;
++	const jobs: BackgroundJob[] = [];
++	for (const job of update.jobs as { id?: unknown; title?: unknown }[]) {
++		if (typeof job?.id !== "string") return undefined;
++		jobs.push({
++			id: job.id,
++			title: typeof job.title === "string" ? job.title : "",
++		});
++	}
++	return jobs;
++}
++
++/** Roster/state-line cell: "" for none, "⏳" for one job, "⏳N" for more. */
++export function jobsIndicator(count: number): string {
++	if (count <= 0) return "";
++	return count > 1 ? `⏳${count}` : "⏳";
++}
++
++/** Text for the model (list_subagents): plain words instead of a glyph. */
++export function describeJobCount(count: number): string {
++	return count === 1 ? "1 bg job" : `${count} bg jobs`;
++}
++
++type Bus = {
++	on(channel: string, handler: (data: unknown) => void): () => void;
++	emit(channel: string, data: unknown): void;
++};
++type Hooks = {
++	on(event: "session_start", handler: (event: unknown, ctx: { sessionManager: { getSessionId(): string } }) => void): void;
++};
++
++/**
++ * Follow one session's bash-async announcements on that session's own extension bus and hand
++ * them to `apply`, keyed by the session id (not the agent name, which a respawn can reuse).
++ * The request at session_start covers either extension load order and /reload adoption.
++ */
++export function watchBackgroundJobs(
++	pi: Hooks & { events: Bus },
++	apply: (sessionId: string, jobs: BackgroundJob[]) => void,
++): void {
++	let sessionId: string | undefined;
++	pi.on("session_start", (_event, ctx) => {
++		sessionId = ctx.sessionManager.getSessionId();
++		// Forget jobs from before a /reload; a live bash-async answers the request synchronously.
++		apply(sessionId, []);
++		pi.events.emit(BASH_ASYNC_JOBS_REQUEST_EVENT, undefined);
++	});
++	pi.events.on(BASH_ASYNC_JOBS_EVENT, (data) => {
++		const jobs = parseJobsUpdate(data);
++		if (jobs && sessionId) apply(sessionId, jobs);
++	});
++}
++
++const TITLE_MAX = 40;
++const clip = (s: string) => (s.length > TITLE_MAX ? `${s.slice(0, TITLE_MAX - 1)}…` : s);
++
++/**
++ * Kill-result detail naming the jobs that died with the killed agents. `before` is a snapshot
++ * taken before the kill: the records are gone afterwards.
++ */
++export function killedJobsDetails(before: Map<string, BackgroundJob[] | undefined>, affected: string[]): string[] {
++	const parts = affected.flatMap((name) => {
++		const jobs = before.get(name) ?? [];
++		return jobs.length ? [`${name}: ${jobs.map((j) => JSON.stringify(clip(j.title || j.id))).join(", ")}`] : [];
++	});
++	return parts.length ? [`stopped background jobs of ${parts.join("; ")}`] : [];
++}
+diff --git a/extensions/actor-subagents/feed.test.ts b/extensions/actor-subagents/feed.test.ts
+index 6592891..b838d7a 100644
+--- a/extensions/actor-subagents/feed.test.ts
++++ b/extensions/actor-subagents/feed.test.ts
+@@ -245,3 +245,11 @@ test("formatSnapshot keeps the columns aligned across indent levels", () => {
+ 	).split("\n").slice(1);
+ 	assert.equal(rows[0].indexOf("turns:"), rows[1].indexOf("turns:"));
+ });
++
++test("formatSnapshot shows unsettled background jobs next to the status", () => {
++	const job = { id: "j", title: "t" };
++	const out = snapshot([rec({ name: "main", depth: 0 }), rec({ name: "w", backgroundJobs: [job, job] }), rec({ name: "z", backgroundJobs: [job] })], "main");
++	assert.match(out, /w +child +idle · 2 bg jobs/);
++	assert.match(out, /z +child +idle · 1 bg job /);
++	assert.doesNotMatch(out.split("\n").find((l) => l.includes("main")) ?? "", /bg job/);
++});
+diff --git a/extensions/actor-subagents/feed.ts b/extensions/actor-subagents/feed.ts
+index f1c2ba0..1eca236 100644
+--- a/extensions/actor-subagents/feed.ts
++++ b/extensions/actor-subagents/feed.ts
+@@ -4,6 +4,7 @@
+  */
+ import type { OrderedAgent } from "./agent-order.ts";
+ import { type AgentStatus, formatStatus } from "./agent-status.ts";
++import { describeJobCount } from "./background-jobs.ts";
+ import type { AgentRecord } from "./agent-record.ts";
+ import type { ControlResult, EngineResumeResult } from "./control-result.ts";
+ import type { Reaction } from "./engine.ts";
+@@ -62,7 +63,9 @@ export function formatSnapshot(
+ 	// Custom status (with any ETA) shown right after the system status, matching the TUI roster ("idle · ...").
+ 	const statusOf = (a: AgentRecord) => {
+ 		const customDisplay = formatCustomStatus(a.customStatus, a.etaTs);
+-		const label = formatStatus(status(a));
++		const jobs = a.backgroundJobs?.length ?? 0;
++		// Unsettled jobs: an idle agent with jobs is not done, their completions will wake it.
++		const label = jobs > 0 ? `${formatStatus(status(a))} · ${describeJobCount(jobs)}` : formatStatus(status(a));
+ 		return customDisplay ? `${label} · ${customDisplay}` : label;
+ 	};
+ 	const widest = (lengths: number[], cap: number) => Math.min(cap, Math.max(...lengths));
+diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
+index 0cf0fba..d86137e 100644
+--- a/extensions/actor-subagents/index.ts
++++ b/extensions/actor-subagents/index.ts
+@@ -25,6 +25,7 @@ import {
+   type RoutedAgentMessage,
+ } from "./agent-message.ts";
+ import { renderAgentMessage } from "./agent-message-renderer.ts";
++import { killedJobsDetails, watchBackgroundJobs, type BackgroundJob } from "./background-jobs.ts";
+ import { ActivityPublisher, AGENT_ACTIVITY_REQUEST_EVENT, AGENT_ACTIVITY_UPDATE_EVENT, hasActiveBackgroundAgent, installActivityNotifier, notifyActivity } from "./activity.ts";
+ import { orderAgents } from "./agent-order.ts";
+ import { agentSystemPrompt } from "./agent-system-prompt.ts";
+@@ -268,6 +269,13 @@ export default function subagents(pi: ExtensionAPI) {
+   // Context-pressure resolves retained child session IDs through this live, reload-safe bridge.
+   (globalThis as Record<symbol, unknown>)[AGENT_NAME_LOOKUP_KEY] = (sessionId: string) =>
+     engine.list().find((agent) => agent.sessionId === sessionId)?.name;
++  // bash-async announcements from main's and each child's own bus, keyed by session id.
++  const applyBackgroundJobs = (sessionId: string, jobs: BackgroundJob[]) => {
++    const rec = engine.list().find((agent) => agent.sessionId === sessionId);
++    if (!rec) return;
++    rec.backgroundJobs = jobs.length > 0 ? jobs : undefined;
++    notifyActivity();
++  };
+ 
+   // The toolset acting as `selfName`. Deps are collected per call, so this stays independent
+   // of the order in which spawnAgent/updateStatus below are defined.
+@@ -443,6 +451,7 @@ export default function subagents(pi: ExtensionAPI) {
+           status: engine.status(a),
+           customStatus: a.customStatus,
+           etaTs: a.etaTs,
++          jobs: a.backgroundJobs?.length,
+           targets: formatSendTargets(matrix, a.name, live),
+         })),
+         width,
+@@ -451,7 +460,8 @@ export default function subagents(pi: ExtensionAPI) {
+       const running = background.filter(
+         (o) => engine.status(o.agent).kind === "working",
+       ).length;
+-      const stateLine = swarmStateLine(running, engine.pausedAgents().length);
++      const jobs = background.reduce((n, o) => n + (o.agent.backgroundJobs?.length ?? 0), 0);
++      const stateLine = swarmStateLine(running, engine.pausedAgents().length, jobs);
+       const pauseLine = theme.bg("selectedBg", truncateToWidth(stateLine, width));
+       // Same header the /subagents panel shows, so the swarm's size and activity stay visible at
+       // a glance — not only inside the panel.
+@@ -610,6 +620,7 @@ export default function subagents(pi: ExtensionAPI) {
+       additionalExtensionPaths: readSettings().childExtensions,
+       extensionFactories: [
+         { name: "subagent-timestamps", factory: registerToolTimestamps },
++        { name: "subagent-background-jobs", factory: (child) => watchBackgroundJobs(child, applyBackgroundJobs) },
+       ],
+       systemPromptOverride: () =>
+         agentSystemPrompt(spec.name, spec.systemPrompt, spec.spawnedBy),
+@@ -1068,13 +1079,15 @@ export default function subagents(pi: ExtensionAPI) {
+       const done = engine.trackActorWork();
+       try {
+         const names = parseNames(args);
++        const jobsBefore = new Map(engine.list().map((a) => [a.name, a.backgroundJobs]));
+         const result = names.length ? await engine.kill("main", names) : await engine.killAll();
+         persistRoster();
+-        ctx.ui.notify(formatControlResult("kill", result), "info");
++        ctx.ui.notify(formatControlResult("kill", result, killedJobsDetails(jobsBefore, result.affected)), "info");
+         updateStatus();
+       } finally { done(); }
+     },
+   });
+ 
+-
++  // Registered last so main's session_start has already set main.sessionId when the request is answered.
++  watchBackgroundJobs(pi, applyBackgroundJobs);
+ }
+diff --git a/extensions/actor-subagents/panel-logic.test.ts b/extensions/actor-subagents/panel-logic.test.ts
+index 9b70823..865eee0 100644
+--- a/extensions/actor-subagents/panel-logic.test.ts
++++ b/extensions/actor-subagents/panel-logic.test.ts
+@@ -341,3 +341,17 @@ test("formatRoster: a deep name keeps its complete text", () => {
+ 	const deep = formatRoster([re({ name: long, depth: 3 })], 200)[0];
+ 	assert.equal(deep, `   ${flat}`); // same full name, only shifted by the indent
+ });
++
++test("formatRoster: jobs column sits after the status, aligned, and only while some agent has jobs", () => {
++	const rows = formatRoster([re({ name: "ab", jobs: 1 }), re({ name: "abcdef", status: { kind: "working", phase: "thinking" }, jobs: 3 })], 200);
++	assert.equal(rows[0].indexOf("⏳"), rows[1].indexOf("⏳3"));
++	assert.ok(rows[0].indexOf("⏳") > rows[0].indexOf("idle"));
++	assert.ok(rows[0].indexOf("⏳") < rows[0].indexOf("y"));
++	assert.doesNotMatch(formatRoster([re({ jobs: 0 })], 200)[0], /⏳/);
++});
++
++test("swarmStateLine: appends the background job total only when non-zero", () => {
++	assert.equal(swarmStateLine(1, 0, 3), " ▶ live · 1 working · ⏳3 ");
++	assert.equal(swarmStateLine(0, 0, 1), " ▶ live · idle · ⏳ ");
++	assert.equal(swarmStateLine(0, 0), " ▶ live · idle ");
++});
+diff --git a/extensions/actor-subagents/panel-logic.ts b/extensions/actor-subagents/panel-logic.ts
+index 3f560e8..df2da9c 100644
+--- a/extensions/actor-subagents/panel-logic.ts
++++ b/extensions/actor-subagents/panel-logic.ts
+@@ -5,6 +5,7 @@ import {
+ 	parseRoutedAgentMessage,
+ } from "./agent-message.ts";
+ import { type AgentStatus, formatStatus } from "./agent-status.ts";
++import { jobsIndicator } from "./background-jobs.ts";
+ import { formatEtaSuffix } from "./eta.ts";
+ import { FAST_ROSTER_MARKER } from "./fast-control.ts";
+ import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
+@@ -81,6 +82,8 @@ export interface RosterEntry {
+ 	customStatus?: string;
+ 	/** Absolute ETA target (epoch ms); rendered in its own ETA column as clock time. */
+ 	etaTs?: number;
++	/** Unsettled background jobs; rendered in their own column right after the system status. */
++	jobs?: number;
+ 	/** Send targets cell (formatSendTargets); appended in full, never truncated. */
+ 	targets?: string;
+ }
+@@ -95,9 +98,10 @@ export const rosterDepth = (depth: number): number => Math.max(0, depth - 1);
+  * Scheduler state line, shown below the roster (panel) and footer: how many agents work and how
+  * many are paused. The per-agent phase (thinking/tool:.../paused) lives in the rows.
+  */
+-export function swarmStateLine(runningCount: number, pausedCount: number): string {
++export function swarmStateLine(runningCount: number, pausedCount: number, jobCount = 0): string {
+ 	const activity = runningCount > 0 ? `${runningCount} working` : "idle";
+-	return ` ▶ live · ${activity}${pausedCount > 0 ? ` · ${pausedCount} paused` : ""} `;
++	const jobs = jobCount > 0 ? ` · ${jobsIndicator(jobCount)}` : "";
++	return ` ▶ live · ${activity}${pausedCount > 0 ? ` · ${pausedCount} paused` : ""}${jobs} `;
+ }
+ 
+ /**
+@@ -139,11 +143,11 @@ export function formatModel(model: string | undefined, thinkingLevel: ThinkingLe
+ //
+ // One single-line row per agent, columns aligned across rows. Reading order — identity first,
+ // then what the agent IS, then what it runs on, then its progress signals:
+-//   name · system-status · model · eta · context · custom-status · targets
++//   name · system-status · jobs · model · eta · context · custom-status · targets
+ // Protected columns (name, system-status) are never hidden: they are what makes a row readable
+ // at all. The rest collapse — whole column dropped, all rows — when the terminal is too narrow,
+ // least informative first:
+-//   targets → custom-status → context → eta → model
++//   targets → custom-status → context → eta → model → jobs
+ // The name cell carries the spawn-tree indent (one space per depth level).
+ // Alignment requires a roster-wide pass (column widths = max content across agents), so this
+ // replaces any per-row formatting. Layout uses terminal display columns so astral/emoji glyphs do
+@@ -186,7 +190,7 @@ function fitMiddle(s: string, w: number, display: RosterDisplayWidth): string {
+ 
+ interface ColSpec {
+ 	key: string;
+-	// 0 = protected (never dropped); else the collapse order (1 dropped first … 5 dropped last).
++	// 0 = protected (never dropped); else the collapse order (1 dropped first … 6 dropped last).
+ 	collapseRank: number;
+ 	fit: "end" | "middle";
+ 	cap?: number;
+@@ -222,6 +226,8 @@ export function formatRoster(
+ 			cellOf: (e) => `${" ".repeat(e.depth)}${e.name}`,
+ 		},
+ 		{ key: "status", collapseRank: 0, fit: "end", cap: SYS_STATUS_CAP, cellOf: (e) => formatStatus(e.status) },
++		// Own column, so a status change (idle ↔ thinking) never moves it and it aligns across agents.
++		{ key: "jobs", collapseRank: 6, fit: "end", cellOf: (e) => jobsIndicator(e.jobs ?? 0) },
+ 		{
+ 			key: "model",
+ 			collapseRank: 5,
+diff --git a/extensions/actor-subagents/panel.ts b/extensions/actor-subagents/panel.ts
+index 55ab852..f7c13a1 100644
+--- a/extensions/actor-subagents/panel.ts
++++ b/extensions/actor-subagents/panel.ts
+@@ -400,6 +400,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
+ 					status: deps.engine.status(a),
+ 					customStatus: a.customStatus,
+ 					etaTs: a.etaTs,
++					jobs: a.backgroundJobs?.length,
+ 					targets: formatSendTargets(matrix, a.name, live),
+ 				})),
+ 				width,
+@@ -415,7 +416,8 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
+ 				lines.push(truncateToWidth(line, width));
+ 			}
+ 			// Swarm activity below the list — one source of truth in panel-logic.
+-			const stateLine = swarmStateLine(running, deps.engine.pausedAgents().length);
++			const jobs = agents().reduce((n, a) => n + (a.backgroundJobs?.length ?? 0), 0);
++			const stateLine = swarmStateLine(running, deps.engine.pausedAgents().length, jobs);
+ 			lines.push(theme.bg("selectedBg", stateLine));
+ 			lines.push(theme.fg("dim", truncateToWidth("─".repeat(width), width)));
+ 			// Chatbox and hint are composed BEFORE the transcript so the transcript can claim exactly
+diff --git a/extensions/actor-subagents/restart-bridge.test.ts b/extensions/actor-subagents/restart-bridge.test.ts
+index 77c7e60..63f9021 100644
+--- a/extensions/actor-subagents/restart-bridge.test.ts
++++ b/extensions/actor-subagents/restart-bridge.test.ts
+@@ -318,12 +318,12 @@ test("exact foreground kill command owns roster persistence after engine cleanup
+ 	assert.notEqual(handlerStart, -1); assert.notEqual(handlerEnd, -1);
+ 	const code = "const command = " + section.slice(handlerStart + "handler: ".length, handlerEnd) + "\n};";
+ 	let persisted = false;
+-	const command = new Function("engine", "parseNames", "persistRoster", "formatControlResult", "updateStatus", stripTypeScriptTypes(code) + "; return command;")(
++	const command = new Function("engine", "parseNames", "persistRoster", "formatControlResult", "updateStatus", "killedJobsDetails", stripTypeScriptTypes(code) + "; return command;")(
+ 		engine, (args: string) => args.split(" "), () => {
+ 			persisted = true;
+ 			assert.equal(bridge.inspect("main-id").ready, false);
+ 			assert.equal(bridge.acquire("main-id", "before-persist").ok, false);
+-		}, () => "killed", () => {},
++		}, () => "killed", () => {}, () => [],
+ 	) as (args: string, ctx: { ui: { notify: () => void } }) => Promise<void>;
+ 	await command("child", { ui: { notify() {} } });
+ 	assert.equal(persisted, true);
