@@ -1,0 +1,147 @@
+--- a/index.ts
++++ b/index.ts
+@@ -88,6 +88,39 @@
+ 	);
+ }
+ 
++// Local patch: /reload hands running jobs (and undelivered completions) to the next instance of this
++// extension instead of killing them. Reload keeps the host process, so globalThis survives it.
++const HANDOFF_KEY = Symbol.for("pi-bash-async.reload-handoff.v1");
++/** A handoff nobody adopts (extension removed or failed to load) must not leave jobs unmanaged. */
++const HANDOFF_TIMEOUT_MS = 30_000;
++type SendMessage = ExtensionAPI["sendMessage"];
++/** The live instance's side of the bundle; unset between a reload shutdown and the adopting session_start. */
++interface LiveBinding {
++	send?: SendMessage;
++	sync?: () => void;
++	backlog: Parameters<SendMessage>[];
++}
++interface Handoff {
++	manager: JobManager;
++	notifications: NotificationBatcher;
++	provider: AsyncTaskProvider;
++	jobSessions: Map<string, string>;
++	live: LiveBinding;
++	timer: ReturnType<typeof setTimeout>;
++}
++function handoffs(): Map<string, Handoff> {
++	const g = globalThis as Record<symbol, unknown>;
++	g[HANDOFF_KEY] ??= new Map<string, Handoff>();
++	return g[HANDOFF_KEY] as Map<string, Handoff>;
++}
++
++async function stopJobs(manager: JobManager, provider: AsyncTaskProvider): Promise<void> {
++	provider.shutdown();
++	manager.beginShutdown();
++	await manager.abortAndSettleAll();
++	manager.closeAllLogs();
++}
++
+ function forgetJobPolls(pollGuard: PollGuard, jobId: string): void {
+ 	pollGuard.forget(`status:${jobId}`);
+ 	pollGuard.forget(`output:${jobId}`);
+@@ -103,8 +136,15 @@
+ 	let runningJobsWidget: RunningJobsWidget | undefined;
+ 	let widgetInstalled = false;
+ 	// Jobs carry no session, and a hosted runtime can switch sessions while an earlier session's jobs run on.
+-	const jobSessions = new Map<string, string>();
++	let jobSessions = new Map<string, string>();
+ 	const reminderAnchors = new ReminderAnchors();
++	let sessionId: string | undefined;
++	let live: LiveBinding = { backlog: [] };
++	const bindLive = () => {
++		live.send = (message, options) => pi.sendMessage(message, options);
++		live.sync = () => syncRunningJobsWidget();
++	};
++	bindLive();
+ 
+ 	const clearRunningJobsWidget = () => {
+ 		const context = uiContext;
+@@ -148,7 +188,7 @@
+ 		}
+ 	};
+ 
+-	const provider = new AsyncTaskProvider(pi.events, "bash-async", "0.2.1", {
++	let provider = new AsyncTaskProvider(pi.events, "bash-async", "0.2.1", {
+ 		cancel: async (id) => {
+ 			await manager.kill(id);
+ 		},
+@@ -166,18 +206,36 @@
+ 	});
+ 	pi.on("session_start", (_event, context) => {
+ 		reminderAnchors.clear();
+-		provider.bind(context.sessionManager.getSessionId());
++		sessionId = context.sessionManager.getSessionId();
++		const adopted = handoffs().get(sessionId);
++		if (adopted) {
++			handoffs().delete(sessionId);
++			clearTimeout(adopted.timer);
++			// Retire this instance's still-unused objects before the variables point at the adopted ones.
++			provider.shutdown();
++			({ manager, notifications, provider, jobSessions, live } = adopted);
++			bindLive();
++			if (context.mode === "tui") uiContext = context;
++			for (const [message, options] of live.backlog.splice(0)) live.send?.(message, options);
++			notifications.flush();
++			syncRunningJobsWidget();
++		}
++		provider.bind(sessionId);
+ 	});
+-	const notifications = new NotificationBatcher({
++	let notifications = new NotificationBatcher({
+ 		deliveryState: (id) => provider.deliveryState(id),
+ 		send: (message, options) => {
+-			provider.deliver(message.details.jobIds, message, (annotated) => pi.sendMessage(annotated, options));
++			// `live`, not `pi`: after a reload the adopting instance owns delivery.
++			provider.deliver(message.details.jobIds, message, (annotated) => {
++				if (live.send) live.send(annotated, options);
++				else live.backlog.push([annotated, options]);
++			});
+ 		},
+ 	});
+ 	manager = new JobManager({
+ 		provider,
+ 		notifications,
+-		onStateChange: () => syncRunningJobsWidget(),
++		onStateChange: () => live.sync?.(),
+ 	});
+ 
+ 	pi.registerTool({
+@@ -249,15 +307,32 @@
+ 		return handleRunningReminderContext(reminderAnchors, sessionId, event.messages, pending, Date.now());
+ 	});
+ 
+-	pi.on("session_shutdown", async () => {
++	pi.on("session_shutdown", async (event) => {
+ 		pollGuard.clear();
+ 		reminderAnchors.clear();
+ 		clearRunningJobsWidget();
+ 		uiContext = undefined;
+-		provider.shutdown();
+-		manager.beginShutdown();
+-		await manager.abortAndSettleAll();
+-		manager.closeAllLogs();
++		if (event.reason === "reload" && sessionId) {
++			const id = sessionId;
++			live.send = undefined;
++			live.sync = undefined;
++			const bundle: Handoff = {
++				manager,
++				notifications,
++				provider,
++				jobSessions,
++				live,
++				timer: setTimeout(() => {
++					if (handoffs().get(id) !== bundle) return;
++					handoffs().delete(id);
++					void stopJobs(bundle.manager, bundle.provider);
++				}, HANDOFF_TIMEOUT_MS),
++			};
++			bundle.timer.unref?.();
++			handoffs().set(id, bundle);
++			return;
++		}
++		await stopJobs(manager, provider);
+ 	});
+ }
+ 

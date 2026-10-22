@@ -1,0 +1,33 @@
+--- a/extensions/actor-subagents/engine.ts	2026-10-21 22:06:27.091803897 -0400
++++ b/extensions/actor-subagents/engine.ts	2026-10-21 22:06:27.111804306 -0400
+@@ -709,7 +709,12 @@
+ 	 */
+ 	recordTurnStart(name: string): { abort: boolean; reason?: string } {
+ 		const rec = this.agents.get(name);
+-		if (rec && this.isStopped(rec)) return { abort: true, reason: "agents paused" };
++		if (rec && this.isStopped(rec)) {
++			// A turn started outside the engine (e.g. an extension's sendMessage with triggerTurn) left its
++			// message in the transcript; resume must re-trigger it or the agent never reads it.
++			rec.pausedMidTurn = true;
++			return { abort: true, reason: "agents paused" };
++		}
+ 		if (rec) {
+ 			rec.turns++;
+ 			rec.lastActivity = Date.now();
+--- a/extensions/actor-subagents/engine.test.ts	2026-10-21 22:06:36.457993143 -0400
++++ b/extensions/actor-subagents/engine.test.ts	2026-10-21 22:06:27.112804326 -0400
+@@ -183,6 +183,14 @@
+ 	assert.match(r.reason ?? "", /paused/i);
+ });
+ 
++test("resume re-triggers an idle agent whose turn was refused while paused", async () => {
++	const e = new Engine(caps);
++	e.addAgent({ ...mainRecord(), name: "a", depth: 1 });
++	e.pause("main");
++	assert.equal(e.recordTurnStart("a").abort, true);
++	assert.deepEqual(released(await e.resume("main")).interrupted, ["a"]);
++});
++
+ test("resume lifts a pause and lets turns run again", async () => {
+ 	const e = new Engine({ maxAgents: 5, maxSpawnDepth: 5 });
+ 	e.addAgent({ ...mainRecord(), name: "a", depth: 1 });

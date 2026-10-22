@@ -22,7 +22,28 @@ let
 
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-local.patch}
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-restart.patch}
+    # Upstream: https://github.com/fdietze/pi-actor-subagents/pull/6
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-pause-refused-turn.patch}
   '';
+  # Async background bash jobs; patched so /reload hands running jobs over instead of killing them.
+  patchedBashAsync =
+    pkgs.runCommand "pi-bash-async-0.4.1"
+      {
+        src = pkgs.fetchurl {
+          url = "https://registry.npmjs.org/@ryan_nookpi/pi-extension-bash-async/-/pi-extension-bash-async-0.4.1.tgz";
+          hash = "sha512-QxgpSvMXFKIr9hqG1+C2qTfsp8nL5X2mLCe4CjjMUf7Fzm+YocLqQOBgPj6V4UnfUHdLD+DQhBFA8cpvjO0LXw==";
+        };
+        nativeBuildInputs = [ pkgs.nodejs ];
+      }
+      ''
+        mkdir -p "$out"
+        tar -xzf "$src" --strip-components=1 -C "$out"
+        chmod -R u+w "$out"
+
+        patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-reload.patch}
+        BASH_ASYNC_DIR="$out" HOME="$TMPDIR" node --experimental-transform-types --no-warnings \
+          --import ${../tests/pi-bash-async}/register.mjs --test ${../tests/pi-bash-async}/reload.test.mjs
+      '';
 in
 {
   options.my.pi = {
@@ -84,8 +105,10 @@ in
           "${config.home.homeDirectory}/.pi/agent/extensions/infinite-context"
           "${config.home.homeDirectory}/.pi/agent/extensions/context-pressure"
           "${config.home.homeDirectory}/.pi/agent/extensions/codex-fast"
+          "${config.home.homeDirectory}/.pi/agent/extensions/bash-async"
         ];
       };
+      ".pi/agent/extensions/bash-async".source = patchedBashAsync;
       ".pi/agent/extensions/pi-restart-in-dir".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/pi-restart-in-dir";
       ".pi/agent/extensions/context-pressure".source =
