@@ -1,3 +1,131 @@
+diff --git a/extensions/actor-subagents/activity.test.ts b/extensions/actor-subagents/activity.test.ts
+index ed108dd..975be27 100644
+--- a/extensions/actor-subagents/activity.test.ts
++++ b/extensions/actor-subagents/activity.test.ts
+@@ -31,6 +31,36 @@ test("activity source keeps raw work independent from terminal progress policy",
+ 	assert.equal(subagentsActivityUpdate(false, true).terminalProgress, false);
+ });
+ 
++test("running bash_async jobs request terminal progress without counting as agent activity", async () => {
++	assert.deepEqual(subagentsActivityUpdate(false, true, true), {
++		version: 1,
++		source: "fdietze-subagents",
++		active: false,
++		terminalProgress: true,
++	});
++	assert.equal(subagentsActivityUpdate(false, false, true).terminalProgress, false, "setting still gates it");
++	let jobs = false;
++	const updates: ReturnType<typeof subagentsActivityUpdate>[] = [];
++	const publisher = new ActivityPublisher({
++		readActive: () => false,
++		readJobsRunning: () => jobs,
++		readTerminalProgressEnabled: async () => true,
++		emit: (update) => updates.push(update),
++		pollMs: 60_000,
++	});
++	const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
++	jobs = true;
++	publisher.notify();
++	await publisher.refreshTerminalProgress();
++	await settle();
++	assert.deepEqual(updates.at(-1), subagentsActivityUpdate(false, true, true));
++	jobs = false;
++	publisher.notify();
++	await settle();
++	assert.equal(updates.at(-1)?.terminalProgress, false);
++	publisher.dispose();
++});
++
+ test("publisher emits activity and setting changes without losing raw active state", async () => {
+ 	let active = true;
+ 	let terminal = true;
+diff --git a/extensions/actor-subagents/activity.ts b/extensions/actor-subagents/activity.ts
+index bb8860a..66cd3e4 100644
+--- a/extensions/actor-subagents/activity.ts
++++ b/extensions/actor-subagents/activity.ts
+@@ -31,17 +31,26 @@ export function hasActiveBackgroundAgent(
+ 	return false;
+ }
+ 
+-export function subagentsActivityUpdate(active: boolean, terminalProgressEnabled: boolean): AgentActivitySourceUpdate {
++/**
++ * Running bash_async jobs (in any agent, main included) request terminal progress but are not
++ * agent work, so they leave `active` (the statusline's active-time meter) alone.
++ */
++export function subagentsActivityUpdate(
++	active: boolean,
++	terminalProgressEnabled: boolean,
++	jobsRunning = false,
++): AgentActivitySourceUpdate {
+ 	return {
+ 		version: 1,
+ 		source: SUBAGENTS_ACTIVITY_SOURCE,
+ 		active,
+-		terminalProgress: active && terminalProgressEnabled,
++		terminalProgress: (active || jobsRunning) && terminalProgressEnabled,
+ 	};
+ }
+ 
+ export interface ActivityPublisherOptions {
+ 	readActive(): boolean;
++	readJobsRunning?(): boolean;
+ 	readTerminalProgressEnabled(): Promise<boolean>;
+ 	emit(update: AgentActivitySourceUpdate): void;
+ 	pollMs?: number;
+@@ -51,6 +60,7 @@ export interface ActivityPublisherOptions {
+ export class ActivityPublisher {
+ 	private readonly options: ActivityPublisherOptions;
+ 	private active: boolean;
++	private jobsRunning: boolean;
+ 	private terminalProgressEnabled = false;
+ 	private lastPublished: string | undefined;
+ 	private queued = false;
+@@ -62,14 +72,21 @@ export class ActivityPublisher {
+ 	constructor(options: ActivityPublisherOptions) {
+ 		this.options = options;
+ 		this.active = options.readActive();
++		this.jobsRunning = options.readJobsRunning?.() ?? false;
++	}
++
++	private get busy(): boolean {
++		return this.active || this.jobsRunning;
+ 	}
+ 
+ 	notify(force = false): void {
+ 		if (this.disposed) return;
+ 		const next = this.options.readActive();
+-		const changed = next !== this.active;
+-		if (next && !this.active) this.terminalProgressEnabled = false;
++		const nextJobs = this.options.readJobsRunning?.() ?? false;
++		const changed = next !== this.active || nextJobs !== this.jobsRunning;
++		if ((next || nextJobs) && !this.busy) this.terminalProgressEnabled = false;
+ 		this.active = next;
++		this.jobsRunning = nextJobs;
+ 		this.syncPoll();
+ 		if (force || changed) {
+ 			this.schedule(force);
+@@ -105,10 +122,10 @@ export class ActivityPublisher {
+ 	}
+ 
+ 	private syncPoll(): void {
+-		if (this.active && !this.poll) {
++		if (this.busy && !this.poll) {
+ 			this.poll = setInterval(() => void this.refreshTerminalProgress(), this.options.pollMs ?? 1_000);
+ 			this.poll.unref?.();
+-		} else if (!this.active && this.poll) {
++		} else if (!this.busy && this.poll) {
+ 			clearInterval(this.poll);
+ 			this.poll = undefined;
+ 		}
+@@ -123,7 +140,7 @@ export class ActivityPublisher {
+ 			if (this.disposed) return;
+ 			const shouldForce = this.forceQueued;
+ 			this.forceQueued = false;
+-			const update = subagentsActivityUpdate(this.active, this.terminalProgressEnabled);
++			const update = subagentsActivityUpdate(this.active, this.terminalProgressEnabled, this.jobsRunning);
+ 			const key = `${update.active}:${update.terminalProgress}`;
+ 			if (!shouldForce && key === this.lastPublished) return;
+ 			try {
 diff --git a/extensions/actor-subagents/agent-record.ts b/extensions/actor-subagents/agent-record.ts
 index 6c1d7b2..8254405 100644
 --- a/extensions/actor-subagents/agent-record.ts
@@ -254,7 +382,7 @@ index f1c2ba0..1eca236 100644
  	};
  	const widest = (lengths: number[], cap: number) => Math.min(cap, Math.max(...lengths));
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 0cf0fba..d86137e 100644
+index 0cf0fba..da9027a 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
 @@ -25,6 +25,7 @@ import {
@@ -297,7 +425,15 @@ index 0cf0fba..d86137e 100644
        const pauseLine = theme.bg("selectedBg", truncateToWidth(stateLine, width));
        // Same header the /subagents panel shows, so the swarm's size and activity stay visible at
        // a glance — not only inside the panel.
-@@ -610,6 +620,7 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -477,6 +487,7 @@ export default function subagents(pi: ExtensionAPI) {
+   // is independent from terminal OSC policy, which is refreshed while work remains active.
+   const activityPublisher = new ActivityPublisher({
+     readActive: () => hasActiveBackgroundAgent(engine.list()),
++    readJobsRunning: () => engine.list().some((a) => (a.backgroundJobs?.length ?? 0) > 0),
+     readTerminalProgressEnabled: async () => {
+       if (!settingsMgr) settingsMgr = SettingsManager.create(cwd, realAgentDir);
+       await settingsMgr.reload();
+@@ -610,6 +621,7 @@ export default function subagents(pi: ExtensionAPI) {
        additionalExtensionPaths: readSettings().childExtensions,
        extensionFactories: [
          { name: "subagent-timestamps", factory: registerToolTimestamps },
@@ -305,7 +441,7 @@ index 0cf0fba..d86137e 100644
        ],
        systemPromptOverride: () =>
          agentSystemPrompt(spec.name, spec.systemPrompt, spec.spawnedBy),
-@@ -1068,13 +1079,15 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -1068,13 +1080,15 @@ export default function subagents(pi: ExtensionAPI) {
        const done = engine.trackActorWork();
        try {
          const names = parseNames(args);

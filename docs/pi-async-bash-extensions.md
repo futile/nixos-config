@@ -158,6 +158,9 @@ that way, since #8225 shows upstream reluctance.
   `patches/pi-actor-subagents-background-jobs.patch` listens on main's and every child's bus (a child
   extension factory, keyed by session id) and shows the count in a roster column after the status, in the
   swarm state line, in `list_subagents` (`idle · 2 bg jobs`), and in kill results (jobs stopped with the agent).
+  Running jobs in any agent (main included) also set `terminalProgress` (not `active`) in its
+  `pi.agent-activity.v1` update, so kitty's tab progress bar/title indicator stays on while jobs run,
+  gated by Pi's `showTerminalProgress` setting; job time doesn't count as active agent time.
 - Command-display patch (`patches/pi-bash-async-command-display.patch`): the call row shows `$ <command>`
   (3 lines collapsed, all when expanded); a missing `title` defaults to the one-line command clipped to 60
   chars instead of its first word; the widget below the editor adds `$ <command…>` after an explicit title.
