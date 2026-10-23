@@ -331,6 +331,22 @@
         "url": "https://github.com/fdietze/pi-actor-subagents"
       }
     },
+    "pi-bash-async": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792796526,
+        "narHash": "sha256-YjvlWQFP2VSTwMIPad33xIcRiIK/aQ0aidNtoyQfY/o=",
+        "owner": "futile",
+        "repo": "pi-bash-async",
+        "rev": "d3e3da58d8a3be46a37c0d04c12114fc27e802d5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "futile",
+        "repo": "pi-bash-async",
+        "type": "github"
+      }
+    },
     "pi-infinite-context": {
       "flake": false,
       "locked": {
@@ -463,6 +479,7 @@
         "nixpkgs-pkgs-unstable": "nixpkgs-pkgs-unstable",
         "noctalia": "noctalia",
         "pi-actor-subagents": "pi-actor-subagents",
+        "pi-bash-async": "pi-bash-async",
         "pi-infinite-context": "pi-infinite-context",
         "serena": "serena",
         "wezterm-embark": "wezterm-embark"

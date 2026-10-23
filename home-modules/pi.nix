@@ -24,35 +24,18 @@ let
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-restart.patch}
     # Upstream: https://github.com/fdietze/pi-actor-subagents/pull/6
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-pause-refused-turn.patch}
-    # Roster/list_subagents/kill show bash-async jobs (pairs with pi-bash-async-jobs-signal.patch).
+    # Roster/list_subagents/kill show bash-async jobs (pairs with the pi-bash-async fork's jobs signal).
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-background-jobs.patch}
   '';
-  # Async background bash jobs; patched so /reload hands running jobs over instead of killing them
-  # and so running jobs are announced to actor-subagents and the statusline.
-  patchedBashAsync =
-    pkgs.runCommand "pi-bash-async-0.4.1"
-      {
-        src = pkgs.fetchurl {
-          url = "https://registry.npmjs.org/@ryan_nookpi/pi-extension-bash-async/-/pi-extension-bash-async-0.4.1.tgz";
-          hash = "sha512-QxgpSvMXFKIr9hqG1+C2qTfsp8nL5X2mLCe4CjjMUf7Fzm+YocLqQOBgPj6V4UnfUHdLD+DQhBFA8cpvjO0LXw==";
-        };
-        nativeBuildInputs = [ pkgs.nodejs ];
-      }
-      ''
-        mkdir -p "$out"
-        tar -xzf "$src" --strip-components=1 -C "$out"
-        chmod -R u+w "$out"
-
-        patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-reload.patch}
-        # Announces unsettled jobs on pi.events and as the "bash-async" footer status (⏳N).
-        patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-jobs-signal.patch}
-        # Shows the command in the call row and widget; default title = whole command, not its first word.
-        patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-command-display.patch}
-        BASH_ASYNC_DIR="$out" HOME="$TMPDIR" node --experimental-transform-types --no-warnings \
-          --import ${../tests/pi-bash-async}/register.mjs --test \
-          ${../tests/pi-bash-async}/reload.test.mjs ${../tests/pi-bash-async}/jobs-signal.test.mjs \
-          ${../tests/pi-bash-async}/command-display.test.mjs
-      '';
+  # Async background bash jobs (fork: /reload keeps jobs, ⏳N footer status + pi.events signal
+  # for actor-subagents, command display); the build runs our regression tests against it.
+  bashAsync = pkgs.runCommand "pi-bash-async" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
+    cp -R "${flake-inputs.pi-bash-async}" "$out"
+    BASH_ASYNC_DIR="$out" HOME="$TMPDIR" node --experimental-transform-types --no-warnings \
+      --import ${../tests/pi-bash-async}/register.mjs --test \
+      ${../tests/pi-bash-async}/reload.test.mjs ${../tests/pi-bash-async}/jobs-signal.test.mjs \
+      ${../tests/pi-bash-async}/command-display.test.mjs
+  '';
 in
 {
   options.my.pi = {
@@ -117,7 +100,7 @@ in
           "${config.home.homeDirectory}/.pi/agent/extensions/bash-async"
         ];
       };
-      ".pi/agent/extensions/bash-async".source = patchedBashAsync;
+      ".pi/agent/extensions/bash-async".source = bashAsync;
       ".pi/agent/extensions/pi-restart-in-dir".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/pi-restart-in-dir";
       ".pi/agent/extensions/context-pressure".source =

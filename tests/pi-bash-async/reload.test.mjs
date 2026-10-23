@@ -1,4 +1,4 @@
-// Regression tests for patches/pi-bash-async-reload.patch.
+// Regression tests for the reload change in the futile/pi-bash-async fork.
 // Run: BASH_ASYNC_DIR=<patched package> node --experimental-transform-types --import ./register.mjs --test reload.test.mjs
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync } from "node:fs";

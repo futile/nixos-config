@@ -1,4 +1,4 @@
-// Regression tests for patches/pi-bash-async-command-display.patch.
+// Regression tests for the command-display change in the futile/pi-bash-async fork.
 // Run: BASH_ASYNC_DIR=<patched package> node --experimental-transform-types --import ./register.mjs --test command-display.test.mjs
 import assert from "node:assert/strict";
 import { join } from "node:path";

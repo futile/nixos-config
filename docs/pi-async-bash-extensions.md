@@ -138,12 +138,13 @@ that way, since #8225 shows upstream reluctance.
 
 ## Adopted setup (nixos-01q)
 
-- `home-modules/pi.nix` vendors the npm tarball (`fetchurl`, pinned 0.4.1) as
-  `patchedBashAsync`, applies `patches/pi-bash-async-reload.patch`, runs
-  `tests/pi-bash-async/reload.test.mjs` in the build, and installs it to
-  `~/.pi/agent/extensions/bash-async`, also listed in actor-subagents
-  `childExtensions`.
-- Reload patch: on `session_shutdown{reason:"reload"}` the running
+- The extension comes from our fork https://github.com/futile/pi-bash-async (flake input
+  `pi-bash-async`; `main` = bash-async package only, `upstream` = full Jonghakseo/pi-extension monorepo
+  plus our commits, maintained with `scripts/sync-upstream` / `scripts/update-main` on `upstream`).
+  `home-modules/pi.nix` (`bashAsync`) runs `tests/pi-bash-async/*.test.mjs` against it in the build and
+  installs it to `~/.pi/agent/extensions/bash-async`, also listed in actor-subagents `childExtensions`.
+  Update with `nix flake update pi-bash-async`.
+- Reload change: on `session_shutdown{reason:"reload"}` the running
   `JobManager`/batcher/provider bundle goes into a `globalThis` map keyed by
   session id instead of being aborted. The next instance adopts it in
   `session_start`, rebinds delivery and the widget, and replays completions that
@@ -151,7 +152,7 @@ that way, since #8225 shows upstream reluctance.
   Other shutdown reasons still kill jobs.
 - `patches/pi-actor-subagents-pause-refused-turn.patch` implements the pause fix (upstream PR: https://github.com/fdietze/pi-actor-subagents/pull/6)
   above.
-- Jobs-signal patch (`patches/pi-bash-async-jobs-signal.patch`): on every job
+- Jobs signal: on every job
   transition bash-async emits `pi.bash-async.v1:jobs` `{version: 1, running, jobs: [{id, title}]}`
   (queued + running jobs) on `pi.events`, re-emits on `pi.bash-async.v1:request`, and in the TUI sets the
   `bash-async` footer status to `⏳N` (N running jobs), which pi-statusline shows.
@@ -161,10 +162,10 @@ that way, since #8225 shows upstream reluctance.
   Running jobs in any agent (main included) also set `terminalProgress` (not `active`) in its
   `pi.agent-activity.v1` update, so kitty's tab progress bar/title indicator stays on while jobs run,
   gated by Pi's `showTerminalProgress` setting; job time doesn't count as active agent time.
-- Command-display patch (`patches/pi-bash-async-command-display.patch`): the call row shows `$ <command>`
+- Command display: the call row shows `$ <command>`
   (3 lines collapsed, all when expanded); a missing `title` defaults to the one-line command clipped to 60
   chars instead of its first word; the widget below the editor adds `$ <command…>` after an explicit title.
-- Run tests manually: `BASH_ASYNC_DIR=<patched pkg> node --experimental-transform-types --import tests/pi-bash-async/register.mjs --test tests/pi-bash-async/{reload,jobs-signal,command-display}.test.mjs`.
+- Run tests manually: `BASH_ASYNC_DIR=<pi-bash-async checkout> node --experimental-transform-types --import tests/pi-bash-async/register.mjs --test tests/pi-bash-async/{reload,jobs-signal,command-display}.test.mjs`.
 - Optional env: `PI_BASH_ASYNC_SYNC_WINDOW_MS`, `PI_BASH_ASYNC_MAX_CONCURRENCY`.
 - Nothing stops the agent from still running `cmd &` in plain `bash`.
   Only guidance prevents it (or a `tool_call` hook that rejects trailing `&`).

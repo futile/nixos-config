@@ -81,6 +81,12 @@
       flake = false;
     };
 
+    # Fork of the bash-async package from Jonghakseo/pi-extension with /reload, jobs-signal and command-display changes.
+    pi-bash-async = {
+      url = "github:futile/pi-bash-async";
+      flake = false;
+    };
+
     pi-actor-subagents = {
       url = "git+https://github.com/fdietze/pi-actor-subagents?rev=707496e93d78aac3d2be609aee69c2b7ffff6c33";
       flake = false;

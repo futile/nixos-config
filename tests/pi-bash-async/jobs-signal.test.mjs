@@ -1,4 +1,4 @@
-// Regression tests for patches/pi-bash-async-jobs-signal.patch.
+// Regression tests for the jobs-signal change in the futile/pi-bash-async fork.
 // Run: BASH_ASYNC_DIR=<patched package> node --experimental-transform-types --import ./register.mjs --test jobs-signal.test.mjs
 import assert from "node:assert/strict";
 import { join } from "node:path";
