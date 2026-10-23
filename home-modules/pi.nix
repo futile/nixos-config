@@ -27,15 +27,6 @@ let
     # Roster/list_subagents/kill show bash-async jobs (pairs with the pi-bash-async fork's jobs signal).
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-background-jobs.patch}
   '';
-  # Async background bash jobs (fork: /reload keeps jobs, ⏳N footer status + pi.events signal
-  # for actor-subagents, command display); the build runs our regression tests against it.
-  bashAsync = pkgs.runCommand "pi-bash-async" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
-    cp -R "${flake-inputs.pi-bash-async}" "$out"
-    BASH_ASYNC_DIR="$out" HOME="$TMPDIR" node --experimental-transform-types --no-warnings \
-      --import ${../tests/pi-bash-async}/register.mjs --test \
-      ${../tests/pi-bash-async}/reload.test.mjs ${../tests/pi-bash-async}/jobs-signal.test.mjs \
-      ${../tests/pi-bash-async}/command-display.test.mjs
-  '';
 in
 {
   options.my.pi = {
@@ -100,7 +91,9 @@ in
           "${config.home.homeDirectory}/.pi/agent/extensions/bash-async"
         ];
       };
-      ".pi/agent/extensions/bash-async".source = bashAsync;
+      # Async background bash jobs (fork: /reload keeps jobs, ⏳N footer status + pi.events signal
+      # for actor-subagents, command display); its own tests live in the fork.
+      ".pi/agent/extensions/bash-async".source = flake-inputs.pi-bash-async;
       ".pi/agent/extensions/pi-restart-in-dir".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/pi-restart-in-dir";
       ".pi/agent/extensions/context-pressure".source =

@@ -334,11 +334,11 @@
     "pi-bash-async": {
       "flake": false,
       "locked": {
-        "lastModified": 1792796526,
-        "narHash": "sha256-YjvlWQFP2VSTwMIPad33xIcRiIK/aQ0aidNtoyQfY/o=",
+        "lastModified": 1792798201,
+        "narHash": "sha256-09My+XszuPCQcAxjN6neyUwoA0Qp6z0TJkX8fk/uTxo=",
         "owner": "futile",
         "repo": "pi-bash-async",
-        "rev": "d3e3da58d8a3be46a37c0d04c12114fc27e802d5",
+        "rev": "ab3d3065b62a4583da642382923788259bf985b5",
         "type": "github"
       },
       "original": {

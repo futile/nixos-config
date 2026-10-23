@@ -141,8 +141,7 @@ that way, since #8225 shows upstream reluctance.
 - The extension comes from our fork https://github.com/futile/pi-bash-async (flake input
   `pi-bash-async`; `main` = bash-async package only, `upstream` = full Jonghakseo/pi-extension monorepo
   plus our commits, maintained with `scripts/sync-upstream` / `scripts/update-main` on `upstream`).
-  `home-modules/pi.nix` (`bashAsync`) runs `tests/pi-bash-async/*.test.mjs` against it in the build and
-  installs it to `~/.pi/agent/extensions/bash-async`, also listed in actor-subagents `childExtensions`.
+  `home-modules/pi.nix` installs it to `~/.pi/agent/extensions/bash-async`, also listed in actor-subagents `childExtensions`.
   Update with `nix flake update pi-bash-async`.
 - Reload change: on `session_shutdown{reason:"reload"}` the running
   `JobManager`/batcher/provider bundle goes into a `globalThis` map keyed by
@@ -165,7 +164,8 @@ that way, since #8225 shows upstream reluctance.
 - Command display: the call row shows `$ <command>`
   (3 lines collapsed, all when expanded); a missing `title` defaults to the one-line command clipped to 60
   chars instead of its first word; the widget below the editor adds `$ <command…>` after an explicit title.
-- Run tests manually: `BASH_ASYNC_DIR=<pi-bash-async checkout> node --experimental-transform-types --import tests/pi-bash-async/register.mjs --test tests/pi-bash-async/{reload,jobs-signal,command-display}.test.mjs`.
+- Tests for the fork's changes: `packages/bash-async/fork-changes.test.ts` on the fork's `upstream` branch
+  (`nix shell nixpkgs#pnpm_10 nixpkgs#nodejs -c pnpm exec vitest run packages/bash-async` after `pnpm install`).
 - Optional env: `PI_BASH_ASYNC_SYNC_WINDOW_MS`, `PI_BASH_ASYNC_MAX_CONCURRENCY`.
 - Nothing stops the agent from still running `cmd &` in plain `bash`.
   Only guidance prevents it (or a `tool_call` hook that rejects trailing `&`).
