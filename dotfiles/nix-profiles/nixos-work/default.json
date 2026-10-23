@@ -73,9 +73,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/ivjh4camx21bpf96az2mr3gyc7v0x7s6-context-efficiency-metrics-0.1.0"
+        "/nix/store/vfimbrryi2bciprgbfahs54bkkipfg0m-context-efficiency-metrics-0.2.0"
       ],
-      "url": "github:fdietze/context-efficiency-metrics/80a126ff6fde894a30f6fbc90fffdce3fe50b6d3?narHash=sha256-eIr3UPi1xfZDNLXQKnqMukOp5jRK3VxfgYUcxGvPHVY%3D"
+      "url": "github:fdietze/context-efficiency-metrics/7e3e6a60894997ec9f54a1b9b64c906cf39230f0?narHash=sha256-HmUyU5IGQkd5b2Q%2BtqVI%2B57eVIIYR8mC1B%2BHh%2BMVyPQ%3D"
     },
     "gh": {
       "active": true,

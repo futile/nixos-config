@@ -35,5 +35,6 @@
   "deviceId": "a8506262-30db-4855-8372-a8f7024a4222",
   "warnings": {
     "anthropicExtraUsage": false
-  }
+  },
+  "cacheWarming": "idle"
 }
