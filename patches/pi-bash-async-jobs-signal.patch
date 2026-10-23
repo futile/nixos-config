@@ -16,8 +16,8 @@ index d34f801..75c6d3d 100644
 +	running: number;
 +	jobs: { id: string; title: string }[];
 +}
-+/** "⏳" for one job, "⏳N" for more. */
-+export const jobsIndicator = (count: number): string => (count > 1 ? `⏳${count}` : "⏳");
++/** "⏳N" for N running jobs. */
++export const jobsIndicator = (count: number): string => `⏳${count}`;
 +
  async function stopJobs(manager: JobManager, provider: AsyncTaskProvider): Promise<void> {
  	provider.shutdown();

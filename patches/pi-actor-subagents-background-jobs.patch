@@ -190,9 +190,9 @@ index 0000000..5263af1
 +	watchBackgroundJobs,
 +} from "./background-jobs.ts";
 +
-+test("jobsIndicator: empty for none, glyph alone for one, glyph+count for more", () => {
++test("jobsIndicator: empty for none, glyph+count otherwise", () => {
 +	assert.equal(jobsIndicator(0), "");
-+	assert.equal(jobsIndicator(1), "⏳");
++	assert.equal(jobsIndicator(1), "⏳1");
 +	assert.equal(jobsIndicator(4), "⏳4");
 +});
 +
@@ -287,10 +287,10 @@ index 0000000..b2f0bda
 +	return jobs;
 +}
 +
-+/** Roster/state-line cell: "" for none, "⏳" for one job, "⏳N" for more. */
++/** Roster/state-line cell: "" for none, "⏳N" for N jobs. */
 +export function jobsIndicator(count: number): string {
 +	if (count <= 0) return "";
-+	return count > 1 ? `⏳${count}` : "⏳";
++	return `⏳${count}`;
 +}
 +
 +/** Text for the model (list_subagents): plain words instead of a glyph. */
@@ -470,7 +470,7 @@ index 9b70823..865eee0 100644
 +
 +test("formatRoster: jobs column sits after the status, aligned, and only while some agent has jobs", () => {
 +	const rows = formatRoster([re({ name: "ab", jobs: 1 }), re({ name: "abcdef", status: { kind: "working", phase: "thinking" }, jobs: 3 })], 200);
-+	assert.equal(rows[0].indexOf("⏳"), rows[1].indexOf("⏳3"));
++	assert.equal(rows[0].indexOf("⏳1"), rows[1].indexOf("⏳3"));
 +	assert.ok(rows[0].indexOf("⏳") > rows[0].indexOf("idle"));
 +	assert.ok(rows[0].indexOf("⏳") < rows[0].indexOf("y"));
 +	assert.doesNotMatch(formatRoster([re({ jobs: 0 })], 200)[0], /⏳/);
@@ -478,7 +478,7 @@ index 9b70823..865eee0 100644
 +
 +test("swarmStateLine: appends the background job total only when non-zero", () => {
 +	assert.equal(swarmStateLine(1, 0, 3), " ▶ live · 1 working · ⏳3 ");
-+	assert.equal(swarmStateLine(0, 0, 1), " ▶ live · idle · ⏳ ");
++	assert.equal(swarmStateLine(0, 0, 1), " ▶ live · idle · ⏳1 ");
 +	assert.equal(swarmStateLine(0, 0), " ▶ live · idle ");
 +});
 diff --git a/extensions/actor-subagents/panel-logic.ts b/extensions/actor-subagents/panel-logic.ts

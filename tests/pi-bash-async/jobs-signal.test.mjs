@@ -51,8 +51,8 @@ const until = async (predicate, ms = 5000) => {
   return false;
 };
 
-test("jobsIndicator shows the glyph alone for one job and a count for more", () => {
-  assert.equal(mod.jobsIndicator(1), "⏳");
+test("jobsIndicator shows the glyph with the job count", () => {
+  assert.equal(mod.jobsIndicator(1), "⏳1");
   assert.equal(mod.jobsIndicator(3), "⏳3");
 });
 
@@ -101,7 +101,7 @@ test("/reload: the adopting instance announces the handed-over job and sets its 
   const next = instance("tui", fresh);
   await next.emit("session_start");
   assert.ok(await until(() => next.emitted.some((u) => u.running === 1)), "adopted job announced on the new bus");
-  assert.deepEqual(next.statuses.at(-1), ["bash-async", "⏳"]);
+  assert.deepEqual(next.statuses.at(-1), ["bash-async", "⏳1"]);
   await next.emit("session_shutdown", { reason: "quit" });
   assert.equal(old.emitted.length, oldCount, "the retired instance stays silent");
 });

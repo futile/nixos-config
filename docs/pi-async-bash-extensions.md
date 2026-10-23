@@ -154,7 +154,7 @@ that way, since #8225 shows upstream reluctance.
 - Jobs-signal patch (`patches/pi-bash-async-jobs-signal.patch`): on every job
   transition bash-async emits `pi.bash-async.v1:jobs` `{version: 1, running, jobs: [{id, title}]}`
   (queued + running jobs) on `pi.events`, re-emits on `pi.bash-async.v1:request`, and in the TUI sets the
-  `bash-async` footer status to `⏳` (one job) / `⏳N` (more), which pi-statusline shows.
+  `bash-async` footer status to `⏳N` (N running jobs), which pi-statusline shows.
   `patches/pi-actor-subagents-background-jobs.patch` listens on main's and every child's bus (a child
   extension factory, keyed by session id) and shows the count in a roster column after the status, in the
   swarm state line, in `list_subagents` (`idle · 2 bg jobs`), and in kill results (jobs stopped with the agent).

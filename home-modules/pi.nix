@@ -44,7 +44,7 @@ let
         chmod -R u+w "$out"
 
         patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-reload.patch}
-        # Announces unsettled jobs on pi.events and as the "bash-async" footer status (⏳/⏳N).
+        # Announces unsettled jobs on pi.events and as the "bash-async" footer status (⏳N).
         patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-jobs-signal.patch}
         # Shows the command in the call row and widget; default title = whole command, not its first word.
         patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-bash-async-command-display.patch}
