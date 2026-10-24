@@ -24,7 +24,7 @@ let
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-restart.patch}
     # bash-async jobs signal: swarm-line total, kill report, terminal progress while jobs run.
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-background-jobs.patch}
-    # extensionStatusKeys setting: allowlist + order for child extension statuses (upstream PR pending).
+    # childExtensionStatusKeys setting: allowlist for child extension statuses (upstream PR #7 pending).
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-extension-status-keys.patch}
   '';
 in
@@ -91,7 +91,7 @@ in
           "${config.home.homeDirectory}/.pi/agent/extensions/bash-async"
         ];
         # Children's other statuses (mcp, ponytail, ...) are noise in the roster.
-        extensionStatusKeys = [ "bash-async" ];
+        childExtensionStatusKeys = [ "bash-async" ];
       };
       # Async background bash jobs (fork: /reload keeps jobs, ⏳N footer status + pi.events signal
       # for actor-subagents, command display); its own tests live in the fork.
