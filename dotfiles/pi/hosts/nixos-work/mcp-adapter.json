@@ -20,6 +20,16 @@
       "command": "mcp-for-blender",
       "lifecycle": "lazy"
     },
+    "gridcraft": {
+      "command": "gridcraft-cli",
+      "args": ["mcp"],
+      "lifecycle": "lazy"
+    },
+    "gridcraft-app": {
+      "command": "gridcraft-cli",
+      "args": ["mcp", "--connect", "7979"],
+      "lifecycle": "lazy"
+    },
     "codebase-memory-mcp": {
       "command": "codebase-memory-mcp",
       "env": {
