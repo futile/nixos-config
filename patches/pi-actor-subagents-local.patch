@@ -1,29 +1,28 @@
 diff --git a/AGENTS.md b/AGENTS.md
-index e49f695..fff4928 100644
+index ca711a7..665bbfa 100644
 --- a/AGENTS.md
 +++ b/AGENTS.md
-@@ -34,7 +34,7 @@ When the main session is file-backed, `persistence.ts` stores `roster.json` and
+@@ -38,7 +38,7 @@ When the main session is file-backed, `persistence.ts` stores `roster.json` and
  ## External interfaces
  
  - Pi package entry: `extensions/actor-subagents/index.ts`
 -- Agent tools (`agent-tools.ts`, shared by every agent; 'main' skips `set_status`): `spawn_subagent`, `send_message`, `set_subagent_model`, `list_subagents`, `subagent_history`, `set_status`, `pause_subagents`, `resume_subagents`, `kill_subagents`
 +- Agent tools (`agent-tools.ts`, shared by every agent; 'main' skips `set_status`): `spawn_subagent`, `set_fast`, `send_message`, `set_subagent_model`, `list_subagents`, `subagent_history`, `set_status`, `pause_subagents`, `resume_subagents`, `kill_subagents`
  - Commands: `/subagents`, `/subagents-pause`, `/subagents-resume`, `/subagents-kill`
- - Custom message type and details shape: `agent-message.ts`
- - Settings (caps and child capability policy): `<pi agent dir>/actor-subagents/settings.json`, the agent dir being the SDK's `getAgentDir()` (normally `~/.pi/agent`)
+ - Custom message type and details shape: `agent-message.ts` (scheduler control notices and routed errors; error parts carry optional `actionable: true`, preserved through parsing and batching for restore)
+ - Reserved agent names: `main`, `scheduler`, `user`, `restore` (`engine.ts`)
 diff --git a/README.md b/README.md
-index 61d5c4c..00676fa 100644
+index 514aa7b..52b4804 100644
 --- a/README.md
 +++ b/README.md
-@@ -10,7 +10,7 @@ pi install git:github.com/fdietze/pi-actor-subagents
- 
- ## Interface
- 
--Every agent receives `spawn_subagent`, `send_message`, `set_subagent_model`, `list_subagents`, `subagent_history`, `set_status`, `pause_subagents`, `resume_subagents`, and `kill_subagents` (`set_status` is for background agents only). An agent pauses, resumes and kills only the agents it spawned and their descendants, and retunes those or itself; `main` owns them all. Messaging and inspection are open to everyone. Child agents receive the orchestration tools through pi's `customTools`; actor-subagents is not recursively loaded as a child extension.
-+Every agent receives `spawn_subagent`, `set_fast`, `send_message`, `set_subagent_model`, `list_subagents`, `subagent_history`, `set_status`, `pause_subagents`, `resume_subagents`, and `kill_subagents` (`set_status` is for background agents only). An agent pauses, resumes and kills only the agents it spawned and their descendants, and retunes those or itself; `main` owns them all. Messaging and inspection are open to everyone. Child agents receive the orchestration tools through pi's `customTools`; actor-subagents is not recursively loaded as a child extension.
- 
- The interactive UI shows a compact roster and provides:
- 
+@@ -25,6 +25,7 @@ Mouse controls use Pi's fullscreen mode. `/subagents` and the keyboard controls
+ | Tool | Purpose |
+ |---|---|
+ | `spawn_subagent` | Create a named agent with its own system prompt, initial task, model, and session. |
++| `set_fast` | Change Fast mode for yourself or one directly owned child. |
+ | `send_message` | Send a message to one or more agents, including parents, children, and peers. |
+ | `list_subagents`, `subagent_history` | Inspect agent state and conversations. |
+ | `set_subagent_model`, `set_status` | Change model or thinking level; report progress and ETA. |
 diff --git a/extensions/actor-subagents/activity.test.ts b/extensions/actor-subagents/activity.test.ts
 new file mode 100644
 index 0000000..ed108dd
@@ -269,10 +268,10 @@ index 0000000..bb8860a
 +	}
 +}
 diff --git a/extensions/actor-subagents/agent-record.ts b/extensions/actor-subagents/agent-record.ts
-index d6c20df..66b5247 100644
+index 2728cbd..010bc70 100644
 --- a/extensions/actor-subagents/agent-record.ts
 +++ b/extensions/actor-subagents/agent-record.ts
-@@ -77,6 +77,8 @@ export interface AgentRecord {
+@@ -96,6 +96,8 @@ export interface AgentRecord {
  	systemPrompt?: string;
  	/** Absolute path of this agent's session JSONL on disk (undefined for 'main' + in-memory). */
  	sessionFile?: string;
@@ -281,7 +280,7 @@ index d6c20df..66b5247 100644
  	/**
  	 * Phase of the running turn (reasoning vs answer text vs tool run); undefined means no
  	 * turn is running. Single field for "is it working" AND "at what": a separate streaming
-@@ -89,6 +91,8 @@ export interface AgentRecord {
+@@ -108,6 +110,8 @@ export interface AgentRecord {
  	etaTs?: number;
  	/** Tool name while `activity === "tool"`. */
  	currentTool?: string;
@@ -289,54 +288,46 @@ index d6c20df..66b5247 100644
 +	compacting?: boolean;
  	/** Terminal reason of the last finished turn; drives the idle-time status (error/truncated). Cleared when a new turn starts. */
  	stopReason?: StopReason;
- 	/**
+ 	/** Why the agent entered the error state; set with the `error` event, cleared with stopReason. */
 diff --git a/extensions/actor-subagents/agent-system-prompt.ts b/extensions/actor-subagents/agent-system-prompt.ts
-index 11f5ea5..8909ce0 100644
+index cc8a17f..e4839f7 100644
 --- a/extensions/actor-subagents/agent-system-prompt.ts
 +++ b/extensions/actor-subagents/agent-system-prompt.ts
 @@ -16,10 +16,11 @@ export function agentSystemPrompt(
      `You are agent "${name}" in a multi-agent system.`,
      `You were spawned by "${spawnedBy}".`,
      "You can talk to other agents with these tools:",
--    "- spawn_subagent({name, systemPrompt, model?, thinkingLevel?, message}): create a subagent inside this session (message = its first task); omit model/thinkingLevel to inherit yours.",
-+    "- spawn_subagent({name, systemPrompt, model?, thinkingLevel?, fast?, message}): create a subagent inside this session (message = its first task; omit fast unless the human operator explicitly requested an override; omission inherits your desired Fast state). Follow the active AGENTS.md model-routing policy when choosing model and thinking level; inheritance is only the fallback when no policy selects another route.",
+-    "- spawn_subagent({name, systemPrompt, model?, thinkingLevel?, message}): create a named background agent with its own model session (message = its first task); omit model/thinkingLevel to inherit yours.",
++    "- spawn_subagent({name, systemPrompt, model?, thinkingLevel?, fast?, message}): create a named background agent with its own model session (message = its first task; omit fast unless the human operator explicitly requested an override; omission inherits your desired Fast state). Follow the active AGENTS.md model-routing policy when choosing model and thinking level; inheritance is only the fallback when no policy selects another route.",
      '- send_message({to, content}): to is an array of agent names (multicast); fire-and-forget (e.g. ["main"]). It never waits for the reply, but it does report each receiver\'s state back to you.',
      "- list_subagents(): see who exists.",
-     "- pause_subagents({names?}) / resume_subagents({names?}) / kill_subagents({names}): control the agents in your subtree (those you spawned, and theirs); each acts on the named agents' whole subtrees. Omitted names in pause/resume mean your direct children.",
+     "- pause_subagents({names?}) / resume_subagents({names?}) / kill_subagents({names}): control the agents in your subtree (those you spawned, and theirs); each acts on the named agents' whole subtrees. Omitted, empty or whitespace-only names in pause/resume mean your direct children.",
 +    "- set_fast({enabled, agent?}): change your Fast state or that of one directly owned child.",
      "- set_status({status, etaMinutes?}): set your short status line (shown to others in list_subagents); empty string clears.",
-     "Messages you receive are prefixed with [message from <sender>].",
+     "Peer messages and scheduler notices are prefixed with [message from <sender>]; human panel input is a real user turn.",
      "",
-@@ -46,11 +47,11 @@ export function agentSystemPrompt(
-     "- If you are genuinely unsure (your task, a design decision, or a question another agent asked you), first try to resolve it yourself: explore the code, read docs, use your tools, or delegate to a peer/subagent.",
-     "- If it's a judgment only someone above you can make, escalate the question up to your spawner instead of fabricating an answer or a go-ahead. You cannot reach the user directly; uncertainty flows up the chain until it reaches someone (ultimately the user) who can decide.",
-     "",
--    "Event-driven — do NOT poll or busy-wait: you run only when a message arrives. After you",
--    "act, END YOUR TURN and go idle; you are automatically re-woken the moment another agent",
--    "messages you. Never poll list_subagents in a loop or try to 'wait' for a subagent to finish",
--    "— it wastes turns. If you spawned several agents, you are woken once per reply: track what",
--    "is still outstanding and finish only when all expected replies are in. Inspect",
-+    "Event-driven — do NOT poll or busy-wait: when no independent work remains and you need",
-+    "another agent's reply, END YOUR TURN and go idle; you are automatically re-woken when it",
-+    "messages you. Continue independent work while replies are outstanding. Never poll",
-+    "list_subagents in a loop or try to 'wait' for a subagent to finish — it wastes turns.",
-+    "If you spawned several agents, continue useful work while replies are outstanding; inspect",
-     "(list_subagents/subagent_history) only when you suspect a problem, not as a waiting mechanism.",
-     "",
-     systemPrompt,
+@@ -48,7 +49,7 @@ export function agentSystemPrompt(
+     "Replies can be batched. Pause/resume/kill notices are best-effort silent appends, not calls to act.",
+     "Only eligible live direct parents are told about explicit control targets; a parent acting itself is not notified.",
+     "A new terminal child error routes one scheduler message to its live direct parent; paused/stopping parents buffer it, never bypassing pause.",
+-    "Event-driven — after spawning or sending, END YOUR TURN. Do NOT poll or busy-wait.",
++    "Event-driven — when no independent work remains and you need another agent's reply, END YOUR TURN. Continue independent work while replies are outstanding. Do NOT poll or busy-wait.",
+     "A handoff/activity observation is not receipt, reading or completion; 'no reaction' means no activity observed in the brief window.",
+     "Track outstanding replies without assuming one new turn per reply. Inspect list_subagents/subagent_history",
+     "only if you suspect a problem, not as a waiting mechanism.",
 diff --git a/extensions/actor-subagents/agent-tools.ts b/extensions/actor-subagents/agent-tools.ts
-index 6ca8169..af173bb 100644
+index 0ace9c6..65f288c 100644
 --- a/extensions/actor-subagents/agent-tools.ts
 +++ b/extensions/actor-subagents/agent-tools.ts
-@@ -19,6 +19,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
- import { Text } from "@earendil-works/pi-tui";
+@@ -20,6 +20,7 @@ import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
  import { orderAgents } from "./agent-order.ts";
+ import { formatStatusDetail } from "./agent-status.ts";
 +import { describeFastState, setOwnedAgentFast } from "./fast-control.ts";
  import type { EngineResumeResult } from "./control-result.ts";
  import type { Engine } from "./engine.ts";
  import {
-@@ -34,6 +35,7 @@ import type { AgentModelSetter } from "./set-agent-model.ts";
+@@ -35,6 +36,7 @@ import type { AgentModelSetter } from "./set-agent-model.ts";
  import type { Spawner } from "./spawner.ts";
  import { collapseBlock, toolPreviewParts } from "./tool-preview.ts";
  import { THINKING_LEVELS } from "./thinking-level.ts";
@@ -344,32 +335,26 @@ index 6ca8169..af173bb 100644
  
  // Tool-call preview that shows the FULL parameter content. Without a custom renderCall,
  // pi's fallback for registered tools shows only the tool name (see ToolExecutionComponent
-@@ -130,11 +132,14 @@ export function makeAgentTools(
-         "Create a subagent — a helper that runs inside your current session. Give it a system prompt and its first message (the task). " +
-         "It can then be messaged by name. The result briefly checks whether the new agent picked its task up and " +
-         "reports its state ('idle (no reaction)' means it received the task but did not start a turn). " +
--        "Event-driven & fire-and-forget: after spawning, END YOUR TURN — you are automatically re-woken when an agent " +
--        "messages you back. Do NOT poll list_subagents or wait in a loop for completion; it wastes turns. Inspect " +
-+        "Event-driven & fire-and-forget: continue independent work after spawning. When no independent work remains " +
-+        "and you need the agent's reply, END YOUR TURN; you are automatically re-woken when it messages you. Do NOT " +
-+        "poll list_subagents or wait in a loop for completion; it wastes turns. Inspect " +
-         "(list_subagents/subagent_history) only if you suspect something went wrong. The new agent's first reply will be " +
-         "its understanding of the task plus clarification questions, then it waits — reply using send_message " +
--        "(go-ahead + any corrections) to unblock its work." +
-+        "(go-ahead + any corrections) to unblock its work. Follow the active AGENTS.md model-routing policy when choosing " +
-+        "model and thinking level; inheritance is only the fallback when no policy selects another route." +
-+
-         // Only main can reach the human; subagents escalate uncertainty up their own chain instead.
+@@ -128,8 +130,9 @@ export function makeAgentTools(
+         "Create a subagent — a named background agent with its own model session. Give it a system prompt and its first message (the task). " +
+         "File-backed sessions attempt to save membership and transcripts; roster write failures are not reported. Reopening the same main session attempts paused restoration; missing files, unavailable models or reopen failures skip agents. Resume restored agents explicitly. Buffered messages, pending notices, custom status and ETA are not persisted. " +
+         "The result reports handoff and briefly observed activity, not receipt or task completion. 'idle (no reaction)' means no activity was observed during that window; main is not watched. " +
+-        "After spawning, END YOUR TURN. Replies start an idle recipient or steer a busy one after current tools, before the next model request; paused or still-stopping recipients buffer messages. Do NOT poll or wait in a loop; inspect only if you suspect a problem. " +
+-        "The child is instructed to reply with its understanding and questions, then wait for your send_message go-ahead; this is a protocol, not guaranteed compliance." +
++        "After spawning, continue independent work. When no independent work remains and you need the reply, END YOUR TURN. Replies start an idle recipient or steer a busy one after current tools, before the next model request; paused or still-stopping recipients buffer messages. Do NOT poll or wait in a loop; inspect only if you suspect a problem. " +
++        "The child is instructed to reply with its understanding and questions, then wait for your send_message go-ahead; this is a protocol, not guaranteed compliance. " +
++        "Follow the active AGENTS.md model-routing policy when choosing model and thinking level; inheritance is only the fallback when no policy selects another route." +
+         // Subagents escalate user questions through their spawner rather than opening a user dialog.
          (selfName === "main"
            ? " If a spawned agent asks something you can't confidently answer yourself, ask the user rather than guessing."
-@@ -147,14 +152,21 @@ export function makeAgentTools(
+@@ -142,14 +145,21 @@ export function makeAgentTools(
          model: Type.Optional(
            Type.String({
              description:
 -              "Omit to inherit your current model (the default — almost always correct). Set 'provider/id' " +
--              "ONLY when the user explicitly named a specific model; a wrong value returns the available list.",
+-              "ONLY when the user explicitly named a specific model; an unknown value reports available models when any are listed.",
 +              "Omit to inherit when no active routing policy selects another model. Otherwise pass the 'provider/id' " +
-+              "selected by AGENTS.md or explicitly requested by the user; a wrong value returns the available list.",
++              "selected by AGENTS.md or explicitly requested by the user; an unknown value reports available models when any are listed.",
            }),
          ),
          thinkingLevel: Type.Optional(
@@ -387,7 +372,7 @@ index 6ca8169..af173bb 100644
            }),
          ),
          // Required, not optional: an agent that receives no message never gets a turn and
-@@ -171,6 +183,7 @@ export function makeAgentTools(
+@@ -166,6 +176,7 @@ export function makeAgentTools(
              systemPrompt: args.systemPrompt,
              model: args.model,
              thinkingLevel: args.thinkingLevel,
@@ -395,18 +380,16 @@ index 6ca8169..af173bb 100644
              message: args.message,
            },
            selfName,
-@@ -195,8 +208,8 @@ export function makeAgentTools(
-         "reply, only briefly for the receiver to pick the message up, and then reports each receiver's state back: a " +
-         "working state (thinking/writing/tool) means it is running a turn, 'idle (no reaction)' means it took the " +
-         "message but did not start one, and buffered/gone mean it is paused or no longer exists. " +
--        "After sending, END YOUR TURN — you are automatically re-woken if a reply arrives. Do NOT poll or wait in a " +
--        "loop; inspect only if you suspect a problem.",
-+        "After sending, continue independent work. When no independent work remains and you need a reply, END YOUR TURN; " +
-+        "you are automatically re-woken if a reply arrives. Do NOT poll or wait in a loop; inspect only if you suspect a problem.",
+@@ -188,7 +199,7 @@ export function makeAgentTools(
+         "Use send_message to actively deliver a reply to agents. Ordinary assistant text is not routed, but is readable through subagent_history and the human's panel. " +
+         "Messages are handed off without waiting for completion: idle recipients start a run, busy recipients are steered after current tools, before the next model request, and paused or still-stopping recipients buffer them. " +
+         "The result briefly observes receiver activity, not receipt or reading. 'idle (no reaction)' means no activity was observed during that window, not that the message was ignored; main is not watched. Later delivery can fail. " +
+-        "Pause/resume/kill notices are best-effort silent appends to eligible live direct parents of explicit targets, excluding the acting parent. A new terminal child error routes one scheduler message to its live direct parent: it can start or steer a run, or buffer while paused/stopping. After sending, END YOUR TURN; replies may be batched, not one turn per reply. Do NOT poll or wait in a loop; inspect only if you suspect a problem.",
++        "Pause/resume/kill notices are best-effort silent appends to eligible live direct parents of explicit targets, excluding the acting parent. A new terminal child error routes one scheduler message to its live direct parent: it can start or steer a run, or buffer while paused/stopping. After sending, continue independent work; when none remains and you need a reply, END YOUR TURN; replies may be batched, not one turn per reply. Do NOT poll or wait in a loop; inspect only if you suspect a problem.",
        parameters: Type.Object({
          // Array-only, not a Union: weak models drop `to` entirely when the schema is
          // anyOf(string, array). A flat array removes the choice and is type-honest.
-@@ -457,6 +470,37 @@ export function makeAgentTools(
+@@ -451,6 +462,37 @@ export function makeAgentTools(
          return { content: [{ type: "text", text }], details: {} };
        },
      }),
@@ -445,10 +428,10 @@ index 6ca8169..af173bb 100644
        name: "set_status",
        label: "Set Status",
 diff --git a/extensions/actor-subagents/engine.ts b/extensions/actor-subagents/engine.ts
-index d28ac18..b6d4573 100644
+index ea6f12c..92469f8 100644
 --- a/extensions/actor-subagents/engine.ts
 +++ b/extensions/actor-subagents/engine.ts
-@@ -178,6 +178,7 @@ export class Engine {
+@@ -188,6 +188,7 @@ export class Engine {
  			reconfigure?: AgentRecord["reconfigure"];
  			systemPrompt?: string;
  			sessionFile?: string;
@@ -456,7 +439,7 @@ index d28ac18..b6d4573 100644
  		},
  	): void {
  		const rec = this.agents.get(name);
-@@ -190,6 +191,7 @@ export class Engine {
+@@ -200,6 +201,7 @@ export class Engine {
  		rec.reconfigure = opts.reconfigure;
  		rec.systemPrompt = opts.systemPrompt;
  		rec.sessionFile = opts.sessionFile;
@@ -649,18 +632,18 @@ index 0000000..93a21e2
 +	return `Fast desired ${desired}; effective ${effective}${reason}`;
 +}
 diff --git a/extensions/actor-subagents/feed.ts b/extensions/actor-subagents/feed.ts
-index 1a3bd96..f1c2ba0 100644
+index 395595d..f6e90eb 100644
 --- a/extensions/actor-subagents/feed.ts
 +++ b/extensions/actor-subagents/feed.ts
-@@ -8,6 +8,7 @@ import type { AgentRecord } from "./agent-record.ts";
- import type { ControlResult, EngineResumeResult } from "./control-result.ts";
+@@ -9,6 +9,7 @@ import type { ControlResult, EngineResumeResult } from "./control-result.ts";
  import type { Reaction } from "./engine.ts";
  import { formatCustomStatus } from "./eta.ts";
+ import { describeExtensionStatuses } from "./extension-status.ts";
 +import { describeFastState, FAST_ROSTER_MARKER, readFastState } from "./fast-control.ts";
  import { formatModelThinking } from "./thinking-level.ts";
  
  /** Compact relative age: 3s / 4m / 2h. */
-@@ -78,6 +79,13 @@ export function formatSnapshot(
+@@ -79,6 +80,13 @@ export function formatSnapshot(
  		const rel = relTo(a, viewer, viewerParent);
  		const queued = a.pending && a.buffer && a.buffer.length > 0 ? `, ${a.buffer.length} queued` : "";
  		const model = formatModelThinking(a.model, a.thinkingLevel);
@@ -674,20 +657,20 @@ index 1a3bd96..f1c2ba0 100644
  		// The foreground agent's turns are pi's own, not this engine's, and it has no spawner —
  		// printing "turns:0 (by main)" for it would state two things that are not true.
  		const isMain = a.name === "main";
-@@ -86,7 +94,7 @@ export function formatSnapshot(
+@@ -89,7 +97,7 @@ export function formatSnapshot(
  		return (
  			`  ${nameCell(o).padEnd(nameW)} ${rel.padEnd(6)} ${fit(status, statusW)} ` +
  			`turns:${turns.padEnd(3)} ctx:${ctx.padEnd(4)} last ${formatAge(now - a.lastActivity).padEnd(4)} ` +
--			`${model}  ${origin}`
-+			`${modelFast}${fastDetails}  ${origin}`
+-			`${model}  ${origin}${extensions ? `  ${extensions}` : ""}`
++			`${modelFast}${fastDetails}  ${origin}${extensions ? `  ${extensions}` : ""}`
  		);
  	});
  	return ["agents:", ...rows].join("\n");
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 7da91f3..94f4391 100644
+index 1349cdf..abcb024 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
-@@ -16,7 +16,7 @@ import {
+@@ -17,13 +17,14 @@ import {
    SessionManager,
    SettingsManager,
  } from "@earendil-works/pi-coding-agent";
@@ -695,8 +678,7 @@ index 7da91f3..94f4391 100644
 +import { sliceByColumn, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
  import {
    AGENT_MESSAGE_CUSTOM_TYPE,
-   createRoutedAgentMessage,
-@@ -24,12 +24,14 @@ import {
+   toCustomAgentMessage,
    type RoutedAgentMessage,
  } from "./agent-message.ts";
  import { renderAgentMessage } from "./agent-message-renderer.ts";
@@ -704,26 +686,27 @@ index 7da91f3..94f4391 100644
  import { orderAgents } from "./agent-order.ts";
  import { agentSystemPrompt } from "./agent-system-prompt.ts";
  import { makeAgentTools } from "./agent-tools.ts";
- import type { AgentHandle } from "./agent-record.ts";
+@@ -31,6 +32,7 @@ import type { AgentHandle } from "./agent-record.ts";
  import type { EngineResumeResult } from "./control-result.ts";
+ import { authorityOf } from "./authorize.ts";
  import { Engine } from "./engine.ts";
 +import { readFastState, setFastDesired } from "./fast-control.ts";
- import { errorNotification } from "./error-notification.ts";
  import {
    formatControlResult,
-@@ -162,7 +164,10 @@ const RESUME_NUDGE = (now: Date) => {
- //      records. pause/resume/kill/retune take the acting agent first; pause/resume/kill take a
- //      names list and return per-target outcomes; pause aborts the stopped turns itself and
- //      resume is async, waiting for those aborts. A v25 instance would keep a swarm-wide pause this code can no longer lift.
--const ENGINE_KEY = "__subagentsEngine_v26";
-+// v27: the live session UUID and compaction flags join AgentRecord; old singleton records
+   formatResumeResult,
+@@ -170,7 +172,10 @@ const RESUME_NUDGE = (now: Date, by: string) => {
+ //      append/busy). A v26 instance would treat a string flag as foreign and lack these methods.
+ // v28: terminal errors route actionable scheduler messages instead of silent notices; v27
+ //      would retain the old announce/route methods after /reload and never wake a parent.
+-const ENGINE_KEY = "__subagentsEngine_v28";
++// v29: the live session UUID and compaction flags join AgentRecord; old singleton records
 +//      cannot supply Fast ownership or accurate activity after a same-process reload.
-+const ENGINE_KEY = "__subagentsEngine_v27";
++const ENGINE_KEY = "__subagentsEngine_v29";
 +const AGENT_NAME_LOOKUP_KEY = Symbol.for("futile.pi.subagents.agent-name-lookup.v1");
  
  function getEngine(): Engine {
    const g = globalThis as Record<string, unknown>;
-@@ -254,6 +259,9 @@ function disposeProcessHooks(dispose: () => void): void {
+@@ -284,6 +289,9 @@ function disposeProcessHooks(dispose: () => void): void {
  
  export default function subagents(pi: ExtensionAPI) {
    const engine = getEngine();
@@ -733,7 +716,7 @@ index 7da91f3..94f4391 100644
  
    // The toolset acting as `selfName`. Deps are collected per call, so this stays independent
    // of the order in which spawnAgent/updateStatus below are defined.
-@@ -292,12 +300,12 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -325,12 +333,12 @@ export default function subagents(pi: ExtensionAPI) {
    // ModelRuntime. ModelRuntime.create() with no args reads getAgentDir()/auth.json
    // + models.json — the SAME credentials and models the foreground uses. subagents()
    // is synchronous, so build asynchronously and expose the runtime via a promise;
@@ -750,27 +733,22 @@ index 7da91f3..94f4391 100644
      return runtime;
    });
  
-@@ -409,6 +417,7 @@ export default function subagents(pi: ExtensionAPI) {
-           depth: rosterDepth(depth),
-           model: a.model,
-           thinkingLevel: a.thinkingLevel,
-+          fastEffective: readFastState(a.sessionId)?.effective,
-           context: formatContext(a.view?.getContextUsage()),
-           status: engine.status(a),
-           customStatus: a.customStatus,
-@@ -416,7 +425,7 @@ export default function subagents(pi: ExtensionAPI) {
-           targets: formatSendTargets(matrix, a.name, live),
-         })),
-         width,
--        { styleStatus: styler },
-+        { display: { visibleWidth, sliceByColumn }, styleStatus: styler },
-       ).map((line) => truncateToWidth(line, width));
-       const running = background.filter(
-         (o) => engine.status(o.agent).kind === "working",
-@@ -443,6 +452,24 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -430,7 +438,7 @@ export default function subagents(pi: ExtensionAPI) {
+           const rosterLines = formatRoster(
+             rosterEntries(engine, background),
+             width,
+-            { styleStatus: styler },
++            { display: { visibleWidth, sliceByColumn }, styleStatus: styler },
+           ).map((line) => truncateToWidth(line, width));
+           const running = background.filter(
+             (o) => engine.status(o.agent).kind === "working",
+@@ -457,9 +465,36 @@ export default function subagents(pi: ExtensionAPI) {
      }
    };
  
+-  // Update the status on every engine event.
+-  const unsubscribeEngine = engine.subscribe(() => updateStatus());
+-  installProcessHooks(unsubscribeEngine);
 +  // Publish one aggregate background source over Pi's shared foreground extension bus. Raw work
 +  // is independent from terminal OSC policy, which is refreshed while work remains active.
 +  const activityPublisher = new ActivityPublisher({
@@ -789,32 +767,22 @@ index 7da91f3..94f4391 100644
 +  });
 +  const clearActivityRequest = pi.events.on(AGENT_ACTIVITY_REQUEST_EVENT, () => updateActivitySource(true));
 +
-   // Tell a parent that its child broke. The child owes its parent a message that a failed turn
-   // will never send, so without this the parent waits forever (see error-notification.ts for the
-   // decision, including who is deliberately not told).
-@@ -471,9 +498,10 @@ export default function subagents(pi: ExtensionAPI) {
-     });
-   };
- 
--  // Update the status on every engine event.
 +  // Update the status and aggregate activity on every engine event.
-   const unsubscribeEngine = engine.subscribe((e) => {
-     if (e.type === "error") notifyParentOfError(e);
++  const unsubscribeEngine = engine.subscribe(() => {
 +    updateActivitySource();
-     updateStatus();
-   });
-   // The roster widget hands pi fully composed lines truncated to the width they were built at,
-@@ -486,6 +514,9 @@ export default function subagents(pi: ExtensionAPI) {
-   const disposeHooks = () => {
-     process.stdout.off("resize", updateStatus);
-     unsubscribeEngine();
++    updateStatus();
++  });
++  const disposeHooks = () => {
++    unsubscribeEngine();
 +    clearActivityRequest();
 +    activityPublisher.dispose();
 +    clearActivityNotifier();
-   };
-   installProcessHooks(disposeHooks);
++  };
++  installProcessHooks(disposeHooks);
  
-@@ -528,6 +559,7 @@ export default function subagents(pi: ExtensionAPI) {
+   // Policy lives in resolve-model.ts (pure); this only binds it to the live registry.
+   const resolveModel = (ref: string | undefined): ResolvedModel | undefined =>
+@@ -482,6 +517,7 @@ export default function subagents(pi: ExtensionAPI) {
        spawnedBy: string;
        model: unknown;
        thinkingLevel?: ThinkingLevel;
@@ -822,14 +790,15 @@ index 7da91f3..94f4391 100644
      },
      existingFile?: string,
    ): Promise<{ session: SessionLike; sessionFile?: string }> => {
-@@ -572,19 +604,17 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -526,20 +562,18 @@ export default function subagents(pi: ExtensionAPI) {
      let sm: SessionManager;
      if (existingFile) {
        sm = SessionManager.open(existingFile);
 +      // A manually renamed restored child owns its label; only unnamed sessions get the
 +      // generated actor name. appendSessionInfo is the supported SDK metadata API.
 +      if (!sm.getSessionName()) sm.appendSessionInfo(spec.name);
-       reconcileDangling(sm);
+       // Separation of Concerns: Pi normalizes outbound requests; restoration keeps
+       // observed history intact because a missing result cannot prove an action failed.
      } else if (subDir) {
        fs.mkdirSync(subDir, { recursive: true });
        sm = SessionManager.create(cwd, subDir);
@@ -847,16 +816,17 @@ index 7da91f3..94f4391 100644
      }
  
      // Leave the built-in tool allowlist unset so the agent inherits the full default
-@@ -603,8 +633,31 @@ export default function subagents(pi: ExtensionAPI) {
-       settingsManager: childSettings,
+@@ -569,8 +603,32 @@ export default function subagents(pi: ExtensionAPI) {
+       // Writes arrive outside any tool call (job timers, session_start), so redraw here.
+       updateStatus();
      });
-     // SDK sessions do not start extension lifecycles until the host explicitly binds them.
--    await session.bindExtensions({ mode: "print" });
+-    await session.bindExtensions({ mode: "rpc", uiContext });
 +    // Bind first so codex-fast can register this session, then apply the inherited/explicit state
 +    // before any first prompt is delivered. Missing control is a visible capability failure.
 +    try {
 +      await session.bindExtensions({
-+        mode: "print",
++        mode: "rpc",
++        uiContext,
 +        onError: (error) => {
 +          console.error(`Subagent extension error (${error.extensionPath}): ${error.error}`);
 +        },
@@ -880,7 +850,7 @@ index 7da91f3..94f4391 100644
        sendAgentMessage: (message, options) =>
          session.sendCustomMessage(toCustomAgentMessage(message), {
            triggerTurn: true,
-@@ -652,7 +705,8 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -627,7 +685,8 @@ export default function subagents(pi: ExtensionAPI) {
      engine,
      resolveModel,
      createSession,
@@ -890,7 +860,7 @@ index 7da91f3..94f4391 100644
      listAvailableModels: listModels,
    });
  
-@@ -731,8 +785,10 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -706,8 +765,10 @@ export default function subagents(pi: ExtensionAPI) {
            pausedMidTurn:
              deriveStatus(session.messages as RawMessage[]) === "pausedMidTurn",
          });
@@ -903,7 +873,7 @@ index 7da91f3..94f4391 100644
        }
      }
      // Present the restored swarm as paused: pausing main's direct children holds every restored
-@@ -822,10 +878,11 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -804,10 +865,11 @@ export default function subagents(pi: ExtensionAPI) {
        (s) => `${s.model.provider}/${s.model.id}`,
      );
      // Locate this main session's subagents dir (persistence + restore are keyed by it).
@@ -917,7 +887,7 @@ index 7da91f3..94f4391 100644
      } catch {
        subDir = undefined;
      }
-@@ -849,27 +906,41 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -833,30 +895,44 @@ export default function subagents(pi: ExtensionAPI) {
          createdAt: Date.now(),
          turns: 0,
          lastActivity: Date.now(),
@@ -933,6 +903,9 @@ index 7da91f3..94f4391 100644
 +      if (main) main.sessionId = mainSessionId;
      }
      await restoreSwarm();
+     // A live ctx is captured again only now: notices queued while it was stale (after a reload)
+     // would otherwise wait for main's next run to settle.
+     engine.flushNotices("main");
 +    updateActivitySource(true);
 +    await activityPublisher.refreshTerminalProgress();
      updateStatus();
@@ -942,7 +915,7 @@ index 7da91f3..94f4391 100644
 -    // A same-version /reload must retain the singleton's live children. Real foreground
 -    // replacement/quit closes their runtimes but deliberately leaves roster.json intact.
 -    if (event.reason === "reload") return;
--    disposeProcessHooks(disposeHooks);
+-    disposeProcessHooks(unsubscribeEngine);
 +    // A same-version /reload retains the singleton's live children, but this foreground runtime's
 +    // callbacks and event publisher must be detached. Retained child callbacks resolve the fresh
 +    // notifier through globalThis after the replacement extension loads.
@@ -965,10 +938,10 @@ index 7da91f3..94f4391 100644
  
    // Register the foreground tools for 'main'. set_status is background-only: main has
 diff --git a/extensions/actor-subagents/panel-logic.test.ts b/extensions/actor-subagents/panel-logic.test.ts
-index f0d77ea..9b70823 100644
+index 22c9df3..01a2cb0 100644
 --- a/extensions/actor-subagents/panel-logic.test.ts
 +++ b/extensions/actor-subagents/panel-logic.test.ts
-@@ -128,15 +128,12 @@ test("formatRoster: aligns the status column across rows (shared name-column wid
+@@ -136,15 +136,12 @@ test("formatRoster: aligns the status column across rows (shared name-column wid
  	assert.equal(rows[0].indexOf("idle"), rows[1].indexOf("thinking")); // same x → aligned
  });
  
@@ -989,8 +962,8 @@ index f0d77ea..9b70823 100644
 +	assert.doesNotMatch(rows.join("\n"), /…/);
  });
  
- test("formatRoster: reading order is name, system status, model, ETA, context, custom status, targets", () => {
-@@ -338,9 +335,9 @@ test("formatRoster: indent keeps the columns aligned", () => {
+ test("formatRoster: reading order is name, system status, model, ETA, context, custom status, targets, extensions", () => {
+@@ -374,11 +371,11 @@ test("formatRoster: indent keeps the columns aligned", () => {
  	assert.equal(rows[0].indexOf("x/y"), rows[1].indexOf("x/y"));
  });
  
@@ -1002,19 +975,21 @@ index f0d77ea..9b70823 100644
 -	assert.equal(deep, `   ${flat}`); // same 24-char name cell, only shifted by the indent
 +	assert.equal(deep, `   ${flat}`); // same full name, only shifted by the indent
  });
+ 
+ const errored = { kind: "idle", outcome: "error" } as const;
 diff --git a/extensions/actor-subagents/panel-logic.ts b/extensions/actor-subagents/panel-logic.ts
-index d21d51a..3f560e8 100644
+index 2c68e13..b8c920a 100644
 --- a/extensions/actor-subagents/panel-logic.ts
 +++ b/extensions/actor-subagents/panel-logic.ts
-@@ -6,6 +6,7 @@ import {
- } from "./agent-message.ts";
- import { type AgentStatus, formatStatus } from "./agent-status.ts";
+@@ -7,6 +7,7 @@ import {
+ import { type AgentStatus, formatStatus, formatStatusDetail } from "./agent-status.ts";
  import { formatEtaSuffix } from "./eta.ts";
+ import { EXTENSION_STATUS_MAX } from "./extension-status.ts";
 +import { FAST_ROSTER_MARKER } from "./fast-control.ts";
  import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
  
  export interface ContextUsageLike {
-@@ -71,6 +72,8 @@ export interface RosterEntry {
+@@ -72,6 +73,8 @@ export interface RosterEntry {
  	depth: number;
  	model: string;
  	thinkingLevel?: ThinkingLevel;
@@ -1023,20 +998,20 @@ index d21d51a..3f560e8 100644
  	context: string;
  	/** Structured system status (agent-status.ts); the row renders label + tone from it. */
  	status: AgentStatus;
-@@ -141,33 +144,44 @@ export function formatModel(model: string | undefined, thinkingLevel: ThinkingLe
- // at all. The rest collapse — whole column dropped, all rows — when the terminal is too narrow,
- // least informative first:
- //   targets → custom-status → context → eta → model
+@@ -171,33 +174,44 @@ export function formatModel(model: string | undefined, thinkingLevel: ThinkingLe
+ // Extensions comes last although it outranks targets: it is the only column with foreign text,
+ // whose glyphs (e.g. emoji) may be wider than their string length, so at the end of the row a
+ // misjudged width cannot shift any other column.
 -// The name cell carries the spawn-tree indent (one space per depth level), added on top of the
 -// name's own cap so nesting never costs name characters.
 +// The name cell carries the spawn-tree indent (one space per depth level).
  // Alignment requires a roster-wide pass (column widths = max content across agents), so this
 -// replaces any per-row formatting. Layout math is plain-text (ASCII content + single-width
--// glyphs); the status cell is styled only AFTER padding so ANSI never corrupts the widths.
+-// glyphs); status styling excludes the column padding and uses the unstyled text's width.
 -// Callers still wrap each line in the ANSI-aware truncateToWidth as a final overflow guard.
 +// replaces any per-row formatting. Layout uses terminal display columns so astral/emoji glyphs do
-+// not cause premature collapse; the status cell is styled only AFTER padding so ANSI never
-+// corrupts the widths. Callers still wrap each line in the ANSI-aware truncateToWidth as a final
++// not cause premature collapse; status styling excludes the column padding and uses the unstyled
++// text's width. Callers still wrap each line in the ANSI-aware truncateToWidth as a final
 +// overflow guard.
 +
 +export interface RosterDisplayWidth {
@@ -1050,12 +1025,12 @@ index d21d51a..3f560e8 100644
 +	sliceByColumn: (text, start, length) => text.slice(start, start + length),
 +};
  export const CUSTOM_STATUS_MAX = 32; // hard cap on the agent-set status (also stated in the set_status prompt)
- const SYS_STATUS_CAP = 18;
+ const SYS_STATUS_CAP = 18; // short labels only (formatStatus); a long tool name is cut
  
 -/** Truncate to width with a trailing ellipsis (plain-text width). */
 -function fitEnd(s: string, w: number): string {
 +/** Truncate to terminal display width with a trailing ellipsis. */
-+function fitEnd(s: string, w: number, display: RosterDisplayWidth): string {
++function fitEnd(s: string, w: number, display: RosterDisplayWidth = plainDisplay): string {
  	if (w <= 0) return "";
 -	if (s.length <= w) return s;
 -	return w === 1 ? "…" : `${s.slice(0, w - 1)}…`;
@@ -1084,7 +1059,7 @@ index d21d51a..3f560e8 100644
  }
  
  interface ColSpec {
-@@ -191,11 +205,13 @@ export function formatRoster(
+@@ -221,11 +235,13 @@ export function formatRoster(
  	width: number,
  	opts: {
  		selectedIndex?: number;
@@ -1098,7 +1073,7 @@ index d21d51a..3f560e8 100644
  	const styleStatus = opts.styleStatus ?? ((l) => l);
  
  	const cols: ColSpec[] = [
-@@ -203,11 +219,15 @@ export function formatRoster(
+@@ -233,11 +249,15 @@ export function formatRoster(
  			key: "name",
  			collapseRank: 0,
  			fit: "middle",
@@ -1107,17 +1082,17 @@ index d21d51a..3f560e8 100644
 +			cellOf: (e) => `${" ".repeat(e.depth)}${e.name}`,
  		},
  		{ key: "status", collapseRank: 0, fit: "end", cap: SYS_STATUS_CAP, cellOf: (e) => formatStatus(e.status) },
--		{ key: "model", collapseRank: 5, fit: "end", cellOf: (e) => formatModel(e.model, e.thinkingLevel) },
+-		{ key: "model", collapseRank: 6, fit: "end", cellOf: (e) => formatModel(e.model, e.thinkingLevel) },
 +		{
 +			key: "model",
-+			collapseRank: 5,
++			collapseRank: 6,
 +			fit: "end",
 +			cellOf: (e) => `${formatModel(e.model, e.thinkingLevel)}${e.fastEffective ? ` ${FAST_ROSTER_MARKER}` : ""}`,
 +		},
- 		{ key: "eta", collapseRank: 4, fit: "end", cellOf: (e) => (e.etaTs != null ? formatEtaSuffix(e.etaTs) : "") },
- 		{ key: "context", collapseRank: 3, fit: "end", cellOf: (e) => e.context },
- 		{ key: "custom", collapseRank: 2, fit: "end", cap: CUSTOM_STATUS_MAX, cellOf: (e) => e.customStatus ?? "" },
-@@ -218,7 +238,7 @@ export function formatRoster(
+ 		{ key: "eta", collapseRank: 5, fit: "end", cellOf: (e) => (e.etaTs != null ? formatEtaSuffix(e.etaTs) : "") },
+ 		{ key: "context", collapseRank: 4, fit: "end", cellOf: (e) => e.context },
+ 		{ key: "custom", collapseRank: 3, fit: "end", cap: CUSTOM_STATUS_MAX, cellOf: (e) => e.customStatus ?? "" },
+@@ -250,7 +270,7 @@ export function formatRoster(
  	const widthOf = new Map<string, number>();
  	for (const c of cols) {
  		let w = 0;
@@ -1126,63 +1101,68 @@ index d21d51a..3f560e8 100644
  		widthOf.set(c.key, c.cap != null ? Math.min(w, c.cap) : w);
  	}
  
-@@ -243,11 +263,12 @@ export function formatRoster(
+@@ -275,12 +295,11 @@ export function formatRoster(
  		const selected = opts.selectedIndex === i;
  		const cells = visible.map((c) => {
  			const w = widthOf.get(c.key) ?? 0;
--			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w).padEnd(w);
+-			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w);
 +			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w, display);
-+			const padded = `${fitted}${" ".repeat(Math.max(0, w - display.visibleWidth(fitted)))}`;
- 			// Tone styling keys off the SYSTEM status only, applied after padding so widths stay exact.
- 			// The selected row is left plain: a background inside it ends with a background reset,
- 			// which would cut the row highlight in half.
--			return c.key === "status" && !selected ? styleStatus(fitted, statusTone(e.status)) : fitted;
-+			return c.key === "status" && !selected ? styleStatus(padded, statusTone(e.status)) : padded;
++			const pad = " ".repeat(Math.max(0, w - display.visibleWidth(fitted)));
+ 			// Separation of Concerns: highlight the status label, not the table's alignment padding.
+ 			// The selected row is left plain: a background reset inside it would cut its highlight.
+-			return c.key === "status" && !selected
+-				? styleStatus(fitted, statusTone(e.status)) + " ".repeat(w - fitted.length)
+-				: fitted.padEnd(w);
++			return c.key === "status" && !selected ? styleStatus(fitted, statusTone(e.status)) + pad : fitted + pad;
  		});
  		const line = cells.join(" ").replace(/ +$/, "");
  		return selected && opts.styleSelected ? opts.styleSelected(line) : line;
 diff --git a/extensions/actor-subagents/panel.ts b/extensions/actor-subagents/panel.ts
-index e1e76e4..55ab852 100644
+index 966aad4..ccd5979 100644
 --- a/extensions/actor-subagents/panel.ts
 +++ b/extensions/actor-subagents/panel.ts
-@@ -15,7 +15,7 @@
+@@ -11,7 +11,7 @@
   * TranscriptDocument so pi's own line caches apply, and scrolled by pi's ScrollView so wheel,
   * page and half-page movement behave exactly like the main chat.
   */
--import { Editor, type EditorTheme, Key, matchesKey, ScrollView, truncateToWidth } from "@earendil-works/pi-tui";
-+import { Editor, type EditorTheme, Key, matchesKey, ScrollView, sliceByColumn, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
- import { isMouseReport, parseWheelEvent } from "./mouse-input.ts";
+-import { Editor, type EditorTheme, Key, matchesKey, ScrollView, truncateToWidth, visibleWidth, type TuiMouseEvent } from "@earendil-works/pi-tui";
++import { Editor, type EditorTheme, Key, matchesKey, ScrollView, sliceByColumn, truncateToWidth, visibleWidth, type TuiMouseEvent } from "@earendil-works/pi-tui";
  import { nextInCycle } from "./next-in-cycle.ts";
  import { THINKING_LEVELS } from "./thinking-level.ts";
-@@ -27,6 +27,7 @@ import {
- } from "@earendil-works/pi-coding-agent";
- import { AGENT_MESSAGE_CUSTOM_TYPE } from "./agent-message.ts";
- import { renderAgentMessage } from "./agent-message-renderer.ts";
-+import { readFastState } from "./fast-control.ts";
- import { orderAgents } from "./agent-order.ts";
- import type { Engine } from "./engine.ts";
  import {
-@@ -394,6 +395,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
- 					depth: rosterDepth(depth),
- 					model: a.model,
- 					thinkingLevel: a.thinkingLevel,
-+					fastEffective: readFastState(a.sessionId)?.effective,
- 					context: formatContext(a.view?.getContextUsage()),
- 					status: deps.engine.status(a),
- 					customStatus: a.customStatus,
-@@ -402,6 +404,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
- 				})),
+@@ -398,6 +398,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
+ 				rosterEntries(deps.engine, ordered()),
  				width,
  				{
 +					display: { visibleWidth, sliceByColumn },
  					styleStatus: styler,
- 					selectedIndex,
+ 					selectedIndex: selectedIndex(),
  					// Selection is a full-row highlight instead of a cursor glyph, so the roster starts
+diff --git a/extensions/actor-subagents/roster-entries.ts b/extensions/actor-subagents/roster-entries.ts
+index 3fff22e..1bb2760 100644
+--- a/extensions/actor-subagents/roster-entries.ts
++++ b/extensions/actor-subagents/roster-entries.ts
+@@ -7,6 +7,7 @@ import type { OrderedAgent } from "./agent-order.ts";
+ import type { AgentRecord } from "./agent-record.ts";
+ import type { Engine } from "./engine.ts";
+ import { formatExtensionStatuses } from "./extension-status.ts";
++import { readFastState } from "./fast-control.ts";
+ import { formatContext, formatSendTargets, type RosterEntry, rosterDepth } from "./panel-logic.ts";
+ 
+ export function rosterEntries(
+@@ -21,6 +22,7 @@ export function rosterEntries(
+ 		depth: rosterDepth(depth),
+ 		model: a.model,
+ 		thinkingLevel: a.thinkingLevel,
++		fastEffective: readFastState(a.sessionId)?.effective,
+ 		context: formatContext(a.view?.getContextUsage()),
+ 		status: engine.status(a),
+ 		customStatus: a.customStatus,
 diff --git a/extensions/actor-subagents/spawner.test.ts b/extensions/actor-subagents/spawner.test.ts
-index bf477c8..0aa94a7 100644
+index c148bb5..c421461 100644
 --- a/extensions/actor-subagents/spawner.test.ts
 +++ b/extensions/actor-subagents/spawner.test.ts
-@@ -6,6 +6,7 @@ import { errorNotification } from "./error-notification.ts";
+@@ -5,6 +5,7 @@ import { Engine } from "./engine.ts";
  import { createSpawner, type SessionLike, type ThinkingLevel } from "./spawner.ts";
  
  class FakeSession implements SessionLike {
@@ -1190,11 +1170,10 @@ index bf477c8..0aa94a7 100644
  	delivered: RoutedAgentMessage[] = [];
  	userMessages: string[] = [];
  	aborted = 0;
-@@ -644,3 +645,37 @@ test("an abort while idle does not mask an error in a later run", async () => {
- 	session.emit("agent_settled");
- 	assert.equal(engine.get("beta")?.stopReason, "error");
+@@ -809,3 +810,36 @@ test("recovered retries, handled tool failures, aborts and truncation do not rou
+ 		assert.equal(engine.events.filter((e) => e.type === "error").length, 0);
+ 	}
  });
-+
 +
 +test("spawn inherits its owner's desired Fast state and honors explicit overrides", async () => {
 +	const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3 });
@@ -1229,18 +1208,18 @@ index bf477c8..0aa94a7 100644
 +	assert.equal(engine.has("unavailable"), false);
 +});
 diff --git a/extensions/actor-subagents/spawner.ts b/extensions/actor-subagents/spawner.ts
-index 5d01b02..e3ccac0 100644
+index 10db6d6..b1ca870 100644
 --- a/extensions/actor-subagents/spawner.ts
 +++ b/extensions/actor-subagents/spawner.ts
-@@ -7,6 +7,7 @@ import type { RoutedAgentMessage } from "./agent-message.ts";
- import type { StopReason } from "./agent-status.ts";
+@@ -8,6 +8,7 @@ import type { RoutedAgentMessage } from "./agent-message.ts";
+ import { formatStatusDetail, type StopReason } from "./agent-status.ts";
  import type { AgentHandle, AgentRecord, AgentView } from "./agent-record.ts";
  import type { Engine } from "./engine.ts";
 +import { describeFastState, type FastState } from "./fast-control.ts";
  import { formatReceiverStatus } from "./feed.ts";
  import { unknownModelMessage } from "./resolve-model.ts";
  import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
-@@ -28,6 +29,8 @@ function lastAssistantOutcome(
+@@ -29,6 +30,8 @@ function lastAssistantOutcome(
  
  /** Minimal slice of an AgentSession that the orchestration needs. */
  export interface SessionLike {
@@ -1249,7 +1228,7 @@ index 5d01b02..e3ccac0 100644
  	/** Deliver peer traffic without representing it as a human-authored user message. */
  	sendAgentMessage(
  		message: RoutedAgentMessage,
-@@ -71,6 +74,8 @@ export interface SpawnSpec {
+@@ -77,6 +80,8 @@ export interface SpawnSpec {
  	model?: string;
  	/** Optional override; omitted means inherit the spawning agent's effective level. */
  	thinkingLevel?: ThinkingLevel;
@@ -1258,7 +1237,7 @@ index 5d01b02..e3ccac0 100644
  	/** Optional first message: delivered atomically to the new agent right after spawn. */
  	message?: string;
  }
-@@ -93,7 +98,10 @@ export interface SpawnerDeps {
+@@ -99,7 +104,10 @@ export interface SpawnerDeps {
  		spawnedBy: string;
  		model: unknown;
  		thinkingLevel?: ThinkingLevel;
@@ -1269,7 +1248,7 @@ index 5d01b02..e3ccac0 100644
  	/** Called after every relevant activity (e.g. refresh the status footer). */
  	onActivity?: () => void;
  }
-@@ -149,7 +157,7 @@ function createSessionCloser(session: SessionLike, detach: () => void = () => {}
+@@ -160,7 +168,7 @@ function createSessionCloser(session: SessionLike, detach: () => void = () => {}
  }
  
  export function createSpawner(deps: SpawnerDeps): Spawner {
@@ -1278,9 +1257,9 @@ index 5d01b02..e3ccac0 100644
  
  	// Subscribe to a background session's lifecycle to refuse a paused agent's turns and
  	// track the turn phase.
-@@ -214,6 +222,14 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
- 				const stopReason = run.abortRequested && outcome?.stopReason === "error" ? "aborted" : outcome?.stopReason;
+@@ -222,6 +230,14 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  				engine.setStopReason(name, stopReason, outcome?.errorMessage);
+ 				engine.flushNotices(name);
  			}
 +			if (ev.type === "compaction_start") {
 +				const rec = engine.get(name);
@@ -1293,41 +1272,39 @@ index 5d01b02..e3ccac0 100644
  			onActivity?.();
  		});
  	};
-@@ -237,15 +253,29 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -265,12 +281,29 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  			// to fully stop. The child-only in-memory steeringMode "all" makes several queued
  			// messages arrive at that boundary. Idle targets start a turn immediately.
  			deliver: async (message) => {
--				void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch((e) =>
--					engine.reportError(name, e instanceof Error ? e.message : String(e)),
--				);
+-				void handOff(() => session.sendAgentMessage(message, { deliverAs: "steer" })).catch(reportError);
 +				// Mark work before the SDK emits agent_start; this covers a pending spawn and the
 +				// event-loop gap before a delivered turn starts. A delivery failure clears only this
 +				// speculative phase; compaction remains active until its own end event.
 +				engine.beginTurn(name);
 +				onActivity?.();
-+				void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch((e) => {
-+					engine.reportError(name, e instanceof Error ? e.message : String(e));
++				void handOff(() => session.sendAgentMessage(message, { deliverAs: "steer" })).catch((error) => {
++					reportError(error);
 +					onActivity?.();
 +				});
  			},
  			// A human-authored turn, steered in like peer traffic so a busy agent picks it up at its
  			// next turn boundary instead of only when it fully stops. The promise resolves with the
  			// prompted turn; the engine calls this fire-and-forget and reports a late failure.
- 			deliverUser: async (text) => {
--				await session.sendUserMessage(text);
+-			deliverUser: (text) => handOff(() => session.sendUserMessage(text)),
++			deliverUser: async (text) => {
 +				engine.beginTurn(name);
 +				onActivity?.();
 +				try {
-+					await session.sendUserMessage(text);
++					await handOff(() => session.sendUserMessage(text));
 +				} catch (error) {
-+					engine.reportError(name, error instanceof Error ? error.message : String(error));
-+					onActivity?.();
++					onActivity?.(); // the engine reports the failure itself (Engine.deliverUser)
 +					throw error;
 +				}
- 			},
- 			// Bash first: abort() ends the agent loop but a tool already running keeps going, so a
- 			// pause that leaves a build or test run alive would not be a pause at all. A failing bash
-@@ -305,6 +335,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
++			},
+ 			append: (message) => {
+ 				void Promise.resolve(session.appendAgentMessage(message)).catch(() => {
+ 					/* see Engine.flushNotices: a lost notice is state the pull tools still show */
+@@ -328,6 +361,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  			turns: 0,
  			lastActivity: Date.now(),
  			pausedMidTurn: spec.pausedMidTurn,
@@ -1335,7 +1312,7 @@ index 5d01b02..e3ccac0 100644
  		});
  	};
  
-@@ -313,21 +344,32 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -336,21 +370,32 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		const inheritRef = spec.model ?? spawner?.model;
  		// The Map Is Not the Territory: inherit the observed effective level, not prior intent.
  		const thinkingLevel = spec.thinkingLevel ?? spawner?.thinkingLevel;
@@ -1369,7 +1346,7 @@ index 5d01b02..e3ccac0 100644
  		let sessionFile: string | undefined;
  		try {
  			({ session, sessionFile } = await createSession({
-@@ -336,12 +378,35 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -359,12 +404,35 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  				spawnedBy: spawnerName,
  				model: resolved.model,
  				thinkingLevel,
@@ -1405,7 +1382,7 @@ index 5d01b02..e3ccac0 100644
  		// A kill can win while session creation awaits. Close the orphan rather than attaching
  		// it to a later reservation with the same name (Second-Order Thinking: avoid hidden work).
  		if (engine.get(spec.name) !== reservation) {
-@@ -366,7 +431,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -389,7 +457,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  			// Persisted to roster.json so a restart can rebuild this agent.
  			systemPrompt: spec.systemPrompt,
  			sessionFile,
@@ -1415,7 +1392,7 @@ index 5d01b02..e3ccac0 100644
  
  		// 4) Deliver the optional first message atomically (no race; the agent is registered).
  		let sent = "";
-@@ -383,7 +450,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -406,7 +476,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  			else sent = ` (initial message NOT delivered: ${outcome.reason})`;
  		}
  		const model = formatModelThinking(`${resolved.provider}/${resolved.id}`, session.thinkingLevel);

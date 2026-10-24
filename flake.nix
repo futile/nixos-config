@@ -88,7 +88,7 @@
     };
 
     pi-actor-subagents = {
-      url = "git+https://github.com/fdietze/pi-actor-subagents?rev=707496e93d78aac3d2be609aee69c2b7ffff6c33";
+      url = "git+https://github.com/fdietze/pi-actor-subagents?rev=db3e80a6ea0a09ccc83a0277cfbce34141643f10";
       flake = false;
     };
 

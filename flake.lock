@@ -317,16 +317,16 @@
     "pi-actor-subagents": {
       "flake": false,
       "locked": {
-        "lastModified": 1790263030,
-        "narHash": "sha256-p0V/icznMlEyttHiw6lhfbydoe324JbyRFoA2TP2/aw=",
+        "lastModified": 1792803239,
+        "narHash": "sha256-E3f6wQdBkfrXbVYvEBDXfLvhtiTsTXCl3Q3ytFlDoho=",
         "ref": "refs/heads/main",
-        "rev": "707496e93d78aac3d2be609aee69c2b7ffff6c33",
-        "revCount": 51,
+        "rev": "db3e80a6ea0a09ccc83a0277cfbce34141643f10",
+        "revCount": 83,
         "type": "git",
         "url": "https://github.com/fdietze/pi-actor-subagents"
       },
       "original": {
-        "rev": "707496e93d78aac3d2be609aee69c2b7ffff6c33",
+        "rev": "db3e80a6ea0a09ccc83a0277cfbce34141643f10",
         "type": "git",
         "url": "https://github.com/fdietze/pi-actor-subagents"
       }
@@ -334,11 +334,11 @@
     "pi-bash-async": {
       "flake": false,
       "locked": {
-        "lastModified": 1792798201,
-        "narHash": "sha256-09My+XszuPCQcAxjN6neyUwoA0Qp6z0TJkX8fk/uTxo=",
+        "lastModified": 1792809784,
+        "narHash": "sha256-LZcf3T04OdO2ppPwI/E+uzTrq1+eOI+JEf/XM4N1yRY=",
         "owner": "futile",
         "repo": "pi-bash-async",
-        "rev": "ab3d3065b62a4583da642382923788259bf985b5",
+        "rev": "26a29d5146847afd4264016f5ad642fd1616f653",
         "type": "github"
       },
       "original": {

@@ -22,9 +22,7 @@ let
 
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-local.patch}
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-restart.patch}
-    # Upstream: https://github.com/fdietze/pi-actor-subagents/pull/6
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-pause-refused-turn.patch}
-    # Roster/list_subagents/kill show bash-async jobs (pairs with the pi-bash-async fork's jobs signal).
+    # bash-async jobs signal: swarm-line total, kill report, terminal progress while jobs run.
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-background-jobs.patch}
   '';
 in

@@ -149,15 +149,15 @@ that way, since #8225 shows upstream reluctance.
   `session_start`, rebinds delivery and the widget, and replays completions that
   arrived during the gap. If nobody adopts it within 30 s, the jobs are killed.
   Other shutdown reasons still kill jobs.
-- `patches/pi-actor-subagents-pause-refused-turn.patch` implements the pause fix (upstream PR: https://github.com/fdietze/pi-actor-subagents/pull/6)
-  above.
+- The pause fix above is upstream (https://github.com/fdietze/pi-actor-subagents/pull/6).
 - Jobs signal: on every job
   transition bash-async emits `pi.bash-async.v1:jobs` `{version: 1, running, jobs: [{id, title}]}`
-  (queued + running jobs) on `pi.events`, re-emits on `pi.bash-async.v1:request`, and in the TUI sets the
-  `bash-async` footer status to `⏳N` (N running jobs), which pi-statusline shows.
+  (queued + running jobs) on `pi.events`, re-emits on `pi.bash-async.v1:request`, and in every host
+  (whatever `ctx.hasUI` says) sets the `bash-async` footer status to `⏳N` (N running jobs). pi-statusline shows main's;
+  actor-subagents (since ea929fd) shows each child's in its roster/`list_subagents` extensions column.
   `patches/pi-actor-subagents-background-jobs.patch` listens on main's and every child's bus (a child
-  extension factory, keyed by session id) and shows the count in a roster column after the status, in the
-  swarm state line, in `list_subagents` (`idle · 2 bg jobs`), and in kill results (jobs stopped with the agent).
+  extension factory, keyed by session id) and adds what the per-agent status can't: the total in the
+  swarm state line and the jobs stopped with an agent in kill results.
   Running jobs in any agent (main included) also set `terminalProgress` (not `active`) in its
   `pi.agent-activity.v1` update, so kitty's tab progress bar/title indicator stays on while jobs run,
   gated by Pi's `showTerminalProgress` setting; job time doesn't count as active agent time.

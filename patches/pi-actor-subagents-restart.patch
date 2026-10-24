@@ -1,8 +1,8 @@
 diff --git a/extensions/actor-subagents/agent-record.ts b/extensions/actor-subagents/agent-record.ts
-index 66b5247..6c1d7b2 100644
+index 010bc70..d7dade0 100644
 --- a/extensions/actor-subagents/agent-record.ts
 +++ b/extensions/actor-subagents/agent-record.ts
-@@ -93,6 +93,8 @@ export interface AgentRecord {
+@@ -112,6 +112,8 @@ export interface AgentRecord {
  	currentTool?: string;
  	/** Context compaction remains active even while model streaming is idle. */
  	compacting?: boolean;
@@ -10,9 +10,9 @@ index 66b5247..6c1d7b2 100644
 +	logicalRun?: boolean;
  	/** Terminal reason of the last finished turn; drives the idle-time status (error/truncated). Cleared when a new turn starts. */
  	stopReason?: StopReason;
- 	/**
+ 	/** Why the agent entered the error state; set with the `error` event, cleared with stopReason. */
 diff --git a/extensions/actor-subagents/agent-tools.test.ts b/extensions/actor-subagents/agent-tools.test.ts
-index 404288f..42c175a 100644
+index aa12d66..4708067 100644
 --- a/extensions/actor-subagents/agent-tools.test.ts
 +++ b/extensions/actor-subagents/agent-tools.test.ts
 @@ -2,7 +2,7 @@ import { test } from "node:test";
@@ -33,19 +33,18 @@ index 404288f..42c175a 100644
  	const tools = makeAgentTools(self, {
  		engine,
  		spawnAgent: async () => ({ ok: true, msg: "" }),
-@@ -27,6 +27,7 @@ function toolOf(engine: Engine, self: string, name: string) {
+@@ -26,6 +26,7 @@ function toolOf(engine: Engine, self: string, name: string) {
+ 		resumeAgents: (by, names) => engine.resume(by, names),
  		persistRoster: () => {},
  		updateStatus: () => {},
- 		getHideThinking: async () => false,
 +		...overrides,
  	});
  	const tool = tools.find((t) => t.name === name);
  	assert.ok(tool, `${name} tool must exist`);
-@@ -95,3 +96,40 @@ test("control tools act as the calling agent: only its subtree obeys", async ()
- 	assert.match(textOf(await call("peer", "kill_subagents", { names: ["helper"] })) ?? "", /failed: helper: 'helper' is not in your subtree/);
- 	assert.ok(engine.has("helper"));
+@@ -119,3 +120,39 @@ test("descriptions distinguish handoff, observation, persistence attempts and si
+ 	assert.match(description("pause_subagents"), /Effects already in flight may still settle/);
+ 	assert.match(description("subagent_history"), /Paging cannot retrieve clipped remainders/);
  });
-+
 +
 +test("multicast admission remains owned between target routes", async () => {
 +	const engine = new Engine({ maxAgents: 8, maxSpawnDepth: 3 });
@@ -83,10 +82,10 @@ index 404288f..42c175a 100644
 +	}
 +});
 diff --git a/extensions/actor-subagents/agent-tools.ts b/extensions/actor-subagents/agent-tools.ts
-index af173bb..18f325c 100644
+index 65f288c..6f614c5 100644
 --- a/extensions/actor-subagents/agent-tools.ts
 +++ b/extensions/actor-subagents/agent-tools.ts
-@@ -177,19 +177,22 @@ export function makeAgentTools(
+@@ -170,19 +170,22 @@ export function makeAgentTools(
          }),
        }),
        execute: async (_id, args) => {
@@ -122,7 +121,7 @@ index af173bb..18f325c 100644
        },
      }),
      defineTool({
-@@ -220,32 +223,35 @@ export function makeAgentTools(
+@@ -210,32 +213,35 @@ export function makeAgentTools(
          content: Type.String({ description: "Message content" }),
        }),
        execute: async (_id, args) => {
@@ -184,7 +183,7 @@ index af173bb..18f325c 100644
        },
      }),
      defineTool({
-@@ -336,12 +342,15 @@ export function makeAgentTools(
+@@ -326,12 +332,15 @@ export function makeAgentTools(
          }),
        }),
        execute: async (_id, args) => {
@@ -207,13 +206,13 @@ index af173bb..18f325c 100644
      }),
      defineTool({
 diff --git a/extensions/actor-subagents/engine.ts b/extensions/actor-subagents/engine.ts
-index b6d4573..3c01aff 100644
+index 92469f8..1f4a64f 100644
 --- a/extensions/actor-subagents/engine.ts
 +++ b/extensions/actor-subagents/engine.ts
-@@ -77,6 +77,64 @@ export class Engine {
- 	// Aborts started by pause() and not yet finished, per agent. resume() waits for them: an abort
+@@ -87,6 +87,64 @@ export class Engine {
+ 	// identity, not name, so a killed agent's late abort never stops a re-spawned namesake. resume() waits for them: an abort
  	// that lands after the agent runs again would kill the turn resume just started.
- 	private readonly aborts = new AbortTracker();
+ 	private readonly aborts = new AbortTracker<AgentRecord>();
 +	private actorWork = 0;
 +	private readonly mainDeliveries = new Set<string>();
 +	private restartLease?: { sessionId: string; token: string };
@@ -275,7 +274,7 @@ index b6d4573..3c01aff 100644
  
  	// Note: no TS parameter properties — Node's strip-only mode (node --test on .ts)
  	// does not support them.
-@@ -112,6 +170,7 @@ export class Engine {
+@@ -122,6 +180,7 @@ export class Engine {
  	}
  
  	canSpawn(name: string, spawnerDepth: number): CheckResult {
@@ -283,21 +282,25 @@ index b6d4573..3c01aff 100644
  		if (RESERVED.has(name)) return { ok: false, reason: `name '${name}' is reserved` };
  		if (!NAME_RE.test(name)) return { ok: false, reason: `invalid name '${name}' (use [a-zA-Z0-9_-])` };
  		if (this.agents.has(name)) return { ok: false, reason: `agent '${name}' already exists` };
-@@ -199,7 +258,12 @@ export class Engine {
- 		// a paused agent would start a turn that recordTurnStart aborts, leaving them unread with
- 		// nobody to re-trigger — so they join the paused inbox, ahead of anything buffered later.
+@@ -209,11 +268,16 @@ export class Engine {
+ 		// paused inbox, ahead of anything buffered later, so resume releases them as one ordered batch
+ 		// instead of as turns that recordTurnStart would refuse.
  		if (this.isStopped(rec)) rec.pausedInbox = [...buffered, ...(rec.pausedInbox ?? [])];
 -		else for (const t of buffered) void opts.handle.deliver(t);
 +		else for (const t of buffered) void this.deliverTracked(opts.handle, t);
-+	}
-+
+ 		// A reservation cannot append, so notices for it waited here.
+ 		this.flushNotices(name);
+ 	}
+ 
 +	private async deliverTracked(handle: AgentHandle, message: RoutedAgentMessage): Promise<void> {
 +		const done = this.trackActorWork();
 +		try { await handle.deliver(message); } finally { done(); }
- 	}
- 
++	}
++
  	/** Release a reservation (session creation failed). */
-@@ -209,6 +273,7 @@ export class Engine {
+ 	release(name: string): void {
+ 		this.agents.delete(name);
+@@ -221,6 +285,7 @@ export class Engine {
  
  	/** Close a removed record without letting one faulty child block registry cleanup. */
  	private async closeRecord(rec: AgentRecord): Promise<void> {
@@ -305,7 +308,7 @@ index b6d4573..3c01aff 100644
  		try {
  			await rec.close?.();
  		} catch (error) {
-@@ -218,7 +283,7 @@ export class Engine {
+@@ -230,7 +295,7 @@ export class Engine {
  				reason: `runtime cleanup failed: ${error instanceof Error ? error.message : String(error)}`,
  				ts: Date.now(),
  			});
@@ -314,12 +317,13 @@ index b6d4573..3c01aff 100644
  	}
  
  	/**
-@@ -232,36 +297,44 @@ export class Engine {
+@@ -244,44 +309,52 @@ export class Engine {
  	 * reader (Second-Order Thinking). Killing individual leaves stays possible: name them.
  	 */
  	async kill(by: string, names: string[]): Promise<ControlResult> {
 -		const results: TargetOutcome[] = [];
 -		const affected: string[] = [];
+-		const killed: { name: string; parent: string }[] = [];
 -		for (const target of names) {
 -			// Already taken down with an ancestor named earlier in this call: done, not unknown.
 -			if (affected.includes(target)) {
@@ -329,6 +333,7 @@ index b6d4573..3c01aff 100644
 +		try {
 +			const results: TargetOutcome[] = [];
 +			const affected: string[] = [];
++			const killed: { name: string; parent: string }[] = [];
 +			for (const target of names) {
 +				// Already taken down with an ancestor named earlier in this call: done, not unknown.
 +				if (affected.includes(target)) {
@@ -342,7 +347,9 @@ index b6d4573..3c01aff 100644
 +				}
  				results.push({ target, ok: true });
 -				continue;
-+				affected.push(...(await this.killSubtree(target)));
++				// The parent is read before the record goes away.
++				killed.push({ name: target, parent: this.agents.get(target)?.spawnedBy ?? "main" });
++				affected.push(...(await this.killSubtree(by, target)));
  			}
 -			const check = authorize(this.agents, by, target);
 -			if (!check.ok) {
@@ -350,39 +357,52 @@ index b6d4573..3c01aff 100644
 -				continue;
 -			}
 -			results.push({ target, ok: true });
--			affected.push(...(await this.killSubtree(target)));
+-			// The parent is read before the record goes away.
+-			killed.push({ name: target, parent: this.agents.get(target)?.spawnedBy ?? "main" });
+-			affected.push(...(await this.killSubtree(by, target)));
 -		}
+-		// Announced after the whole operation, so a parent taken down by it is no longer live.
+-		this.announce({ kind: "killed", by, targets: killed });
 -		return { results, affected };
++			// Announced after the whole operation, so a parent taken down by it is no longer live.
++			this.announce({ kind: "killed", by, targets: killed });
 +			return { results, affected };
 +		} finally { done(); }
  	}
  
  	/** Kill `name` and its subtree (post-order), returning every name taken down. */
- 	private async killSubtree(name: string): Promise<string[]> {
+ 	private async killSubtree(by: string, name: string): Promise<string[]> {
 -		const subtree = subtreePostOrder(this.agents, name);
+-
+-		// Inversion: remove first so no new message can enter a runtime while it closes.
+-		for (const r of subtree) this.agents.delete(r.name);
+-		// Start every teardown before the first await: each `close` detaches its session synchronously
+-		// (AgentRecord.close), so no event of any of them can reach a re-spawned namesake meanwhile.
+-		const closing = subtree.map((r) => this.closeRecord(r));
+-		for (const [i, r] of subtree.entries()) {
+-			await closing[i];
+-			this.emit({ type: "kill", name: r.name, by, ts: Date.now() });
+-		}
+-		return subtree.map((r) => r.name);
 +		const done = this.trackActorWork();
 +		try {
 +			const subtree = subtreePostOrder(this.agents, name);
- 
--		// Inversion: remove first so no new message can enter a runtime while it closes.
--		for (const r of subtree) this.agents.delete(r.name);
--		for (const r of subtree) {
--			await this.closeRecord(r);
--			this.emit({ type: "kill", name: r.name, ts: Date.now() });
--		}
--		return subtree.map((r) => r.name);
++
 +			// Inversion: remove first so no new message can enter a runtime while it closes.
 +			for (const r of subtree) this.agents.delete(r.name);
-+			for (const r of subtree) {
-+				await this.closeRecord(r);
-+				this.emit({ type: "kill", name: r.name, ts: Date.now() });
++			// Start every teardown before the first await: each `close` detaches its session synchronously
++			// (AgentRecord.close), so no event of any of them can reach a re-spawned namesake meanwhile.
++			const closing = subtree.map((r) => this.closeRecord(r));
++			for (const [i, r] of subtree.entries()) {
++				await closing[i];
++				this.emit({ type: "kill", name: r.name, by, ts: Date.now() });
 +			}
 +			return subtree.map((r) => r.name);
 +		} finally { done(); }
  	}
  
  	/**
-@@ -276,21 +349,25 @@ export class Engine {
+@@ -296,21 +369,25 @@ export class Engine {
  		name: string,
  		change: { model?: ModelChange; thinkingLevel?: ThinkingLevel },
  	): Promise<RetuneResult> {
@@ -421,8 +441,8 @@ index b6d4573..3c01aff 100644
 +		} finally { done(); }
  	}
  
- 	/** Kill all agents except 'main': main's children, each with its subtree. */
-@@ -303,9 +380,12 @@ export class Engine {
+ 	/** `by` (main's authority) kills all agents except 'main': main's children, each with its subtree. */
+@@ -323,9 +400,12 @@ export class Engine {
  	 * path so persisted membership remains authoritative and can be restored in the next session.
  	 */
  	async shutdownAll(): Promise<void> {
@@ -438,27 +458,27 @@ index b6d4573..3c01aff 100644
  	}
  
  	/** Every agent except 'main'. */
-@@ -440,6 +520,8 @@ export class Engine {
+@@ -487,6 +567,8 @@ export class Engine {
  	 */
  	pause(by: string, names?: string[]): ControlResult {
  		const { results, recs } = this.controlTargets(by, names);
 +		if (this.restartLease)
 +			return { results: results.map((r) => ({ target: r.target, ok: false, reason: "restart handoff in progress" })), affected: [] };
  		const before = this.pausedSet();
- 		const flagged: string[] = [];
+ 		const flagged: AgentRecord[] = [];
  		for (const rec of recs) {
-@@ -482,66 +564,77 @@ export class Engine {
+@@ -525,71 +607,82 @@ export class Engine {
  	 * Nothing cleared means no event.
  	 */
  	async resume(by: string, names?: string[]): Promise<EngineResumeResult> {
 -		const { results, recs } = this.controlTargets(by, names);
 -		const before = this.pausedSet();
--		const cleared = recs.filter((rec) => rec.paused === true);
--		for (const rec of cleared) rec.paused = false;
+-		const cleared = [...new Set(recs)].filter((rec) => rec.paused !== undefined); // a name given twice clears once
+-		for (const rec of cleared) rec.paused = undefined;
 -		for (const result of results) {
 -			const rec = this.agents.get(result.target);
--			const holder = result.ok && rec ? pausedBy(this.agents, rec) : undefined;
--			if (holder) result.reason = `still paused by '${holder}'`;
+-			const holder = result.ok && rec ? pauseHolder(this.agents, rec) : undefined;
+-			if (holder) result.reason = `still held by '${holder}'`;
 +		if (this.restartLease) {
 +			const { results } = this.controlTargets(by, names);
 +			return { results: results.map((r) => ({ target: r.target, ok: false, reason: "restart handoff in progress" })), affected: [], interrupted: [], bufferedMessages: 0 };
@@ -466,15 +486,40 @@ index b6d4573..3c01aff 100644
 -		if (cleared.length === 0) return { results, affected: [], interrupted: [], bufferedMessages: 0 };
 -
 -		const released = this.background().filter((rec) => before.has(rec.name) && !this.isAgentPaused(rec));
--		this.emit({ type: "resume", names: cleared.map((rec) => rec.name), ts: Date.now() });
--
+-		this.emit({ type: "resume", names: cleared.map((rec) => rec.name), by, ts: Date.now() });
+-		this.announce({
+-			kind: "resumed",
+-			by,
+-			targets: cleared.map((rec) => ({ ...asTarget(rec), holder: pauseHolder(this.agents, rec) })),
+-		});
++		const done = this.trackActorWork();
++		try {
++			const { results, recs } = this.controlTargets(by, names);
++			const before = this.pausedSet();
++			const cleared = [...new Set(recs)].filter((rec) => rec.paused !== undefined); // a name given twice clears once
++			for (const rec of cleared) rec.paused = undefined;
++			for (const result of results) {
++				const rec = this.agents.get(result.target);
++				const holder = result.ok && rec ? pauseHolder(this.agents, rec) : undefined;
++				if (holder) result.reason = `still held by '${holder}'`;
++			}
++			if (cleared.length === 0) return { results, affected: [], interrupted: [], bufferedMessages: 0 };
++
++			const released = this.background().filter((rec) => before.has(rec.name) && !this.isAgentPaused(rec));
++			this.emit({ type: "resume", names: cleared.map((rec) => rec.name), by, ts: Date.now() });
++			this.announce({
++				kind: "resumed",
++				by,
++				targets: cleared.map((rec) => ({ ...asTarget(rec), holder: pauseHolder(this.agents, rec) })),
++			});
+ 
 -		// The released agents that still run now: not killed (or respawned) and not paused again.
 -		const running = () => released.filter((rec) => this.agents.get(rec.name) === rec && !this.isAgentPaused(rec));
 -		// Re-scan after every wait: a pause and resume in between can start a new abort. No await
 -		// follows the last scan, so nothing can land between it and the release below.
 -		for (;;) {
--			const names = new Set(running().map((rec) => rec.name));
--			const pending = this.aborts.pending((name) => names.has(name));
+-			const live = new Set(running());
+-			const pending = this.aborts.pending((rec) => live.has(rec));
 -			if (pending.length === 0) break;
 -			await Promise.all(pending);
 -		}
@@ -491,30 +536,14 @@ index b6d4573..3c01aff 100644
 -				bufferedMessages += inbox.length;
 -				// KISS + Inversion: one atomic batch preserves every message and avoids racing
 -				// several idle-session starts, which can accept the first prompt and drop the rest.
--				void rec.handle.deliver(mergeRoutedAgentMessages(inbox));
-+		const done = this.trackActorWork();
-+		try {
-+			const { results, recs } = this.controlTargets(by, names);
-+			const before = this.pausedSet();
-+			const cleared = recs.filter((rec) => rec.paused === true);
-+			for (const rec of cleared) rec.paused = false;
-+			for (const result of results) {
-+				const rec = this.agents.get(result.target);
-+				const holder = result.ok && rec ? pausedBy(this.agents, rec) : undefined;
-+				if (holder) result.reason = `still paused by '${holder}'`;
-+			}
-+			if (cleared.length === 0) return { results, affected: [], interrupted: [], bufferedMessages: 0 };
-+
-+			const released = this.background().filter((rec) => before.has(rec.name) && !this.isAgentPaused(rec));
-+			this.emit({ type: "resume", names: cleared.map((rec) => rec.name), ts: Date.now() });
-+
+-				void rec.handle.deliver(mergeRoutedAgentMessages(inbox)).catch((error) => this.reportFailureOf(rec, error));
 +			// The released agents that still run now: not killed (or respawned) and not paused again.
 +			const running = () => released.filter((rec) => this.agents.get(rec.name) === rec && !this.isAgentPaused(rec));
 +			// Re-scan after every wait: a pause and resume in between can start a new abort. No await
 +			// follows the last scan, so nothing can land between it and the release below.
 +			for (;;) {
-+				const names = new Set(running().map((rec) => rec.name));
-+				const pending = this.aborts.pending((name) => names.has(name));
++				const live = new Set(running());
++				const pending = this.aborts.pending((rec) => live.has(rec));
 +				if (pending.length === 0) break;
 +				await Promise.all(pending);
 +			}
@@ -531,7 +560,7 @@ index b6d4573..3c01aff 100644
 +					bufferedMessages += inbox.length;
 +					// KISS + Inversion: one atomic batch preserves every message and avoids racing
 +					// several idle-session starts, which can accept the first prompt and drop the rest.
-+					void this.deliverTracked(rec.handle, mergeRoutedAgentMessages(inbox));
++					void this.deliverTracked(rec.handle, mergeRoutedAgentMessages(inbox)).catch((error) => this.reportFailureOf(rec, error));
 +				}
  			}
 -		}
@@ -541,10 +570,10 @@ index b6d4573..3c01aff 100644
 +		} finally { done(); }
  	}
  
- 	async route(from: string, to: string, content: string): Promise<RouteResult> {
+ 	async route(from: string, to: string, content: string, actionable?: true): Promise<RouteResult> {
 -		const target = this.agents.get(to);
 -		if (!target) return { outcome: "failed", reason: `unknown agent '${to}'` };
--		const message = createRoutedAgentMessage(from, content);
+-		const message = createRoutedAgentMessage(from, content, actionable);
 -		// One tail for both outcomes: a paused target parks the message, a live one takes it.
 -		// Everything after that (edge count, activity, feed event) is identical, so it is written once.
 -		// The pause state is read ONCE, before the delivery await, and the reported outcome comes from
@@ -556,13 +585,13 @@ index b6d4573..3c01aff 100644
 -		target.lastActivity = Date.now();
 -		this.countEdge(from, to);
 -		this.emit({ type: "route", from, to, preview: previewOf(content), buffered: paused, ts: Date.now() });
--		return paused ? { outcome: "buffered" } : { outcome: "delivered" };
+-		return paused ? { outcome: "buffered", status: this.status(target) } : { outcome: "delivered" };
 +		if (this.restartLease) return { outcome: "failed", reason: "restart handoff in progress" };
 +		const done = this.trackActorWork();
 +		try {
 +			const target = this.agents.get(to);
 +			if (!target) return { outcome: "failed", reason: `unknown agent '${to}'` };
-+			const message = createRoutedAgentMessage(from, content);
++			const message = createRoutedAgentMessage(from, content, actionable);
 +			// One tail for both outcomes: a paused target parks the message, a live one takes it.
 +			// Everything after that (edge count, activity, feed event) is identical, so it is written once.
 +			// The pause state is read ONCE, before the delivery await, and the reported outcome comes from
@@ -574,33 +603,31 @@ index b6d4573..3c01aff 100644
 +			target.lastActivity = Date.now();
 +			this.countEdge(from, to);
 +			this.emit({ type: "route", from, to, preview: previewOf(content), buffered: paused, ts: Date.now() });
-+			return paused ? { outcome: "buffered" } : { outcome: "delivered" };
++			return paused ? { outcome: "buffered", status: this.status(target) } : { outcome: "delivered" };
 +		} finally { done(); }
  	}
  
  	/**
-@@ -552,6 +645,7 @@ export class Engine {
- 	 * text unread with nobody to re-trigger it.
+@@ -599,6 +692,7 @@ export class Engine {
+ 	 * structured peer messages), and a paused agent would abort the triggered turn.
  	 */
  	deliverUser(to: string, text: string): DeliverUserResult {
 +		if (this.restartLease) return { outcome: "refused", reason: "restart handoff in progress" };
  		// 'main' IS the chat the human is typing in; there is no child session to hand a turn to.
  		if (to === "main") return { outcome: "refused", reason: "'main' is the chat you are typing in" };
  		const target = this.agents.get(to);
-@@ -561,9 +655,10 @@ export class Engine {
+@@ -608,7 +702,8 @@ export class Engine {
  			return { outcome: "refused", reason: `'${to}' is paused — resume it first` };
  		if (this.isStopped(target))
  			return { outcome: "refused", reason: `'${to}' is still stopping — try again in a moment` };
+-		void target.handle.deliverUser(text).catch((error) => this.reportFailureOf(target, error));
 +		const done = this.trackActorWork();
- 		void target.handle.deliverUser(text).catch((error) => {
- 			this.reportError(to, error instanceof Error ? error.message : String(error));
--		});
-+		}).finally(done);
++		void target.handle.deliverUser(text).catch((error) => this.reportFailureOf(target, error)).finally(done);
  		target.lastActivity = Date.now();
  		this.countEdge("main", to);
  		this.emit({ type: "route", from: "main", to, preview: previewOf(text), buffered: false, ts: Date.now() });
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 94f4391..0cf0fba 100644
+index abcb024..217716f 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
 @@ -4,6 +4,7 @@
@@ -611,25 +638,25 @@ index 94f4391..0cf0fba 100644
  import * as fs from "node:fs";
  import * as path from "node:path";
  import {
-@@ -31,6 +32,7 @@ import { makeAgentTools } from "./agent-tools.ts";
- import type { AgentHandle } from "./agent-record.ts";
+@@ -32,6 +33,7 @@ import type { AgentHandle } from "./agent-record.ts";
  import type { EngineResumeResult } from "./control-result.ts";
+ import { authorityOf } from "./authorize.ts";
  import { Engine } from "./engine.ts";
 +import { createRestartBridge, RESTART_BRIDGE_KEY } from "./restart-bridge.ts";
  import { readFastState, setFastDesired } from "./fast-control.ts";
- import { errorNotification } from "./error-notification.ts";
  import {
-@@ -166,7 +168,8 @@ const RESUME_NUDGE = (now: Date) => {
- //      resume is async, waiting for those aborts. A v25 instance would keep a swarm-wide pause this code can no longer lift.
- // v27: the live session UUID and compaction flags join AgentRecord; old singleton records
+   formatControlResult,
+@@ -174,7 +176,8 @@ const RESUME_NUDGE = (now: Date, by: string) => {
+ //      would retain the old announce/route methods after /reload and never wake a parent.
+ // v29: the live session UUID and compaction flags join AgentRecord; old singleton records
  //      cannot supply Fast ownership or accurate activity after a same-process reload.
--const ENGINE_KEY = "__subagentsEngine_v27";
-+// v28: restart handoff tracks owned operations and logical runs independently of visible records.
-+const ENGINE_KEY = "__subagentsEngine_v28";
+-const ENGINE_KEY = "__subagentsEngine_v29";
++// v30: restart handoff tracks owned operations and logical runs independently of visible records.
++const ENGINE_KEY = "__subagentsEngine_v30";
  const AGENT_NAME_LOOKUP_KEY = Symbol.for("futile.pi.subagents.agent-name-lookup.v1");
  
  function getEngine(): Engine {
-@@ -182,13 +185,15 @@ function getEngine(): Engine {
+@@ -190,13 +193,15 @@ function getEngine(): Engine {
      // stays on disk in roster.json, so the next pi start restores the swarm.
      // Fire-and-forget: nothing here can await, and a faulty old runtime must not block the new
      // engine — shutdownAll already isolates per-child failures.
@@ -647,7 +674,7 @@ index 94f4391..0cf0fba 100644
    }
    return g[ENGINE_KEY] as Engine;
  }
-@@ -259,6 +264,7 @@ function disposeProcessHooks(dispose: () => void): void {
+@@ -289,6 +294,7 @@ function disposeProcessHooks(dispose: () => void): void {
  
  export default function subagents(pi: ExtensionAPI) {
    const engine = getEngine();
@@ -655,17 +682,26 @@ index 94f4391..0cf0fba 100644
    // Context-pressure resolves retained child session IDs through this live, reload-safe bridge.
    (globalThis as Record<symbol, unknown>)[AGENT_NAME_LOOKUP_KEY] = (sessionId: string) =>
      engine.list().find((agent) => agent.sessionId === sessionId)?.name;
-@@ -288,12 +294,27 @@ export default function subagents(pi: ExtensionAPI) {
-   // loop: with "followUp" the replies queue while main streams and main never observes
+@@ -318,15 +324,33 @@ export default function subagents(pi: ExtensionAPI) {
    // them mid-loop (polls forever). "steer" injects them before main's next LLM call so it
    // sees the replies. triggerTurn preserves immediate delivery while main is idle.
--  setMainSink((message) =>
--    pi.sendMessage(toCustomAgentMessage(message), {
--      triggerTurn: true,
--      deliverAs: "steer",
--    }),
+   // silent: triggerTurn false appends without a turn, which the engine only does while main is
+-  // not busy (mid-run Pi would push it into the running turn's history).
+-  setMainSink((message, silent) =>
+-    pi.sendMessage(
+-      toCustomAgentMessage(message),
+-      silent
+-        ? { triggerTurn: false }
+-        : { triggerTurn: true, deliverAs: "steer" },
+-    ),
 -  );
-+  setMainSink((message) => {
++  // not busy (mid-run Pi would push it into the running turn's history). It starts no work, so it
++  // is not a restart-owned delivery.
++  setMainSink((message, silent) => {
++    if (silent) {
++      pi.sendMessage(toCustomAgentMessage(message), { triggerTurn: false });
++      return;
++    }
 +    const restartDeliveryId = randomUUID();
 +    engine.queueMainDelivery(restartDeliveryId);
 +    try {
@@ -689,37 +725,37 @@ index 94f4391..0cf0fba 100644
  
    // Process-global model services built once (same creds as the foreground).
    // pi 0.80.10 SDK: AuthStorage was removed and ModelRegistry now wraps an async
-@@ -801,11 +822,14 @@ export default function subagents(pi: ExtensionAPI) {
-   // the interrupted ones among those are re-triggered in `by`'s name, so their reply goes to the
-   // agent that resumed them.
+@@ -781,11 +805,14 @@ export default function subagents(pi: ExtensionAPI) {
+   // the interrupted ones among those are re-triggered in the name of `by`'s authority agent
+   // ('main' for the human), so their reply goes to an agent that can read it.
    const resumeAgents = async (by: string, names?: string[]): Promise<EngineResumeResult> => {
 -    const result = await engine.resume(by, names);
--    const nudge = RESUME_NUDGE(new Date());
--    for (const name of result.interrupted) void engine.route(by, name, nudge);
+-    const nudge = RESUME_NUDGE(new Date(), by);
+-    for (const name of result.interrupted) void engine.route(authorityOf(by), name, nudge);
 -    updateStatus();
 -    return result;
 +    const done = engine.trackActorWork();
 +    try {
 +      const result = await engine.resume(by, names);
-+      const nudge = RESUME_NUDGE(new Date());
-+      for (const name of result.interrupted) void engine.route(by, name, nudge);
++      const nudge = RESUME_NUDGE(new Date(), by);
++      for (const name of result.interrupted) void engine.route(authorityOf(by), name, nudge);
 +      updateStatus();
 +      return result;
 +    } finally { done(); }
    };
  
    // Swarm control commands take an optional agent-name list; empty means all of main's children.
-@@ -917,7 +941,8 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -906,7 +933,8 @@ export default function subagents(pi: ExtensionAPI) {
        const main = engine.get("main");
        if (main) main.sessionId = mainSessionId;
      }
 -    await restoreSwarm();
 +    const done = engine.trackActorWork();
 +    try { await restoreSwarm(); } finally { done(); }
-     updateActivitySource(true);
-     await activityPublisher.refreshTerminalProgress();
-     updateStatus();
-@@ -934,6 +959,7 @@ export default function subagents(pi: ExtensionAPI) {
+     // A live ctx is captured again only now: notices queued while it was stale (after a reload)
+     // would otherwise wait for main's next run to settle.
+     engine.flushNotices("main");
+@@ -926,6 +954,7 @@ export default function subagents(pi: ExtensionAPI) {
      const previousSubDir = subDir;
      subDir = undefined;
      await engine.shutdownAll();
@@ -727,19 +763,19 @@ index 94f4391..0cf0fba 100644
      // Publish the inactive snapshot before detaching this runtime's publisher.
      updateActivitySource(true);
      updateStatus();
-@@ -1039,11 +1065,14 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -1032,11 +1061,14 @@ export default function subagents(pi: ExtensionAPI) {
    pi.registerCommand("subagents-kill", {
      description: "Terminate agents by name, each with its subtree (empty = all except 'main').",
      handler: async (args, ctx) => {
 -      const names = parseNames(args);
--      const result = names.length ? await engine.kill("main", names) : await engine.killAll();
+-      const result = names.length ? await engine.kill("user", names) : await engine.killAll("user");
 -      persistRoster();
 -      ctx.ui.notify(formatControlResult("kill", result), "info");
 -      updateStatus();
 +      const done = engine.trackActorWork();
 +      try {
 +        const names = parseNames(args);
-+        const result = names.length ? await engine.kill("main", names) : await engine.killAll();
++        const result = names.length ? await engine.kill("user", names) : await engine.killAll("user");
 +        persistRoster();
 +        ctx.ui.notify(formatControlResult("kill", result), "info");
 +        updateStatus();
@@ -749,10 +785,10 @@ index 94f4391..0cf0fba 100644
  
 diff --git a/extensions/actor-subagents/restart-bridge.test.ts b/extensions/actor-subagents/restart-bridge.test.ts
 new file mode 100644
-index 0000000..77c7e60
+index 0000000..329f14c
 --- /dev/null
 +++ b/extensions/actor-subagents/restart-bridge.test.ts
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,336 @@
 +import assert from "node:assert/strict";
 +import { test } from "node:test";
 +import { readFileSync } from "node:fs";
@@ -788,6 +824,9 @@ index 0000000..77c7e60
 +	disposed = false;
 +	sendAgentMessage(): void | Promise<void> {}
 +	sendUserMessage() {}
++	appendAgentMessage() {}
++	isStreaming = false;
++	getExtensionStatuses() { return {}; }
 +	abort() {}
 +	abortBash() {}
 +	shutdown() { return this.shutdownGate; }
@@ -834,7 +873,7 @@ index 0000000..77c7e60
 +	assert.equal(bridge.acquire("main-id", "token").ok, false);
 +	engine.release("pending");
 +	const child = record("child");
-+	child.paused = true;
++	child.paused = "main";
 +	engine.addAgent(child);
 +	assert.equal(bridge.inspect("main-id").ready, true);
 +	await engine.route("main", "child", "queued");
@@ -851,7 +890,7 @@ index 0000000..77c7e60
 +
 +test("lease is same-token idempotent, blocks admission, and wrong-token release cannot unlock", async () => {
 +	const { engine, bridge } = fixture();
-+	const child = record("child"); child.paused = true; engine.addAgent(child);
++	const child = record("child"); child.paused = "main"; engine.addAgent(child);
 +	assert.equal(bridge.acquire("main-id", "lease").ok, true);
 +	assert.equal(bridge.acquire("main-id", "lease").ok, true);
 +	assert.equal(bridge.inspect("main-id").ready, true);
@@ -860,7 +899,7 @@ index 0000000..77c7e60
 +	assert.equal((await engine.route("main", "child", "no")).outcome, "failed");
 +	assert.equal(engine.deliverUser("child", "no").outcome, "refused");
 +	assert.equal((await engine.resume("main")).results[0]?.ok, false);
-+	assert.equal(child.paused, true);
++	assert.equal(child.paused, "main");
 +	assert.equal(child.pausedInbox, undefined);
 +	assert.throws(() => engine.queueMainDelivery("no"), /handoff/);
 +	bridge.release("child-id", "lease"); bridge.release("main-id", "other");
@@ -948,9 +987,11 @@ index 0000000..77c7e60
 +	await runtime.spawnAgent({ name: "child", systemPrompt: "test" }, "main");
 +	session.sendAgentMessage = async () => { throw new Error("delivery failed"); };
 +	await engine.route("main", "child", "failure before start");
++	await new Promise((resolve) => setImmediate(resolve)); // the handoff rejection settles a few ticks later
 +	assert.equal(bridge.inspect("main-id").ready, true);
 +	session.emit("agent_start");
 +	await engine.route("main", "child", "failure during run");
++	await new Promise((resolve) => setImmediate(resolve));
 +	assert.equal(bridge.inspect("main-id").ready, false);
 +	session.emit("agent_end");
 +	assert.equal(bridge.inspect("main-id").ready, false);
@@ -984,7 +1025,7 @@ index 0000000..77c7e60
 +	child.close = async () => { closed++; };
 +	engine.addAgent(child);
 +	assert.equal(bridge.acquire("main-id", "lease").ok, true);
-+	for (const control of [engine.pause("main"), await engine.kill("main", ["child"]), await engine.killAll()]) {
++	for (const control of [engine.pause("main"), await engine.kill("main", ["child"]), await engine.killAll("main")]) {
 +		assert.deepEqual(control.affected, []);
 +		assert.deepEqual(control.results, [{ target: "child", ok: false, reason: "restart handoff in progress" }]);
 +	}
@@ -1036,13 +1077,13 @@ index 0000000..77c7e60
 +
 +test("exact foreground resume wrapper owns the gap before interrupted-work nudges", async () => {
 +	const { engine, bridge } = fixture(); const child = record("child"); const admission = deferred(); const sampled = deferred();
-+	child.paused = true; child.pausedMidTurn = true;
++	child.paused = "main"; child.pausedMidTurn = true;
 +	let deliveries = 0;
 +	child.handle.deliver = () => { deliveries++; return admission.promise; };
 +	engine.addAgent(child);
 +	const code = sourceWrapper("  const resumeAgents =", "\n  // Swarm control commands");
-+	const resume = new Function("engine", "RESUME_NUDGE", "updateStatus", stripTypeScriptTypes(code) + "; return resumeAgents;")(
-+		engine, () => "resume nudge", () => {},
++	const resume = new Function("engine", "RESUME_NUDGE", "authorityOf", "updateStatus", stripTypeScriptTypes(code) + "; return resumeAgents;")(
++		engine, () => "resume nudge", (by: string) => by, () => {},
 +	) as (by: string, names?: string[]) => Promise<EngineResumeResult>;
 +	let ready: boolean | undefined; let acquired: boolean | undefined; let beforeNudge: boolean | undefined;
 +	engine.subscribe((event) => {
@@ -1174,10 +1215,10 @@ index dc775b5..07f2ed6 100644
  }
  
 diff --git a/extensions/actor-subagents/spawner.ts b/extensions/actor-subagents/spawner.ts
-index e3ccac0..7ba4c68 100644
+index b1ca870..b675390 100644
 --- a/extensions/actor-subagents/spawner.ts
 +++ b/extensions/actor-subagents/spawner.ts
-@@ -174,10 +174,15 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -185,10 +185,15 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		name: string,
  		session: SessionLike,
  		streamingRef: { msg: unknown },
@@ -1192,10 +1233,10 @@ index e3ccac0..7ba4c68 100644
 +				const rec = engine.get(name);
 +				if (rec) rec.logicalRun = true;
 +			}
- 			if (ev.type === "turn_start") {
- 				const r = engine.recordTurnStart(name);
- 				if (r.abort) run.abortRequested = true;
-@@ -216,6 +221,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 			// The engine refuses a stopped agent's turn itself, through the agent's `handle.abort` (which marks
+ 			// `run.abortRequested`), so every abort it starts is tracked (engine.ts startAbort).
+ 			if (ev.type === "turn_start") engine.recordTurnStart(name);
+@@ -223,6 +228,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  				engine.endTurn(name);
  			}
  			if (ev.type === "agent_settled") {
@@ -1203,39 +1244,35 @@ index e3ccac0..7ba4c68 100644
 +				const rec = engine.get(name);
 +				if (rec) rec.logicalRun = false;
  				// The SDK emits agent_end for every retry attempt. Only agent_settled closes the
- 				// logical run, so deriving its outcome here produces one parent notification.
+ 				// logical run, so deriving its outcome here produces one parent notice.
  				const outcome = lastAssistantOutcome(session.messages);
-@@ -242,7 +250,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -250,7 +258,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		session: SessionLike,
  		systemPrompt: string,
  	): { handle: AgentHandle; view: AgentView; close: () => Promise<void>; reconfigure: NonNullable<AgentRecord["reconfigure"]> } => {
 -		const run = { abortRequested: false };
 +		const run = { abortRequested: false, active: false };
- 		const handle: AgentHandle = {
- 			// Fire-and-forget: Pi's custom-message delivery awaits the prompted turn. Awaiting it
- 			// would block the caller (e.g. the spawn_subagent tool) until the target agent finishes.
-@@ -257,21 +265,35 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 		// Turns handed to the session whose promise has not settled yet. Pi resolves a prompted
+ 		// delivery only after its run settles, and a user message runs a preflight before its run
+ 		// is marked active, so this covers the gap from hand-off to isStreaming. It cannot stick: it
+@@ -285,21 +293,31 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  				// event-loop gap before a delivered turn starts. A delivery failure clears only this
  				// speculative phase; compaction remains active until its own end event.
  				engine.beginTurn(name);
 +				const rec = engine.get(name);
 +				if (rec) rec.logicalRun = true;
  				onActivity?.();
--				void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch((e) => {
+-				void handOff(() => session.sendAgentMessage(message, { deliverAs: "steer" })).catch((error) => {
 +				// The SDK can await preflight/the child run. Keep that owned work visible even
 +				// if another delivery fails before agent_start, or the record is removed.
 +				const done = engine.trackActorWork();
-+				const failed = (e: unknown) => {
++				const failed = (error: unknown) => {
 +					if (rec) rec.logicalRun = run.active;
- 					engine.reportError(name, e instanceof Error ? e.message : String(e));
+ 					reportError(error);
  					onActivity?.();
 -				});
 +				};
-+				try {
-+					void Promise.resolve(session.sendAgentMessage(message, { deliverAs: "steer" })).catch(failed).finally(done);
-+				} catch (error) {
-+					try { failed(error); } finally { done(); }
-+				}
++				void handOff(() => session.sendAgentMessage(message, { deliverAs: "steer" })).catch(failed).finally(done);
  			},
  			// A human-authored turn, steered in like peer traffic so a busy agent picks it up at its
  			// next turn boundary instead of only when it fully stops. The promise resolves with the
@@ -1246,13 +1283,13 @@ index e3ccac0..7ba4c68 100644
 +				if (rec) rec.logicalRun = true;
  				onActivity?.();
  				try {
- 					await session.sendUserMessage(text);
+ 					await handOff(() => session.sendUserMessage(text));
  				} catch (error) {
 +					if (rec) rec.logicalRun = run.active;
- 					engine.reportError(name, error instanceof Error ? error.message : String(error));
- 					onActivity?.();
+ 					onActivity?.(); // the engine reports the failure itself (Engine.deliverUser)
  					throw error;
-@@ -339,7 +361,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+ 				}
+@@ -365,7 +383,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		});
  	};
  
@@ -1261,7 +1298,7 @@ index e3ccac0..7ba4c68 100644
  		const spawner = engine.get(spawnerName);
  		const inheritRef = spec.model ?? spawner?.model;
  		// The Map Is Not the Territory: inherit the observed effective level, not prior intent.
-@@ -455,5 +477,10 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -481,5 +499,10 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		return { ok: true, msg: `spawned '${spec.name}' (model ${model}${fast})${sent}` };
  	};
  
