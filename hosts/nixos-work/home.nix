@@ -223,7 +223,7 @@ in
         # packages from nixpkgs-unstable
         (with pkgs.nixpkgs-unstable; [
           # work/office tools
-          # gridcraft # 2026-10-23 not yet cached, use to check: `nix path-info --store https://cache.nixos.org "$(nix eval --raw github:nixos/nixpkgs/nixpkgs-unstable#gridcraft.outPath)" &>/dev/null && echo cached || echo "not cached"`
+          gridcraft # 2026-10-23 not yet cached, use to check: `nix path-info --store https://cache.nixos.org "$(nix eval --raw github:nixos/nixpkgs/nixpkgs-unstable#gridcraft.outPath)" &>/dev/null && echo cached || echo "not cached"`
           wordcraft
           soundcraft
           deckcraft

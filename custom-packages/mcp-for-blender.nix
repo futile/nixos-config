@@ -27,7 +27,8 @@ python3.pkgs.buildPythonApplication rec {
   ];
 
   dependencies = with python3.pkgs; [
-    mcp
+    # Upstream (through 2.2.4) requires mcp<2; nixpkgs' default mcp is 2.x.
+    mcp_1
     httpx
   ];
 

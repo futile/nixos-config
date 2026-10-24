@@ -14,6 +14,9 @@
     # be sourced. Paths can't be relative there atm., see some existing github issue.
     extraConfig = "source ${config.xdg.configHome}/nushell/shared_config.nu";
     extraEnv = "source ${config.xdg.configHome}/nushell/shared_env.nu";
+
+    # 2026-10-24 need to set explicitly due to stateVersion etc.
+    loadSessionVariables = true;
   };
 
   xdg = {
