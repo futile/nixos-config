@@ -155,6 +155,8 @@ that way, since #8225 shows upstream reluctance.
   (queued + running jobs) on `pi.events`, re-emits on `pi.bash-async.v1:request`, and in every host
   (whatever `ctx.hasUI` says) sets the `bash-async` footer status to `⏳N` (N running jobs). pi-statusline shows main's;
   actor-subagents (since ea929fd) shows each child's in its roster/`list_subagents` extensions column.
+  `patches/pi-actor-subagents-extension-status-keys.patch` adds the `extensionStatusKeys` setting
+  (allowlist, also the display order); we set it to `["bash-async"]`.
   `patches/pi-actor-subagents-background-jobs.patch` listens on main's and every child's bus (a child
   extension factory, keyed by session id) and adds what the per-agent status can't: the total in the
   swarm state line and the jobs stopped with an agent in kill results.

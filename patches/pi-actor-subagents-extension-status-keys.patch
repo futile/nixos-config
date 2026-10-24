@@ -1,0 +1,228 @@
+From 8d33da35f2f620599c02bbc2e734f20e1bbd42da Mon Sep 17 00:00:00 2001
+From: Felix Rath <felixm.rath@gmail.com>
+Date: Fri, 23 Oct 2026 23:00:32 -0400
+Subject: [PATCH] feat: extensionStatusKeys setting to choose and order child
+ extension statuses
+
+---
+ README.md                                     |  4 +++-
+ .../actor-subagents/extension-status.test.ts  | 19 ++++++++++++++-
+ .../actor-subagents/extension-status.ts       | 23 ++++++++++++-------
+ extensions/actor-subagents/index.ts           |  5 ++--
+ extensions/actor-subagents/settings.test.ts   | 18 +++++++++++++--
+ extensions/actor-subagents/settings.ts        | 11 ++++++++-
+ 6 files changed, 65 insertions(+), 15 deletions(-)
+
+diff --git a/README.md b/README.md
+index 52b4804..99cf556 100644
+--- a/README.md
++++ b/README.md
+@@ -45,13 +45,15 @@ Optional file: `~/.pi/agent/actor-subagents/settings.json` (inside Pi's configur
+   "maxSpawnDepth": 3,
+   "childExtensions": [
+     "~/.pi/agent/npm/node_modules/pi-infinite-context/extensions/infinite-context/index.ts"
+-  ]
++  ],
++  "extensionStatusKeys": ["bash-async"]
+ }
+ ```
+ 
+ - `maxAgents`: maximum live background agents (default: `8`).
+ - `maxSpawnDepth`: maximum hierarchy depth (default: `3`). Both limits must be positive integers; missing or invalid values use their defaults. Changes apply after restarting Pi.
+ - `childExtensions`: extension whitelist for subagents (default: `[]`). List extension files or directories; children do not inherit Pi's discovered extensions. Actor-subagents' orchestration tools are always available and need no whitelist entry. Changes apply to newly spawned agents. The example path assumes `pi install npm:pi-infinite-context` in the default Pi setup. Child extensions run with `ctx.mode === "rpc"` and `ctx.hasUI === true`: their `ctx.ui.setStatus` texts appear in the roster and in `list_subagents`, and dialogs (`confirm`, `select`, `input`, …) resolve as cancelled.
++- `extensionStatusKeys`: status keys shown in the roster and in `list_subagents` (default: unset, which shows every key, sorted by key). Other keys are ignored, and the shown statuses keep the list's order. Changes apply to newly spawned agents.
+ 
+ ## Coordination
+ 
+diff --git a/extensions/actor-subagents/extension-status.test.ts b/extensions/actor-subagents/extension-status.test.ts
+index 0d18dda..a988c89 100644
+--- a/extensions/actor-subagents/extension-status.test.ts
++++ b/extensions/actor-subagents/extension-status.test.ts
+@@ -43,9 +43,26 @@ test("withExtensionStatus ignores malformed input from untyped extensions", () =
+ });
+ 
+ test("formatting sorts by key: plain values for the roster, key: value for the LLM", () => {
+-	const s = { zeta: "z", "bash-async": "⏳2" };
++	const s = withExtensionStatus(withExtensionStatus({}, "zeta", "z"), "bash-async", "⏳2");
+ 	assert.equal(formatExtensionStatuses(s), "⏳2 z");
+ 	assert.equal(describeExtensionStatuses(s), "bash-async: ⏳2, zeta: z");
+ 	assert.equal(formatExtensionStatuses(undefined), "");
+ 	assert.equal(describeExtensionStatuses({}), "");
+ });
++
++test("withExtensionStatus ignores keys outside allowedKeys", () => {
++	const allowed = ["bash-async"];
++	const s = withExtensionStatus({}, "bash-async", "⏳1", allowed);
++	assert.deepEqual(s, { "bash-async": "⏳1" });
++	assert.equal(withExtensionStatus(s, "mcp", "MCP 0/4", allowed), s);
++	const empty = {};
++	assert.equal(withExtensionStatus(empty, "bash-async", "⏳1", []), empty, "an empty list shows nothing");
++	assert.deepEqual(withExtensionStatus(s, "bash-async", undefined, allowed), {});
++});
++
++test("with allowedKeys, entries keep the allowlist's order", () => {
++	const allowed = ["zeta", "bash-async"];
++	const s = withExtensionStatus(withExtensionStatus({}, "bash-async", "⏳2", allowed), "zeta", "z", allowed);
++	assert.equal(formatExtensionStatuses(s), "z ⏳2");
++	assert.equal(describeExtensionStatuses(withExtensionStatus(s, "bash-async", "⏳3", allowed)), "zeta: z, bash-async: ⏳3");
++});
+diff --git a/extensions/actor-subagents/extension-status.ts b/extensions/actor-subagents/extension-status.ts
+index 1288bfa..53ac509 100644
+--- a/extensions/actor-subagents/extension-status.ts
++++ b/extensions/actor-subagents/extension-status.ts
+@@ -35,29 +35,36 @@ export function sanitizeStatusText(text: string): string {
+  * renders hold a snapshot safely. Text that is empty after sanitizing clears the key, like
+  * `undefined` does. Both arguments come from untyped extension code, so non-strings are treated
+  * as a clear (text) or ignored (key), and the key is sanitized too: it reaches the LLM listing.
++ * With `allowedKeys` (the `extensionStatusKeys` setting), every other key is ignored and the
++ * entries are kept in the allowlist's order instead of sorted by key.
+  */
+ export function withExtensionStatus(
+ 	statuses: ExtensionStatuses,
+ 	rawKey: unknown,
+ 	text: unknown,
++	allowedKeys?: readonly string[],
+ ): ExtensionStatuses {
+ 	const key = typeof rawKey === "string" ? sanitizeStatusText(rawKey) : "";
+-	if (key === "") return statuses;
++	if (key === "" || (allowedKeys && !allowedKeys.includes(key))) return statuses;
+ 	const value = typeof text === "string" ? sanitizeStatusText(text) : "";
+ 	if (value === "") {
+ 		if (!(key in statuses)) return statuses;
+ 		const { [key]: _removed, ...rest } = statuses;
+ 		return rest;
+ 	}
+-	return statuses[key] === value ? statuses : { ...statuses, [key]: value };
++	if (statuses[key] === value) return statuses;
++	// The display order is fixed here, once per change: allowlist order if given, else by key.
++	// shortcut: integer-like keys ("1") always sort first in a JS object; use a Map if one appears.
++	const entries = [...Object.entries(statuses).filter(([k]) => k !== key), [key, value] as const];
++	entries.sort(([a], [b]) =>
++		allowedKeys ? allowedKeys.indexOf(a) - allowedKeys.indexOf(b) : a.localeCompare(b),
++	);
++	return Object.fromEntries(entries);
+ }
+ 
+-const byKey = (statuses: ExtensionStatuses) =>
+-	Object.entries(statuses).sort(([a], [b]) => a.localeCompare(b));
+-
+-/** Roster cell: values sorted by key and joined by spaces, like Pi's own footer status line. */
++/** Roster cell: values in stored order joined by spaces, like Pi's own footer status line. */
+ export function formatExtensionStatuses(statuses: ExtensionStatuses | undefined): string {
+-	return statuses ? byKey(statuses).map(([, text]) => text).join(" ") : "";
++	return statuses ? Object.entries(statuses).map(([, text]) => text).join(" ") : "";
+ }
+ 
+ /**
+@@ -65,5 +72,5 @@ export function formatExtensionStatuses(statuses: ExtensionStatuses | undefined)
+  * the name of the extension that set it.
+  */
+ export function describeExtensionStatuses(statuses: ExtensionStatuses | undefined): string {
+-	return statuses ? byKey(statuses).map(([key, text]) => `${key}: ${text}`).join(", ") : "";
++	return statuses ? Object.entries(statuses).map(([key, text]) => `${key}: ${text}`).join(", ") : "";
+ }
+diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
+index 42e7c4a..5320763 100644
+--- a/extensions/actor-subagents/index.ts
++++ b/extensions/actor-subagents/index.ts
+@@ -565,6 +565,7 @@ export default function subagents(pi: ExtensionAPI) {
+     const childSettings = SettingsManager.inMemory(
+       realSettings.getGlobalSettings(),
+     );
++    const settings = readSettings();
+     const loader = new DefaultResourceLoader({
+       cwd,
+       agentDir: realAgentDir,
+@@ -578,7 +579,7 @@ export default function subagents(pi: ExtensionAPI) {
+       // Re-read per spawn (unlike the caps), so revoking a capability takes effect on the
+       // next child rather than at the next pi start.
+       noExtensions: true,
+-      additionalExtensionPaths: readSettings().childExtensions,
++      additionalExtensionPaths: settings.childExtensions,
+       extensionFactories: [
+         { name: "subagent-timestamps", factory: registerToolTimestamps },
+         { name: "subagent-background-jobs", factory: (child) => watchBackgroundJobs(child, applyBackgroundJobs) },
+@@ -632,7 +633,7 @@ export default function subagents(pi: ExtensionAPI) {
+     // write from a killed child can never reach a re-spawned agent of the same name.
+     let extensionStatuses: ExtensionStatuses = {};
+     const uiContext = headlessUiContext(session.extensionRunner, (key, text) => {
+-      const next = withExtensionStatus(extensionStatuses, key, text);
++      const next = withExtensionStatus(extensionStatuses, key, text, settings.extensionStatusKeys);
+       if (next === extensionStatuses) return;
+       extensionStatuses = next;
+       // Writes arrive outside any tool call (job timers, session_start), so redraw here.
+diff --git a/extensions/actor-subagents/settings.test.ts b/extensions/actor-subagents/settings.test.ts
+index d3817b8..8fd05db 100644
+--- a/extensions/actor-subagents/settings.test.ts
++++ b/extensions/actor-subagents/settings.test.ts
+@@ -4,7 +4,11 @@ import { DEFAULT_CAPS, parseSettings } from "./settings.ts";
+ 
+ test("an empty or unreadable settings file yields the defaults and no child extensions", () => {
+ 	for (const input of ["", "not json", "{}", "null", "[]"]) {
+-		assert.deepEqual(parseSettings(input), { caps: DEFAULT_CAPS, childExtensions: [] }, input);
++		assert.deepEqual(
++			parseSettings(input),
++			{ caps: DEFAULT_CAPS, childExtensions: [], extensionStatusKeys: undefined },
++			input,
++		);
+ 	}
+ });
+ 
+@@ -48,6 +52,16 @@ test("child extensions fail closed for missing, malformed, or mixed entries", ()
+ test("valid caps and child extensions are read from the same file", () => {
+ 	assert.deepEqual(
+ 		parseSettings(JSON.stringify({ maxAgents: 3, childExtensions: ["/one.ts"] })),
+-		{ caps: { ...DEFAULT_CAPS, maxAgents: 3 }, childExtensions: ["/one.ts"] },
++		{ caps: { ...DEFAULT_CAPS, maxAgents: 3 }, childExtensions: ["/one.ts"], extensionStatusKeys: undefined },
+ 	);
+ });
++
++test("extension status keys are a list of non-empty strings, otherwise every key is shown", () => {
++	assert.deepEqual(parseSettings(JSON.stringify({ extensionStatusKeys: ["bash-async"] })).extensionStatusKeys, [
++		"bash-async",
++	]);
++	assert.deepEqual(parseSettings(JSON.stringify({ extensionStatusKeys: [] })).extensionStatusKeys, []);
++	for (const extensionStatusKeys of ["bash-async", [""], [1], null]) {
++		assert.equal(parseSettings(JSON.stringify({ extensionStatusKeys })).extensionStatusKeys, undefined);
++	}
++});
+diff --git a/extensions/actor-subagents/settings.ts b/extensions/actor-subagents/settings.ts
+index b6650e0..eae3b8c 100644
+--- a/extensions/actor-subagents/settings.ts
++++ b/extensions/actor-subagents/settings.ts
+@@ -19,6 +19,8 @@ export interface Settings {
+ 	caps: Caps;
+ 	/** Extension paths loaded into every child session, on top of its always-on tools. */
+ 	childExtensions: string[];
++	/** Extension status keys shown for children; undefined shows every key. */
++	extensionStatusKeys: string[] | undefined;
+ }
+ 
+ /** Applied per field, so an unset or invalid single cap does not disturb the others. */
+@@ -38,9 +40,15 @@ function childExtensions(value: unknown): string[] {
+ 	return value;
+ }
+ 
++// Display-only, so an invalid value falls back to the default (every key) like the caps do.
++function extensionStatusKeys(value: unknown): string[] | undefined {
++	if (!Array.isArray(value)) return undefined;
++	return value.every((entry) => typeof entry === "string" && entry.length > 0) ? value : undefined;
++}
++
+ /**
+  * Parses the settings file's contents; unparseable text is treated as an empty file.
+- * The file is flat (all three keys at the top level) because it is hand-edited; the `caps`
++ * The file is flat (all keys at the top level) because it is hand-edited; the `caps`
+  * grouping exists only in the type, where it is what the engine is constructed from.
+  */
+ export function parseSettings(json: string): Settings {
+@@ -57,5 +65,6 @@ export function parseSettings(json: string): Settings {
+ 			maxSpawnDepth: positiveInt(value?.maxSpawnDepth, DEFAULT_CAPS.maxSpawnDepth),
+ 		},
+ 		childExtensions: childExtensions(value?.childExtensions),
++		extensionStatusKeys: extensionStatusKeys(value?.extensionStatusKeys),
+ 	};
+ }
+-- 
+2.56.0
+
