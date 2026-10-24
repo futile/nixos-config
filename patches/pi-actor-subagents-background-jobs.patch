@@ -338,7 +338,7 @@ index 0000000..6d17546
 +	return parts.length ? [`stopped background jobs of ${parts.join("; ")}`] : [];
 +}
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 217716f..42e7c4a 100644
+index 25d28be..3eede3a 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
 @@ -25,6 +25,7 @@ import {
@@ -381,15 +381,15 @@ index 217716f..42e7c4a 100644
      readTerminalProgressEnabled: async () => {
        if (!settingsMgr) settingsMgr = SettingsManager.create(cwd, realAgentDir);
        await settingsMgr.reload();
-@@ -571,6 +581,7 @@ export default function subagents(pi: ExtensionAPI) {
-       additionalExtensionPaths: readSettings().childExtensions,
+@@ -572,6 +582,7 @@ export default function subagents(pi: ExtensionAPI) {
+       additionalExtensionPaths: settings.childExtensions,
        extensionFactories: [
          { name: "subagent-timestamps", factory: registerToolTimestamps },
 +        { name: "subagent-background-jobs", factory: (child) => watchBackgroundJobs(child, applyBackgroundJobs) },
        ],
        systemPromptOverride: () =>
          agentSystemPrompt(spec.name, spec.systemPrompt, spec.spawnedBy),
-@@ -1064,13 +1075,15 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -1065,13 +1076,15 @@ export default function subagents(pi: ExtensionAPI) {
        const done = engine.trackActorWork();
        try {
          const names = parseNames(args);

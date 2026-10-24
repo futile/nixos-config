@@ -317,16 +317,16 @@
     "pi-actor-subagents": {
       "flake": false,
       "locked": {
-        "lastModified": 1792803239,
-        "narHash": "sha256-E3f6wQdBkfrXbVYvEBDXfLvhtiTsTXCl3Q3ytFlDoho=",
+        "lastModified": 1792872508,
+        "narHash": "sha256-1nNBszaHKIspvWnuMbb00xHwtyRLanEcKHuZavkgY80=",
         "ref": "refs/heads/main",
-        "rev": "db3e80a6ea0a09ccc83a0277cfbce34141643f10",
-        "revCount": 83,
+        "rev": "2361622beaa427ca9ef65e5bc0aee757ad574341",
+        "revCount": 84,
         "type": "git",
         "url": "https://github.com/fdietze/pi-actor-subagents"
       },
       "original": {
-        "rev": "db3e80a6ea0a09ccc83a0277cfbce34141643f10",
+        "rev": "2361622beaa427ca9ef65e5bc0aee757ad574341",
         "type": "git",
         "url": "https://github.com/fdietze/pi-actor-subagents"
       }

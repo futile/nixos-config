@@ -24,8 +24,6 @@ let
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-restart.patch}
     # bash-async jobs signal: swarm-line total, kill report, terminal progress while jobs run.
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-background-jobs.patch}
-    # childExtensionStatusKeys setting: allowlist for child extension statuses (upstream PR #7 pending).
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-extension-status-keys.patch}
   '';
 in
 {
