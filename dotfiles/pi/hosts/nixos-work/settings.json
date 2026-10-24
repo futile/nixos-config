@@ -11,8 +11,10 @@
     "git:github.com/DietrichGebert/ponytail",
     "git:github.com/fdietze/pi-session-name",
     "git:github.com/fdietze/pi-question",
-    "git:github.com/fdietze/pi-claude-auth@main"
+    "git:github.com/fdietze/pi-claude-auth@main",
+    "git:github.com/fdietze/pi-peer-messages"
   ],
+  "defaultTools": ["+send_peer_message"],
   "steeringMode": "all",
   "terminal": {
     "showTerminalProgress": true
