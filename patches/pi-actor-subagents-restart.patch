@@ -627,7 +627,7 @@ index 92469f8..1f4a64f 100644
  		this.countEdge("main", to);
  		this.emit({ type: "route", from: "main", to, preview: previewOf(text), buffered: false, ts: Date.now() });
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index abcb024..217716f 100644
+index 919bea8..482bd6e 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
 @@ -4,6 +4,7 @@
@@ -725,7 +725,7 @@ index abcb024..217716f 100644
  
    // Process-global model services built once (same creds as the foreground).
    // pi 0.80.10 SDK: AuthStorage was removed and ModelRegistry now wraps an async
-@@ -781,11 +805,14 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -782,11 +806,14 @@ export default function subagents(pi: ExtensionAPI) {
    // the interrupted ones among those are re-triggered in the name of `by`'s authority agent
    // ('main' for the human), so their reply goes to an agent that can read it.
    const resumeAgents = async (by: string, names?: string[]): Promise<EngineResumeResult> => {
@@ -745,7 +745,7 @@ index abcb024..217716f 100644
    };
  
    // Swarm control commands take an optional agent-name list; empty means all of main's children.
-@@ -906,7 +933,8 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -907,7 +934,8 @@ export default function subagents(pi: ExtensionAPI) {
        const main = engine.get("main");
        if (main) main.sessionId = mainSessionId;
      }
@@ -755,7 +755,7 @@ index abcb024..217716f 100644
      // A live ctx is captured again only now: notices queued while it was stale (after a reload)
      // would otherwise wait for main's next run to settle.
      engine.flushNotices("main");
-@@ -926,6 +954,7 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -927,6 +955,7 @@ export default function subagents(pi: ExtensionAPI) {
      const previousSubDir = subDir;
      subDir = undefined;
      await engine.shutdownAll();
@@ -763,7 +763,7 @@ index abcb024..217716f 100644
      // Publish the inactive snapshot before detaching this runtime's publisher.
      updateActivitySource(true);
      updateStatus();
-@@ -1032,11 +1061,14 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -1033,11 +1062,14 @@ export default function subagents(pi: ExtensionAPI) {
    pi.registerCommand("subagents-kill", {
      description: "Terminate agents by name, each with its subtree (empty = all except 'main').",
      handler: async (args, ctx) => {

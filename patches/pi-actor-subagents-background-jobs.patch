@@ -338,7 +338,7 @@ index 0000000..6d17546
 +	return parts.length ? [`stopped background jobs of ${parts.join("; ")}`] : [];
 +}
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 25d28be..3eede3a 100644
+index 482bd6e..415e2db 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
 @@ -25,6 +25,7 @@ import {

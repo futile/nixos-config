@@ -1,5 +1,5 @@
 diff --git a/AGENTS.md b/AGENTS.md
-index ca711a7..665bbfa 100644
+index 1364b20..d4c60cb 100644
 --- a/AGENTS.md
 +++ b/AGENTS.md
 @@ -38,7 +38,7 @@ When the main session is file-backed, `persistence.ts` stores `roster.json` and
@@ -12,7 +12,7 @@ index ca711a7..665bbfa 100644
  - Custom message type and details shape: `agent-message.ts` (scheduler control notices and routed errors; error parts carry optional `actionable: true`, preserved through parsing and batching for restore)
  - Reserved agent names: `main`, `scheduler`, `user`, `restore` (`engine.ts`)
 diff --git a/README.md b/README.md
-index 514aa7b..52b4804 100644
+index e22ec1f..d37ed0d 100644
 --- a/README.md
 +++ b/README.md
 @@ -25,6 +25,7 @@ Mouse controls use Pi's fullscreen mode. `/subagents` and the keyboard controls
@@ -427,6 +427,25 @@ index 0ace9c6..65f288c 100644
      defineTool({
        name: "set_status",
        label: "Set Status",
+diff --git a/extensions/actor-subagents/bind-headless-extensions.ts b/extensions/actor-subagents/bind-headless-extensions.ts
+index 76541b7..44fe961 100644
+--- a/extensions/actor-subagents/bind-headless-extensions.ts
++++ b/extensions/actor-subagents/bind-headless-extensions.ts
+@@ -22,6 +22,7 @@ import type { AgentSession, ExtensionUIContext } from "@earendil-works/pi-coding
+ export async function bindHeadlessExtensions(
+ 	session: Pick<AgentSession, "extensionRunner" | "bindExtensions">,
+ 	setStatus: ExtensionUIContext["setStatus"],
++	onError?: Parameters<AgentSession["bindExtensions"]>[0]["onError"],
+ ): Promise<void> {
+ 	const runner = session.extensionRunner;
+ 	const uiContext: ExtensionUIContext = { ...runner.getUIContext(), setStatus };
+@@ -29,5 +30,5 @@ export async function bindHeadlessExtensions(
+ 	// runner instance only; `session.reload()` builds a new runner and would reset it (children are
+ 	// never reloaded: index.ts reloads only settings and the resource loader).
+ 	runner.hasUI = () => false;
+-	await session.bindExtensions({ mode: "print", uiContext });
++	await session.bindExtensions({ mode: "print", uiContext, onError });
+ }
 diff --git a/extensions/actor-subagents/engine.ts b/extensions/actor-subagents/engine.ts
 index ea6f12c..92469f8 100644
 --- a/extensions/actor-subagents/engine.ts
@@ -667,7 +686,7 @@ index 395595d..f6e90eb 100644
  	});
  	return ["agents:", ...rows].join("\n");
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 1349cdf..abcb024 100644
+index 4be7f2b..919bea8 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
 @@ -17,13 +17,14 @@ import {
@@ -790,7 +809,7 @@ index 1349cdf..abcb024 100644
      },
      existingFile?: string,
    ): Promise<{ session: SessionLike; sessionFile?: string }> => {
-@@ -526,20 +562,18 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -527,20 +563,18 @@ export default function subagents(pi: ExtensionAPI) {
      let sm: SessionManager;
      if (existingFile) {
        sm = SessionManager.open(existingFile);
@@ -816,21 +835,33 @@ index 1349cdf..abcb024 100644
      }
  
      // Leave the built-in tool allowlist unset so the agent inherits the full default
-@@ -569,8 +603,32 @@ export default function subagents(pi: ExtensionAPI) {
-       // Writes arrive outside any tool call (job timers, session_start), so redraw here.
-       updateStatus();
-     });
--    await session.bindExtensions({ mode: "rpc", uiContext });
+@@ -564,14 +598,38 @@ export default function subagents(pi: ExtensionAPI) {
+     // The statuses are owned by this session (read via the view, like context usage), so a late
+     // write from a killed child can never reach a re-spawned agent of the same name.
+     let extensionStatuses: ExtensionStatuses = {};
+-    await bindHeadlessExtensions(session, (key, text) => {
+-      const next = withExtensionStatus(extensionStatuses, key, text, settings.childExtensionStatusKeys);
+-      if (next === extensionStatuses) return;
+-      extensionStatuses = next;
+-      // Writes arrive outside any tool call (job timers, session_start), so redraw here.
+-      updateStatus();
+-    });
 +    // Bind first so codex-fast can register this session, then apply the inherited/explicit state
 +    // before any first prompt is delivered. Missing control is a visible capability failure.
 +    try {
-+      await session.bindExtensions({
-+        mode: "rpc",
-+        uiContext,
-+        onError: (error) => {
++      await bindHeadlessExtensions(
++        session,
++        (key, text) => {
++          const next = withExtensionStatus(extensionStatuses, key, text, settings.childExtensionStatusKeys);
++          if (next === extensionStatuses) return;
++          extensionStatuses = next;
++          // Writes arrive outside any tool call (job timers, session_start), so redraw here.
++          updateStatus();
++        },
++        (error) => {
 +          console.error(`Subagent extension error (${error.extensionPath}): ${error.error}`);
 +        },
-+      });
++      );
 +      const applied = setFastDesired(sm.getSessionId(), spec.fast ?? false);
 +      if (!applied.ok) throw new Error(applied.reason);
 +    } catch (error) {
@@ -850,7 +881,7 @@ index 1349cdf..abcb024 100644
        sendAgentMessage: (message, options) =>
          session.sendCustomMessage(toCustomAgentMessage(message), {
            triggerTurn: true,
-@@ -627,7 +685,8 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -628,7 +686,8 @@ export default function subagents(pi: ExtensionAPI) {
      engine,
      resolveModel,
      createSession,
@@ -860,7 +891,7 @@ index 1349cdf..abcb024 100644
      listAvailableModels: listModels,
    });
  
-@@ -706,8 +765,10 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -707,8 +766,10 @@ export default function subagents(pi: ExtensionAPI) {
            pausedMidTurn:
              deriveStatus(session.messages as RawMessage[]) === "pausedMidTurn",
          });
@@ -873,7 +904,7 @@ index 1349cdf..abcb024 100644
        }
      }
      // Present the restored swarm as paused: pausing main's direct children holds every restored
-@@ -804,10 +865,11 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -805,10 +866,11 @@ export default function subagents(pi: ExtensionAPI) {
        (s) => `${s.model.provider}/${s.model.id}`,
      );
      // Locate this main session's subagents dir (persistence + restore are keyed by it).
@@ -887,7 +918,7 @@ index 1349cdf..abcb024 100644
      } catch {
        subDir = undefined;
      }
-@@ -833,30 +895,44 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -834,30 +896,44 @@ export default function subagents(pi: ExtensionAPI) {
          createdAt: Date.now(),
          turns: 0,
          lastActivity: Date.now(),
