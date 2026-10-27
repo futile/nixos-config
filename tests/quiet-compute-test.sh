@@ -23,7 +23,13 @@ cat >"${tmp_dir}/bin/tuned-adm" <<'SH'
 #!/usr/bin/env bash
 case "$1" in
 active) echo "Current active profile: $(cat "${TUNED_TEST_PROFILE}")" ;;
-profile) echo "$2" >"${TUNED_TEST_PROFILE}" ;;
+profile)
+	echo "$2" >"${TUNED_TEST_PROFILE}"
+	# Like amd-pstate: with boost off (powersave), cpuinfo_max_freq drops to nominal.
+	max=4700000
+	[[ "$2" == powersave ]] && max=2700000
+	for f in "${QUIET_COMPUTE_SYSFS}"/devices/system/cpu/cpu*/cpufreq/cpuinfo_max_freq; do echo "${max}" >"${f}"; done
+	;;
 esac
 SH
 chmod +x "${tmp_dir}/bin/tuned-adm"

@@ -78,12 +78,16 @@ cmd_on() {
 }
 
 cmd_off() {
-	local previous=""
+	local previous="" cpu0="${sysfs}/devices/system/cpu/cpu0/cpufreq" max_file
 	need_root off
-	set_max_khz "$(cat "${sysfs}/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq")"
 	[[ -s "${state_dir}/previous-profile" ]] && previous="$(cat "${state_dir}/previous-profile")"
+	[[ -n "${previous}" ]] && tuned-adm profile "${previous}"
+	# Uncap only after the profile restore: with boost off, cpuinfo_max_freq is just the
+	# nominal frequency. amd_pstate_max_freq is the boosted maximum regardless of boost.
+	max_file="${cpu0}/amd_pstate_max_freq"
+	[[ -r "${max_file}" ]] || max_file="${cpu0}/cpuinfo_max_freq"
+	set_max_khz "$(cat "${max_file}")"
 	if [[ -n "${previous}" ]]; then
-		tuned-adm profile "${previous}"
 		rm -f "${state_dir}/previous-profile"
 		echo "quiet-compute off: restored ${previous}, max frequency uncapped"
 	else
