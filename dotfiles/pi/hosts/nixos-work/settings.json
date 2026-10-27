@@ -14,12 +14,14 @@
     "git:github.com/fdietze/pi-claude-auth@main",
     "git:github.com/fdietze/pi-peer-messages"
   ],
-  "defaultTools": ["+send_peer_message"],
+  "defaultTools": [
+    "+send_peer_message"
+  ],
   "steeringMode": "all",
   "terminal": {
     "showTerminalProgress": true
   },
-  "hideThinkingBlock": false,
+  "hideThinkingBlock": true,
   "followUpMode": "all",
   "showCacheMissNotices": true,
   "tuiMode": "regular",
