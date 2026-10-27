@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# Low-heat mode for long unattended compute: keep the EC's fan curve in charge,
+# but cap heat output so the fan (mostly) stays off.
+#   quiet-compute on [MHz]   tuned "powersave" (no boost, EPP power, low-power
+#                            platform profile) + max CPU frequency cap (default 1600)
+#   quiet-compute off        restore full max frequency and the previous tuned profile
+#   quiet-compute status     profile, cap, temperature, fan, package power
+set -euo pipefail
+
+sysfs="${QUIET_COMPUTE_SYSFS:-/sys}"
+# Persistent, since the tuned profile also survives reboots.
+state_dir="${QUIET_COMPUTE_STATE_DIR:-/var/lib/quiet-compute}"
+cpufreq_glob="${sysfs}/devices/system/cpu/cpu[0-9]*/cpufreq"
+
+usage() {
+	sed -n '4,7s/^# \{0,1\}//p' "$0" >&2
+	exit 2
+}
+
+need_root() {
+	# QUIET_COMPUTE_SYSFS is a test hook: a fake sysfs needs no privileges.
+	if [[ "${EUID}" -ne 0 && -z "${QUIET_COMPUTE_SYSFS:-}" ]]; then
+		exec sudo -- "$0" "$@"
+	fi
+}
+
+set_max_khz() {
+	local dir
+	for dir in ${cpufreq_glob}; do
+		echo "$1" >"${dir}/scaling_max_freq"
+	done
+}
+
+hwmon_by_name() {
+	local h
+	for h in "${sysfs}"/class/hwmon/hwmon*; do
+		[[ "$(cat "${h}/name" 2>/dev/null)" == "$1" ]] && echo "${h}" && return
+	done
+	return 0
+}
+
+# Prints the integer in file $1 divided by $2, or n/a if unreadable.
+read_div() {
+	local v
+	if v="$(cat "$1" 2>/dev/null)" && [[ "${v}" =~ ^[0-9]+$ ]]; then
+		echo "$((v / $2))"
+	else
+		echo n/a
+	fi
+}
+
+cmd_on() {
+	local mhz="${1:-1600}" cpu0="${sysfs}/devices/system/cpu/cpu0/cpufreq" min_khz max_khz previous
+	# No leading zeros: bash arithmetic would read them as octal.
+	[[ "${mhz}" =~ ^[1-9][0-9]{0,5}$ ]] || {
+		echo "MHz must be a positive integer: ${mhz}" >&2
+		exit 2
+	}
+	min_khz="$(cat "${cpu0}/cpuinfo_min_freq")"
+	max_khz="$(cat "${cpu0}/cpuinfo_max_freq")"
+	if ((mhz * 1000 < min_khz || mhz * 1000 > max_khz)); then
+		echo "MHz must be between $((min_khz / 1000)) and $((max_khz / 1000)): ${mhz}" >&2
+		exit 2
+	fi
+	need_root on "${mhz}"
+
+	mkdir -p "${state_dir}"
+	# Keep the profile from before the first "on", so repeated "on" calls still restore it.
+	# An empty file means "no active profile"; off then leaves the profile alone.
+	if [[ ! -e "${state_dir}/previous-profile" ]]; then
+		previous="$(tuned-adm active | sed -n 's/^Current active profile: //p')"
+		echo "${previous}" >"${state_dir}/previous-profile"
+	fi
+	tuned-adm profile powersave
+	# After the profile switch, so tuned cannot clobber the cap.
+	set_max_khz "$((mhz * 1000))"
+	echo "quiet-compute on: powersave, max ${mhz} MHz"
+}
+
+cmd_off() {
+	local previous=""
+	need_root off
+	set_max_khz "$(cat "${sysfs}/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq")"
+	[[ -s "${state_dir}/previous-profile" ]] && previous="$(cat "${state_dir}/previous-profile")"
+	if [[ -n "${previous}" ]]; then
+		tuned-adm profile "${previous}"
+		rm -f "${state_dir}/previous-profile"
+		echo "quiet-compute off: restored ${previous}, max frequency uncapped"
+	else
+		rm -f "${state_dir}/previous-profile"
+		echo "quiet-compute off: max frequency uncapped (no saved tuned profile, left as is)"
+	fi
+}
+
+cmd_status() {
+	local k10 gpu
+	k10="$(hwmon_by_name k10temp)"
+	gpu="$(hwmon_by_name amdgpu)"
+	if [[ -e "${state_dir}/previous-profile" ]]; then
+		echo "quiet mode: on (off restores '$(cat "${state_dir}/previous-profile")')"
+	else
+		echo "quiet mode: off"
+	fi
+	tuned-adm active 2>/dev/null || true
+	echo "max freq:  $(read_div "${sysfs}/devices/system/cpu/cpu0/cpufreq/scaling_max_freq" 1000) MHz"
+	echo "Tctl:      $(read_div "${k10:-/nonexistent}/temp1_input" 1000) °C"
+	echo "package:   $(read_div "${gpu:-/nonexistent}/power1_input" 1000000) W"
+	if [[ -r /proc/acpi/ibm/fan && -z "${QUIET_COMPUTE_SYSFS:-}" ]]; then
+		sed -n 's/^\(speed\|level\):[[:space:]]*/fan \1: /p' /proc/acpi/ibm/fan
+	fi
+}
+
+case "${1:-}" in
+on)
+	shift
+	cmd_on "$@"
+	;;
+off) cmd_off ;;
+status) cmd_status ;;
+*) usage ;;
+esac
