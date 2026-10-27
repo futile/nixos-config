@@ -2,7 +2,7 @@
 # Low-heat mode for long unattended compute: keep the EC's fan curve in charge,
 # but cap heat output so the fan (mostly) stays off.
 #   quiet-compute on [MHz]   tuned "powersave" (no boost, EPP power, low-power
-#                            platform profile) + max CPU frequency cap (default 1600)
+#                            platform profile) + max CPU frequency cap (default 1400)
 #   quiet-compute off        restore full max frequency and the previous tuned profile
 #   quiet-compute status     profile, cap, temperature, fan, package power
 set -euo pipefail
@@ -50,7 +50,7 @@ read_div() {
 }
 
 cmd_on() {
-	local mhz="${1:-1600}" cpu0="${sysfs}/devices/system/cpu/cpu0/cpufreq" min_khz max_khz previous
+	local mhz="${1:-1400}" cpu0="${sysfs}/devices/system/cpu/cpu0/cpufreq" min_khz max_khz previous
 	# No leading zeros: bash arithmetic would read them as octal.
 	[[ "${mhz}" =~ ^[1-9][0-9]{0,5}$ ]] || {
 		echo "MHz must be a positive integer: ${mhz}" >&2

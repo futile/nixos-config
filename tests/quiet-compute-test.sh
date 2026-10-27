@@ -43,16 +43,16 @@ fail() {
 
 # A second "on" must not overwrite the saved original profile.
 "${qc}" on >/dev/null
-[[ "$(cat "${max1}")" == 1600000 ]] || fail "default cap not 1600 MHz"
+[[ "$(cat "${max1}")" == 1400000 ]] || fail "default cap not 1400 MHz"
 
 for bad in abc 100 9000 0 0800; do
 	if "${qc}" on "${bad}" 2>/dev/null; then fail "accepted invalid MHz '${bad}'"; fi
 done
-[[ "$(cat "${max1}")" == 1600000 ]] || fail "invalid MHz changed the cap"
+[[ "$(cat "${max1}")" == 1400000 ]] || fail "invalid MHz changed the cap"
 
 # No hwmon in the fake sysfs: status must degrade, not fail.
 status="$("${qc}" status)" || fail "status failed"
-[[ "${status}" == *"max freq:  1600 MHz"* && "${status}" == *"Tctl:      n/a"* ]] || fail "status output: ${status}"
+[[ "${status}" == *"max freq:  1400 MHz"* && "${status}" == *"Tctl:      n/a"* ]] || fail "status output: ${status}"
 [[ "${status}" == *"quiet mode: on (off restores 'throughput-performance')"* ]] || fail "status state: ${status}"
 
 "${qc}" off >/dev/null
