@@ -25,6 +25,19 @@ let
     # bash-async jobs signal: swarm-line total, kill report, terminal progress while jobs run.
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-background-jobs.patch}
   '';
+  # npm build output; the patch translates its Korean UI strings to English.
+  patchedCodexImageGen = pkgs.runCommand "pi-codex-image-gen" { } ''
+    mkdir -p "$out"
+    tar -xzf ${
+      pkgs.fetchurl {
+        url = "https://registry.npmjs.org/@buyong/pi-codex-image-gen/-/pi-codex-image-gen-0.3.1.tgz";
+        hash = "sha256-UgTgLUGSloJKAtxPMBgxY3X51KjjTji/+Cw3O26MpcY=";
+      }
+    } -C "$out" --strip-components=1
+    chmod -R u+w "$out"
+
+    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-codex-image-gen-english.patch}
+  '';
 in
 {
   options.my.pi = {
@@ -74,6 +87,8 @@ in
         nudgeAtTokens = 1000000000;
         nudgeAtPercent = 100;
       };
+      # Loaded as a local package from settings.json (its manifest also declares skills).
+      ".pi/agent/packages/pi-codex-image-gen".source = patchedCodexImageGen;
       ".pi/agent/extensions/actor-subagents".source =
         "${patchedActorSubagents}/extensions/actor-subagents";
       ".pi/agent/actor-subagents/settings.json".text = builtins.toJSON {
@@ -87,6 +102,7 @@ in
           "${config.home.homeDirectory}/.pi/agent/extensions/context-pressure"
           "${config.home.homeDirectory}/.pi/agent/extensions/codex-fast"
           "${config.home.homeDirectory}/.pi/agent/extensions/bash-async"
+          "${config.home.homeDirectory}/.pi/agent/packages/pi-codex-image-gen"
         ];
         # Children's other statuses (mcp, ponytail, ...) are noise in the roster.
         childExtensionStatusKeys = [ "bash-async" ];

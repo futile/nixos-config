@@ -1,0 +1,175 @@
+diff -ruN -x '*.map' a/dist/commands.js b/dist/commands.js
+--- a/dist/commands.js
++++ b/dist/commands.js
+@@ -8,7 +8,7 @@
+ }
+ export function registerImageGenSettingsCommand(pi) {
+     pi.registerCommand("codex-imagen", {
+-        description: "이미지 생성 모델을 선택하고 저장합니다.",
++        description: "Select and save the image generation model.",
+         getArgumentCompletions: (prefix) => {
+             const choices = IMAGE_MODELS.filter((model) => model.startsWith(prefix.trim())).map((model) => ({ value: model, label: model }));
+             return choices.length ? choices : null;
+@@ -21,10 +21,10 @@
+                 let selected = args.trim();
+                 if (!selected) {
+                     if (!ctx.hasUI) {
+-                        report(ctx, `이미지 생성 모델: ${currentModel}\n설정: ${store.path}\n사용법: /codex-imagen gpt-image-2.5|gpt-image-2`);
++                        report(ctx, `Image generation model: ${currentModel}\nSettings file: ${store.path}\nUsage: /codex-imagen gpt-image-2.5|gpt-image-2`);
+                         return;
+                     }
+-                    selected = await ctx.ui.select(`이미지 생성 모델 (현재: ${currentModel})`, [
++                    selected = await ctx.ui.select(`Image generation model (current: ${currentModel})`, [
+                         currentModel,
+                         ...IMAGE_MODELS.filter((model) => model !== currentModel),
+                     ]);
+@@ -32,12 +32,12 @@
+                         return;
+                 }
+                 if (!isImageModel(selected))
+-                    throw new Error("사용법: /codex-imagen [gpt-image-2.5|gpt-image-2]");
++                    throw new Error("Usage: /codex-imagen [gpt-image-2.5|gpt-image-2]");
+                 await store.save(selected);
+-                report(ctx, `이미지 생성 모델: ${selected}`);
++                report(ctx, `Image generation model: ${selected}`);
+             }
+             catch (error) {
+-                report(ctx, `이미지 생성 설정을 변경하지 못했습니다: ${error instanceof Error ? error.message : String(error)}`, "error");
++                report(ctx, `Failed to change image generation settings: ${error instanceof Error ? error.message : String(error)}`, "error");
+             }
+         },
+     });
+diff -ruN -x '*.map' a/dist/open-image.js b/dist/open-image.js
+--- a/dist/open-image.js
++++ b/dist/open-image.js
+@@ -7,13 +7,13 @@
+  */
+ export function defaultAppUnavailableReason(env = process.env, platform = process.platform) {
+     if (env.SSH_CONNECTION || env.SSH_CLIENT || env.SSH_TTY) {
+-        return "SSH 세션에서는 원격 컴퓨터에서 열리므로 열지 않습니다.";
++        return "in an SSH session the app would open on the remote machine";
+     }
+     if (platform !== "darwin" &&
+         platform !== "win32" &&
+         !env.DISPLAY &&
+         !env.WAYLAND_DISPLAY) {
+-        return "그래픽 화면(DISPLAY 또는 WAYLAND_DISPLAY)이 없어 열 수 없습니다.";
++        return "no graphical display (DISPLAY or WAYLAND_DISPLAY)";
+     }
+     return undefined;
+ }
+@@ -37,12 +37,12 @@
+         await access(path);
+     }
+     catch {
+-        throw new Error(`저장된 파일을 찾을 수 없습니다: ${path}`);
++        throw new Error(`saved file not found: ${path}`);
+     }
+     const [command, args] = defaultAppLauncher(path, process.platform);
+     await new Promise((resolve, reject) => {
+         const child = spawn(command, args, { stdio: "ignore", detached: true });
+-        child.once("error", (error) => reject(new Error(`${command}을(를) 실행하지 못했습니다: ${error.message}`)));
++        child.once("error", (error) => reject(new Error(`failed to run ${command}: ${error.message}`)));
+         child.once("spawn", () => {
+             child.unref();
+             resolve();
+diff -ruN -x '*.map' a/dist/render.js b/dist/render.js
+--- a/dist/render.js
++++ b/dist/render.js
+@@ -23,12 +23,12 @@
+         ? request.num_last_images_to_include
+         : 0;
+     const operation = pathCount > 0
+-        ? `편집 · 참조 이미지 ${pathCount}개`
++        ? `edit · ${pathCount} reference image(s)`
+         : historyCount > 0
+-            ? `편집 · 최근 대화 이미지 ${historyCount}개`
+-            : "생성";
++            ? `edit · ${historyCount} recent conversation image(s)`
++            : "generate";
+     return request.transparent_background === true
+-        ? `${operation} · 투명 배경`
++        ? `${operation} · transparent background`
+         : operation;
+ }
+ /** Tool title and request summary, with the prompt on one line until the row is expanded. */
+@@ -65,12 +65,12 @@
+ }
+ function resultHeading(details, content) {
+     const { operation, background } = (details ?? {});
+-    const parts = [operation === "edit" ? "편집 완료" : "생성 완료"];
++    const parts = [operation === "edit" ? "Edited" : "Generated"];
+     const size = imageSize(content);
+     if (size !== undefined)
+         parts.push(size);
+     if (background === "transparent")
+-        parts.push("투명 배경");
++        parts.push("transparent background");
+     return parts.join(" · ");
+ }
+ function pathLabel(path, theme, width) {
+@@ -92,7 +92,7 @@
+     if (context.isError)
+         return new Text(theme.fg("error", text), 0, 0);
+     if (options.isPartial)
+-        return new Text(`\n${theme.fg("muted", "이미지를 생성하는 중…")}`, 0, 0);
++        return new Text(`\n${theme.fg("muted", "Generating image…")}`, 0, 0);
+     const state = context.state;
+     const savedPath = result.details
+         ?.savedPath;
+@@ -103,8 +103,8 @@
+         context.showImages &&
+         result.content.some((block) => block.type === "image");
+     const hint = [
+-        ...(isImageShown ? ["이미지 클릭: 확대·축소"] : []),
+-        ...(canOpen ? ["경로 클릭: 기본 앱으로 열기"] : []),
++        ...(isImageShown ? ["Click image: zoom in/out"] : []),
++        ...(canOpen ? ["Click path: open in default app"] : []),
+     ].join(" · ");
+     const setOpenStatus = (text, isError) => {
+         state.openStatus = { text, isError };
+@@ -116,7 +116,7 @@
+                 "",
+                 truncateToWidth(theme.fg("success", heading), width),
+                 path === undefined
+-                    ? truncateToWidth(theme.fg("warning", "파일로 저장하지 못했습니다."), width)
++                    ? truncateToWidth(theme.fg("warning", "Could not save to file."), width)
+                     : pathLabel(path, theme, width),
+             ];
+             if (hint !== "") {
+@@ -138,8 +138,8 @@
+                 event.x >= visibleWidth(displayPath(path))) {
+                 return undefined;
+             }
+-            setOpenStatus("기본 앱 실행을 요청하는 중…", false);
+-            openWithDefaultApp(path).then(() => setOpenStatus("기본 앱 실행을 요청했습니다.", false), (error) => setOpenStatus(`열지 못했습니다: ${errorMessage(error)}`, true));
++            setOpenStatus("Launching default app…", false);
++            openWithDefaultApp(path).then(() => setOpenStatus("Default app launched.", false), (error) => setOpenStatus(`Could not open: ${errorMessage(error)}`, true));
+             return { handled: true };
+         },
+     };
+diff -ruN -x '*.map' a/dist/settings.js b/dist/settings.js
+--- a/dist/settings.js
++++ b/dist/settings.js
+@@ -21,10 +21,10 @@
+         }
+         const value = JSON.parse(raw);
+         if (typeof value !== "object" || value === null || Array.isArray(value))
+-            throw new Error("이미지 생성 설정은 JSON 객체여야 합니다.");
++            throw new Error("image generation settings must be a JSON object");
+         const settings = value;
+         if (settings.model !== undefined && !isImageModel(settings.model))
+-            throw new Error("이미지 생성 model은 gpt-image-2.5 또는 gpt-image-2여야 합니다.");
++            throw new Error("image generation setting \"model\" must be gpt-image-2.5 or gpt-image-2");
+         return settings;
+     }
+     async load() {
+@@ -34,7 +34,7 @@
+     /** Preserves unrelated keys and atomically replaces the saved model. */
+     async save(model) {
+         if (!isImageModel(model))
+-            throw new Error("지원하지 않는 이미지 생성 모델입니다.");
++            throw new Error("unsupported image generation model");
+         const settings = { ...(await this.read()), model };
+         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
+         const temporary = `${this.path}.${randomUUID()}.tmp`;
