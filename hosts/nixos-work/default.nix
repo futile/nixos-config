@@ -165,6 +165,12 @@ in
     # 2026-01-30 6.18 still no zfs
     # 2026-05: linuxPackages_latest (7.3) broke zfs 2.4.4; track newest zfs-compatible kernel instead
     kernelPackages = pkgs.lib.my.latestZfsCompatibleKernelPackages config.boot.zfs.package;
+
+    # Suspend sometimes hangs freezing user.slice while a process waits on an unanswered
+    # FUSE request (likely rclone gdrive with Wi-Fi going down), see systemd/systemd#37590.
+    # After this many seconds the kernel aborts the whole FUSE connection (mount dies with
+    # ENOTCONN), so the freeze can finish. Applies to mounts created after the sysctl is set.
+    kernel.sysctl."fs.fuse.max_request_timeout" = 10;
   };
 
   i18n.inputMethod = {
