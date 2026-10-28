@@ -62,7 +62,7 @@ Recent commits follow a scoped style such as `hm-cf: Add touch-id support for su
 This section is locally maintained. Do not replace it with generated onboarding text or session-end git mandates.
 
 - Use `bd` for all issue tracking; do not create markdown task lists or use another issue tracker. Use `--json` for programmatic commands.
-- For implementation work, check `bd ready --json`, reuse a relevant issue or create one with `bd create`, and claim it with `bd update <id> --claim --json`.
+- For nontrivial or multi-step implementation work, check `bd ready --json`, reuse a relevant issue or create one with `bd create`, and claim it with `bd update <id> --claim --json`. Small, self-contained fixes (e.g. a one-line config change) do not need an issue.
 - Give new issues a clear description, design, and acceptance criteria. Link discovered follow-up work with `--deps discovered-from:<id>`.
 - Close completed issues with `bd close <id> --reason "Completed" --json`; update unfinished issues with concrete blockers and remaining work.
 - Research, review, and suggestion-only requests do not require an issue unless the user asks to track follow-up work. Check ready work before asking what to work on next.
