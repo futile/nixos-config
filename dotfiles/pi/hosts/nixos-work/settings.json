@@ -15,12 +15,14 @@
     "git:github.com/fdietze/pi-peer-messages",
     "~/.pi/agent/packages/pi-codex-image-gen"
   ],
-  "defaultTools": ["+send_peer_message"],
+  "defaultTools": [
+    "+send_peer_message"
+  ],
   "steeringMode": "all",
   "terminal": {
     "showTerminalProgress": true
   },
-  "hideThinkingBlock": true,
+  "hideThinkingBlock": false,
   "followUpMode": "all",
   "showCacheMissNotices": true,
   "tuiMode": "regular",
@@ -32,7 +34,9 @@
     "anthropic/claude-sonnet-5-5",
     "anthropic/claude-haiku-5-5"
   ],
-  "extensions": ["-builtin:mcp"],
+  "extensions": [
+    "-builtin:mcp"
+  ],
   "deviceId": "a8506262-30db-4855-8372-a8f7024a4222",
   "warnings": {
     "anthropicExtraUsage": false
