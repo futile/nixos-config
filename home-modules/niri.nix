@@ -75,7 +75,11 @@ in
     timeouts = [ ];
 
     events = {
-      "before-sleep" = "/run/current-system/sw/bin/noctalia msg session lock";
+      # Stopping the rclone FUSE mount avoids suspend hanging while freezing user.slice
+      # (see `fs.fuse.max_request_timeout` in hosts/nixos-work/default.nix).
+      "before-sleep" =
+        "/run/current-system/sw/bin/noctalia msg session lock; /run/current-system/sw/bin/systemctl --user stop rclone-gdrive";
+      "after-resume" = "/run/current-system/sw/bin/systemctl --user start rclone-gdrive";
     };
   };
 }

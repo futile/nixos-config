@@ -18,6 +18,8 @@
 
       Service = {
         Type = "simple";
+        # clear a stale mountpoint left by a dead/aborted FUSE connection, otherwise the mount fails
+        ExecStartPre = "-/run/wrappers/bin/fusermount3 -uz %h/GoogleDrive";
         ExecStart =
           # `--allow-other` because service doesn't properly run as my user while booting/something about graphical DE..
           "${pkgs.rclone}/bin/rclone mount --allow-other --vfs-cache-mode=full gdrive: %h/GoogleDrive";
