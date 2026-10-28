@@ -122,5 +122,15 @@ nixos-generate-config --root /mnt
 * Upload key to GitHub: Settings -> SSH-Keys -> ...
 * Vivaldi: Activate sync, PW in KeepassXC
 
+## Dual-booting Windows: hardware clock
+
+NixOS keeps the hardware clock (RTC) in UTC (`time.hardwareClockInLocalTime = false`, the default). Windows assumes local time by default, so each OS would shift the other's clock by the UTC offset. Instead of switching NixOS to local time, make Windows use UTC: in an admin `cmd`, run
+
+```
+reg add "HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\TimeZoneInformation" /v RealTimeIsUniversal /d 1 /t REG_DWORD /f
+```
+
+then reboot. If the RTC is already wrong, fix it once from NixOS with `sudo hwclock --systohc --utc`.
+
 
 [pimey-nixos]: https://github.com/pimeys/nixos

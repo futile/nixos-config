@@ -111,8 +111,8 @@ in
     timeZone = "America/Guadeloupe";
     # timeZone = "Asia/Bangkok";
 
-    # For dualbooting with Windows
-    hardwareClockInLocalTime = true;
+    # RTC in UTC (no Windows dual-boot on this machine anymore)
+    hardwareClockInLocalTime = false;
   };
 
   hardware.openrazer = {
