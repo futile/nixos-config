@@ -107,8 +107,8 @@ in
 
   time = {
     # Set your time zone.
-    #timeZone = "Europe/Berlin";
-    timeZone = "America/Guadeloupe";
+    timeZone = "Europe/Berlin";
+    # timeZone = "America/Guadeloupe";
     # timeZone = "Asia/Bangkok";
 
     # RTC in UTC (no Windows dual-boot on this machine anymore)
