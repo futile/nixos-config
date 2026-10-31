@@ -16,6 +16,7 @@ These rules override conflicting skill guidance. Explicit user requests take pre
 
 - Before creating worktrees, avoid duplicate cold builds/downloads and preserve cache reuse.
 - In `~/gits/nixpkgs`, use `~/nixos/bin/nix-build-sccached` instead of `nix build` when shared sccache applies; see `~/nixos/docs/nix-sccache.md`.
+- On Linux, `kernel.perf_event_paranoid=2` allows only user-space profiling: `perf record -g` or `--call-graph dwarf` fails with EACCES ("Failure to open any events") unless you add `--user-callchains`. Kernel frames or system-wide (`-a`) profiling need root; ask first.
 
 ## Subagents
 
