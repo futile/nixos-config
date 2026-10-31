@@ -84,9 +84,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/8q6jczz4f4llbzn3ji6cfp7z4bhny5za-gh-2.100.0"
+        "/nix/store/y7rnnq2qqi43sajrpc3yfqln3ivqgc9b-gh-2.103.0"
       ],
-      "url": "path:/nix/store/9vb5g7arhwk5zp01lac716qq9b7z7yqg-source?lastModified=1788922888&narHash=sha256-QMX3uerxnW2R5dHcWpIQILHDltOZnon3x3Spq7EzBFI%3D&rev=a391f95d4557d685fd8e5dc0d4b1f9271aa2f342"
+      "url": "path:/nix/store/c8qzbml2czb3kwna9c6mi9d8frw09i2x-source?lastModified=1792782095&narHash=sha256-KtL%2Bp7f7jY34cO5Mt0/hUZNE3spnINk7hwpYxM2XLC4%3D&rev=901c54c08bdc20e00c2b3c73716b97497b1b3c74"
     },
     "hydra-check": {
       "active": true,
@@ -95,9 +95,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/rif2gyfsjgjw7nkvi6pjnzwrp1zr797p-hydra-check-2.1.0"
+        "/nix/store/zyrnr4xzs7dbiii3nqi3bisdf911bbaq-hydra-check-2.1.0"
       ],
-      "url": "path:/nix/store/77dbgds155bbz3vd3qywq1sii07i5ljs-source?lastModified=1778869304&narHash=sha256-30sZNZoA1cqF5JNO9fVX%2BwgiQYjB7HJqqJ4ztCDeBZE%3D&rev=d233902339c02a9c334e7e593de68855ad26c4cb"
+      "url": "path:/nix/store/c8qzbml2czb3kwna9c6mi9d8frw09i2x-source?lastModified=1792782095&narHash=sha256-KtL%2Bp7f7jY34cO5Mt0/hUZNE3spnINk7hwpYxM2XLC4%3D&rev=901c54c08bdc20e00c2b3c73716b97497b1b3c74"
     },
     "janet": {
       "active": true,
@@ -150,9 +150,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/p343pbfrzda5a37m9dhmg17pwc47bkls-pi-1.3.0"
+        "/nix/store/yizqci8k3d9dwmv3k02hwshl2mvdl5bi-pi-1.4.0"
       ],
-      "url": "github:numtide/llm-agents.nix/06667f1e155921a30427e4277c42ede088521396?narHash=sha256-/8LNjKF2eCmvIOTq03Hq0udO97DDTT0/mPgmHHrn%2BX8%3D"
+      "url": "github:numtide/llm-agents.nix/b14f9d18b6d127221bd9f63817a40e1cca2b344b?narHash=sha256-kl4L50m8mMMyQLjH2d46ljtdzR%2B9vlgpoDmOrpNV/SU%3D"
     },
     "yarn": {
       "active": true,
@@ -161,9 +161,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/i2d711xk76lzfd817wrg76czlljq2yjv-yarn-1.22.19"
+        "/nix/store/956bk5xr4ins0havkzr1dh9l846pll7c-yarn-1.22.22"
       ],
-      "url": "path:/nix/store/gjg3b0xl0w7a43qywrjnm1528dspyxv3-source?lastModified=1696419054&narHash=sha256-EdR%2BdIKCfqL3voZUDYwcvgRDOektQB9KbhBVcE0/3Mo%3D&rev=7131f3c223a2d799568e4b278380cd9dac2b8579"
+      "url": "path:/nix/store/c8qzbml2czb3kwna9c6mi9d8frw09i2x-source?lastModified=1792782095&narHash=sha256-KtL%2Bp7f7jY34cO5Mt0/hUZNE3spnINk7hwpYxM2XLC4%3D&rev=901c54c08bdc20e00c2b3c73716b97497b1b3c74"
     }
   },
   "version": 3
