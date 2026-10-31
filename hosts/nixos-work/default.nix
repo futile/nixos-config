@@ -259,6 +259,7 @@ in
     coreutils
     git
     rsync
+    perf
     dconf-editor
     adwaita-icon-theme
 
