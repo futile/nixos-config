@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Write back sccache jobserver tokens leaked by compiles killed mid-flight (nixos-32i).
+
+The sccache server owns a jobserver pipe filled with one token per CPU and shares it
+with the rustc processes it spawns. When a client disconnects (Ctrl+C), the server
+SIGKILLs its in-flight rustc, whose tokens never return (mozilla/sccache#2874). Once
+the pipe is empty, every later compile request hangs.
+
+Whenever the service cgroup holds only the server, nobody can legitimately hold a
+token, so the pipe must be full. A shortfall that persists for SETTLE seconds is a
+leak and gets written back. Polls fast only while compiles run or a shortfall is
+being confirmed, so an idle machine sees one wakeup per SLOW seconds.
+
+Usage: sccache-token-guard <cgroup dir of sccache.service>
+"""
+import fcntl
+import os
+import struct
+import sys
+import termios
+import time
+
+FAST = 0.2  # seconds between samples while compiles run or a shortfall is confirmed
+SLOW = 2.0  # seconds between samples while idle and healthy; bounds detection after a short build
+SETTLE = 1.0  # the server holds a token briefly before its child shows up; ignore shorter dips
+
+
+def log(msg):
+    print(msg, flush=True)
+
+
+def pool_pipe(pid):
+    """(read path, write path) of the only pipe `pid` holds open for reading and writing."""
+    ends = {}
+    fd_dir = f"/proc/{pid}/fd"
+    for fd in os.listdir(fd_dir):
+        try:
+            target = os.readlink(f"{fd_dir}/{fd}")
+            if not target.startswith("pipe:"):
+                continue
+            with open(f"/proc/{pid}/fdinfo/{fd}") as info:
+                flags = next(int(line.split()[1], 8) for line in info if line.startswith("flags:"))
+        except (OSError, StopIteration):
+            continue  # fd closed meanwhile
+        ends.setdefault(target, {})[flags & os.O_ACCMODE] = f"{fd_dir}/{fd}"
+    pairs = [(e[os.O_RDONLY], e[os.O_WRONLY]) for e in ends.values() if os.O_RDONLY in e and os.O_WRONLY in e]
+    return pairs[0] if len(pairs) == 1 else None
+
+
+def available(read_path):
+    """Tokens currently in the pipe (FIONREAD on a fresh read end; never reads)."""
+    fd = os.open(read_path, os.O_RDONLY | os.O_NONBLOCK)
+    try:
+        return struct.unpack("i", fcntl.ioctl(fd, termios.FIONREAD, b"\0" * 4))[0]
+    finally:
+        os.close(fd)
+
+
+def refill(write_path, n):
+    fd = os.open(write_path, os.O_WRONLY | os.O_NONBLOCK)
+    try:
+        os.write(fd, b"|" * n)
+    finally:
+        os.close(fd)
+
+
+class Confirm:
+    """Turns idle pool samples into a refill count once a shortfall outlasts SETTLE."""
+
+    def __init__(self):
+        self.since = None
+        self.best = 0
+
+    def reset(self):
+        self.since = None
+
+    def step(self, now, pool, capacity):
+        if pool >= capacity:
+            self.since = None
+            return 0
+        if self.since is None:
+            self.since, self.best = now, pool
+        self.best = max(self.best, pool)
+        if now - self.since < SETTLE:
+            return 0
+        self.since = None
+        return capacity - self.best
+
+
+def procs(cgroup):
+    try:
+        with open(f"{cgroup}/cgroup.procs") as f:
+            return f.read().split()
+    except FileNotFoundError:
+        return []  # service stopped
+
+
+def main(cgroup):
+    log(f"watching {cgroup}")
+    confirm, warned = Confirm(), set()
+    while True:
+        delay = SLOW
+        try:
+            members = procs(cgroup)
+            pid = int(members[0]) if len(members) == 1 else None
+            paths = pool_pipe(pid) if pid else None
+            if pid is None:
+                confirm.reset()
+                if members:
+                    delay = FAST  # compiles running: a leak can only happen now
+            elif paths is None:
+                if pid not in warned:
+                    warned.add(pid)
+                    log(f"server pid {pid}: no unique pipe held for reading and writing; skipping")
+            else:
+                capacity = len(os.sched_getaffinity(pid))
+                pool = available(paths[0])
+                if pool > capacity and pid not in warned:
+                    warned.add(pid)
+                    log(f"server pid {pid}: idle pool {pool} above capacity {capacity}")
+                missing = confirm.step(time.monotonic(), pool, capacity)
+                if confirm.since is not None:
+                    delay = FAST
+                if missing and procs(cgroup) == members:
+                    # A token that came back since the last sample shrinks the shortfall.
+                    missing = min(missing, capacity - available(paths[0]))
+                    if missing > 0:
+                        refill(paths[1], missing)
+                        log(f"refilled {missing} leaked tokens (server pid {pid}, capacity {capacity})")
+        except (FileNotFoundError, ProcessLookupError):
+            confirm.reset()  # server exited between reads
+        time.sleep(delay)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    main(sys.argv[1])

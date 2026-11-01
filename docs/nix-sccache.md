@@ -36,6 +36,19 @@ Use systemd to stop or restart the managed daemon, rather than
 `Restart=on-failure`. New compiler invocations can still auto-start a daemon
 when the service is stopped.
 
+### Token Guard
+
+When a client disconnects mid-compile (Ctrl+C), sccache 0.18 SIGKILLs its
+rustc, and the jobserver tokens that rustc held never return to the server's
+pool (mozilla/sccache#2874). Once the pool is empty, every later compile hangs
+with no rustc running. `sccache-token-guard.service` runs `bin/sccache-token-guard`:
+whenever the `sccache.service` cgroup holds only the server, the pool must hold
+one token per CPU, so a shortfall lasting over 1 s gets written back. It samples
+every 2 s while idle and every 200 ms while compiles run, so a leak is refilled
+about 1-3 s after the last compile ends. Refills show up as
+`refilled N leaked tokens` in `journalctl --user -u sccache-token-guard.service`.
+Tests: `python3 tests/test_sccache_token_guard.py`.
+
 ## Current Cache Location
 
 The local Nix build cache directory is:

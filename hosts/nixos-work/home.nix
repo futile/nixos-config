@@ -278,6 +278,22 @@ in
     Install.WantedBy = [ "default.target" ];
   };
 
+  # Writes back jobserver tokens leaked when sccache kills a compile mid-flight (nixos-32i).
+  systemd.user.services.sccache-token-guard = {
+    Unit = {
+      Description = "Refill sccache jobserver tokens leaked by killed compiles";
+      After = [ "sccache.service" ];
+    };
+
+    Service = {
+      ExecStart = "${pkgs.python3}/bin/python3 -u ${../../bin/sccache-token-guard} /sys/fs/cgroup/user.slice/user-%U.slice/user@%U.service/app.slice/sccache.service";
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+
+    Install.WantedBy = [ "default.target" ];
+  };
+
   my.nixProfileSnapshot = {
     enable = true;
     hostName = "nixos-work";
