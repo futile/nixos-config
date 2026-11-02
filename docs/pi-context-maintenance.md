@@ -1,10 +1,11 @@
 # Pi context maintenance: triggers, economics, and reminder design
 
-Current thresholds (2026-10-21): each tier starts at its window share or a
+Current thresholds (2026-11-02): each tier starts at its window share or a
 token count, whichever comes first, so large windows (1M) are judged in tokens:
-advisory `min(60%, 150k)`, firm `min(75%, 200k)`, urgent `min(80%, 300k)`,
-post-collapse residual `min(60%, 200k)`. Percentage-point gates (growth, rearm
-drop, low fold yield) are measured on at most a 200k reference window. Windows
+advisory `min(60%, 150k)`, firm `min(75%, 300k)`, urgent `min(80%, 400k)`,
+post-collapse residual `min(60%, 300k)`. Advisory rearms after 40k growth,
+other tiers after 20k. Percentage-point gates (growth, rearm drop, low fold
+yield) are measured on at most a 200k reference window. Windows
 up to 200k behave as before. Upstream infinite-context (pinned at `b3a5815`)
 no longer has `context_summary`; revising a summary is a singleton
 `context_fold`. Its own 150k nudges are disabled through

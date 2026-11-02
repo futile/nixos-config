@@ -2,13 +2,15 @@ export const CONTEXT_RESERVE_TOKENS = 16_384;
 export const CRITICAL_EXTRA_TOKENS = 8_000;
 export const REARM_DROP_PERCENT = 5;
 export const REARM_GROWTH_TOKENS = 20_000;
+/** The soft advisory repeats less often while context keeps growing. */
+export const ADVISORY_REARM_GROWTH_TOKENS = 40_000;
 export const COLLAPSE_COOLDOWN_TOKENS = 5_000;
 export const RECENT_YIELD_LIMIT = 3;
 export const HIGH_RESIDUAL_PERCENT = 60;
-export const HIGH_RESIDUAL_TOKENS = 200_000;
+export const HIGH_RESIDUAL_TOKENS = 300_000;
 export const ADVISORY_TOKENS = 150_000;
-export const FIRM_TOKENS = 200_000;
-export const URGENT_TOKENS = 300_000;
+export const FIRM_TOKENS = 300_000;
+export const URGENT_TOKENS = 400_000;
 /** Window-share gates are measured on at most this window, so large windows are judged in tokens. */
 export const REFERENCE_WINDOW_TOKENS = 200_000;
 
@@ -385,7 +387,10 @@ function rearm(state: PressureState, current: UsageBaseline): PressureState {
       (current.contextWindow === latch.contextWindow
         ? latch.tokens - current.tokens >=
             share(REARM_DROP_PERCENT, current.contextWindow) ||
-          current.tokens - latch.tokens >= REARM_GROWTH_TOKENS
+          current.tokens - latch.tokens >=
+            (level === "advisory"
+              ? ADVISORY_REARM_GROWTH_TOKENS
+              : REARM_GROWTH_TOKENS)
         : current.percent <= latch.percent - REARM_DROP_PERCENT)
     )
       delete latches[level];

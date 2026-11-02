@@ -518,19 +518,21 @@ test("a positive collapse waits for a fresh reading, and reset retains yields", 
   assert.equal(resetPressure(fresh).yields.length, 1);
 });
 
-test("large windows use token tiers: advisory 150k, firm 200k, urgent 300k", () => {
+test("large windows use token tiers: advisory 150k, firm 300k, urgent 400k", () => {
   const big = (tokens: number) => usage(tokens, undefined, 1_000_000);
   let { state } = ready(140_000, undefined, 1_000_000);
   const steps: [number, string | undefined][] = [
     [140_000, undefined],
     [150_000, "advisory"],
-    [165_000, undefined],
-    [170_000, "advisory"], // +20k rearms
-    [200_000, "firm"],
-    [215_000, undefined], // firm suppresses advisory
-    [220_000, "firm"],
-    [299_000, "firm"],
-    [300_000, "urgent"],
+    [170_000, undefined], // +20k does not rearm advisory
+    [189_000, undefined],
+    [190_000, "advisory"], // +40k rearms
+    [299_000, "advisory"],
+    [300_000, "firm"],
+    [315_000, undefined], // firm suppresses advisory
+    [320_000, "firm"], // +20k rearms firm
+    [399_000, "firm"],
+    [400_000, "urgent"],
   ];
   for (const [tokens, expected] of steps) {
     const result = evaluatePressure(state, big(tokens));
@@ -540,11 +542,11 @@ test("large windows use token tiers: advisory 150k, firm 200k, urgent 300k", () 
   }
 
   for (const [after, expected] of [
-    [210_000, "retention"],
-    [190_000, undefined],
+    [310_000, "retention"],
+    [290_000, undefined],
   ] as const) {
     const fold = makeYieldSample(
-      { action: "fold", ok: true, deltaTokens: 300_000 - after },
+      { action: "fold", ok: true, deltaTokens: 400_000 - after },
       1_000_000,
       1,
     );
@@ -559,15 +561,15 @@ test("large windows judge fold yields in tokens of a 200k reference window", () 
     [5_000, true],
     [10_000, false],
   ] as const) {
-    const { state: ready300 } = ready(300_000, undefined, 1_000_000);
+    const { state: ready400 } = ready(400_000, undefined, 1_000_000);
     const sample = makeYieldSample(
       { action: "fold", ok: true, deltaTokens: saved },
       1_000_000,
       1,
     );
     if (!sample) throw new Error("expected valid sample");
-    const state = { ...ready300, yields: [sample, sample, sample] };
-    const result = evaluatePressure(state, usage(300_000, undefined, 1_000_000));
+    const state = { ...ready400, yields: [sample, sample, sample] };
+    const result = evaluatePressure(state, usage(400_000, undefined, 1_000_000));
     assert.equal(result.decision?.kind, "urgent");
     assert.equal(result.decision?.broaderYield !== undefined, broader, `${saved}`);
   }
