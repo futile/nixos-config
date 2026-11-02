@@ -25,7 +25,7 @@
   "hideThinkingBlock": false,
   "followUpMode": "all",
   "showCacheMissNotices": true,
-  "tuiMode": "regular",
+  "tuiMode": "fullscreen",
   "enabledModels": [
     "openai/gpt-6-astra",
     "openai/gpt-6.1-sol",
