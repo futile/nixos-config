@@ -5,7 +5,8 @@
   "mcpServers": {
     "DeepWiki": {
       "url": "https://mcp.deepwiki.com/mcp",
-      "lifecycle": "lazy"
+      "lifecycle": "lazy",
+      "directTools": ["ask_wiki_question"]
     },
     "serena": {
       "command": "/home/felix/nixos/bin/serena-mcp-with-desktop-env",
