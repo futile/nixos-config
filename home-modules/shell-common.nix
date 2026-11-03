@@ -78,5 +78,7 @@
     file
     lsof
     killall
+
+    leaf-markdown-viewer
   ];
 }
