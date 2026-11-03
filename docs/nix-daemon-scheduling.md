@@ -1,8 +1,8 @@
 # Nix Daemon Build Scheduling
 
-Notes on keeping the desktop responsive while Nix builds run. Nothing here is applied yet;
-the host currently runs `nix-daemon.service` with defaults (`CPUSchedulingPolicy=other`,
-IO class best-effort, `CPUWeight` unset, in `system.slice`).
+Notes on keeping the desktop responsive while Nix builds run. Applied on nixos-work:
+`nix.daemonCPUSchedPolicy = "batch"` (`hosts/nixos-work/default.nix`); `CPUWeight` is
+still unset.
 
 ## Where `nice -n 19` applies
 
@@ -32,3 +32,13 @@ Nix uses store `auto`: the local store when `/nix/var/nix` is writable by the ca
   contention (work-conserving). Stronger than `batch`; both combine.
 
 Suggested if daemon builds cause lag: `daemonCPUSchedPolicy = "batch"` plus `CPUWeight = 20`.
+
+## Cargo builds on nixos-work
+
+`hosts/nixos-work/cargo-build-slice.nix` wraps rustup's `cargo` so every cargo command runs
+in the user unit `background-build.slice` (child of `background.slice`, `CPUWeight=30`);
+`sccache.service` runs there too. Programs started by `cargo run` get an env runner that
+moves them back to `app.slice`. Opt out with `CARGO_NO_BUILD_SLICE=1`. `app.slice`
+(8G) and `session.slice` (1G) have `MemoryLow`, with 9G on the ancestors
+(`user.slice`, `user-.slice`, `user@.service`), and the ZFS ARC is capped at 8 GiB
+(kernel parameter, needs a reboot or a root write to `/sys/module/zfs/parameters/zfs_arc_max`).

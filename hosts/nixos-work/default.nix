@@ -171,7 +171,23 @@ in
     # After this many seconds the kernel aborts the whole FUSE connection (mount dies with
     # ENOTCONN), so the freeze can finish. Applies to mounts created after the sysctl is set.
     kernel.sysctl."fs.fuse.max_request_timeout" = 10;
+
+    # The default ARC limit (~all RAM) makes builds push the desktop into swap before
+    # ZFS shrinks the cache; 8 GiB keeps enough for the store and checkouts.
+    kernelParams = [ "zfs.zfs_arc_max=${toString (8 * 1024 * 1024 * 1024)}" ];
   };
+
+  # Builders do not preempt interactive tasks on wakeup (docs/nix-daemon-scheduling.md).
+  nix.daemonCPUSchedPolicy = "batch";
+
+  # memory.low only protects up to the ancestors' effective protection, so the chain
+  # down to the user manager needs it for app.slice/session.slice (home.nix) to work.
+  systemd.slices.user.sliceConfig.MemoryLow = "9G";
+  systemd.slices."user-" = {
+    overrideStrategy = "asDropin";
+    sliceConfig.MemoryLow = "9G";
+  };
+  systemd.services."user@".serviceConfig.MemoryLow = "9G";
 
   i18n.inputMethod = {
     type = "ibus";

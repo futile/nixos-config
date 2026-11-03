@@ -120,6 +120,17 @@ in
           ExecStart=${config.programs.keepassxc.package}/bin/keepassxc --minimized
           ExecStartPost=${closeKeePassXCStartupWindow}
         '';
+
+        # Keep desktop apps and the compositor in RAM while builds compete for memory.
+        # Only effective up to the user@.service protection set in default.nix.
+        "systemd/user/app.slice.d/memory-low.conf".text = ''
+          [Slice]
+          MemoryLow=8G
+        '';
+        "systemd/user/session.slice.d/memory-low.conf".text = ''
+          [Slice]
+          MemoryLow=1G
+        '';
       };
   };
 
@@ -192,7 +203,7 @@ in
           # element-desktop # known bug: https://github.com/NixOS/nixpkgs/issues/120228
 
           # rust tools
-          rustup
+          (pkgs.callPackage ./cargo-build-slice.nix { })
           cargo-edit
           cargo-nextest
           cargo-binstall
@@ -254,11 +265,16 @@ in
     stateVersion = "22.11";
   };
 
+  # Builds (cargo wrapper, sccache) run here; the name makes it a child of the stock
+  # background.slice (CPUWeight=30), so they yield CPU to app.slice and session.slice.
+  systemd.user.slices.background-build.Unit.Description = "Background build jobs";
+
   systemd.user.services.sccache = {
     Unit.Description = "sccache compiler cache";
 
     Service = {
       Type = "simple";
+      Slice = "background-build.slice";
       ExecStart = "${pkgs.sccache}/bin/sccache";
       Environment = [
         "SCCACHE_START_SERVER=1"
@@ -286,7 +302,7 @@ in
     };
 
     Service = {
-      ExecStart = "${pkgs.python3}/bin/python3 -u ${../../bin/sccache-token-guard} /sys/fs/cgroup/user.slice/user-%U.slice/user@%U.service/app.slice/sccache.service";
+      ExecStart = "${pkgs.python3}/bin/python3 -u ${../../bin/sccache-token-guard} /sys/fs/cgroup/user.slice/user-%U.slice/user@%U.service/background.slice/background-build.slice/sccache.service";
       Restart = "on-failure";
       RestartSec = "5s";
     };
