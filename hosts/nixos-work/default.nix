@@ -187,7 +187,12 @@ in
     overrideStrategy = "asDropin";
     sliceConfig.MemoryLow = "9G";
   };
-  systemd.services."user@".serviceConfig.MemoryLow = "9G";
+  systemd.services."user@".serviceConfig = {
+    MemoryLow = "9G";
+    # Merges with upstream `pids memory cpu`; lets home.nix pin background-build.slice
+    # (docs/background-build-cpuset.md). Applies after reboot.
+    Delegate = "cpuset";
+  };
 
   i18n.inputMethod = {
     type = "ibus";

@@ -23,6 +23,14 @@ let
       ${pkgs.niri}/bin/niri msg action close-window --id "$window_id"
     fi
   '';
+
+  # background-build.slice leaves physical core 0 (SMT pair 0,1) to interactive work
+  # and gets every CPU while the session is idle (docs/background-build-cpuset.md).
+  buildCpusRestricted = "2-15";
+  setBuildCpus =
+    cpus:
+    "/run/current-system/sw/bin/systemctl --user set-property --runtime background-build.slice AllowedCPUs=${cpus}";
+  restrictBuildCpus = setBuildCpus buildCpusRestricted;
 in
 {
   imports =
@@ -267,7 +275,34 @@ in
 
   # Builds (cargo wrapper, sccache) run here; the name makes it a child of the stock
   # background.slice (CPUWeight=30), so they yield CPU to app.slice and session.slice.
-  systemd.user.slices.background-build.Unit.Description = "Background build jobs";
+  systemd.user.slices.background-build = {
+    Unit.Description = "Background build jobs";
+    Slice.AllowedCPUs = buildCpusRestricted;
+  };
+
+  # Separate from the swayidle in niri.nix: with logind support, swayidle disables its
+  # timeouts while any logind idle inhibitor (noctalia Caffeine) is held.
+  systemd.user.services.build-cpu-idle = {
+    Unit = {
+      Description = "Give background-build.slice all CPUs while the session is idle";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+      ConditionEnvironment = "WAYLAND_DISPLAY";
+    };
+
+    Service = {
+      # Restricted is the safe default whenever this service is not running.
+      ExecStartPre = "-${restrictBuildCpus}";
+      ExecStart = "${
+        pkgs.swayidle.override { systemdSupport = false; }
+      }/bin/swayidle -w timeout 300 '${setBuildCpus "0-15"}' resume '${restrictBuildCpus}'";
+      ExecStopPost = "-${restrictBuildCpus}";
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
 
   systemd.user.services.sccache = {
     Unit.Description = "sccache compiler cache";

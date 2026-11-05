@@ -37,7 +37,8 @@ Suggested if daemon builds cause lag: `daemonCPUSchedPolicy = "batch"` plus `CPU
 
 `hosts/nixos-work/cargo-build-slice.nix` wraps rustup's `cargo` so every cargo command runs
 in the user unit `background-build.slice` (child of `background.slice`, `CPUWeight=30`);
-`sccache.service` runs there too. Programs started by `cargo run` get an env runner that
+`sccache.service` runs there too. Its core reservation is described in
+[`background-build-cpuset.md`](background-build-cpuset.md). Programs started by `cargo run` get an env runner that
 moves them back to `app.slice`. Opt out with `CARGO_NO_BUILD_SLICE=1`. `app.slice`
 (8G) and `session.slice` (1G) have `MemoryLow`, with 9G on the ancestors
 (`user.slice`, `user-.slice`, `user@.service`), and the ZFS ARC is capped at 8 GiB
