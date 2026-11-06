@@ -118,6 +118,10 @@ in
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/codex-fast";
       ".pi/agent/extensions/static-working-indicator".source =
         config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/static-working-indicator";
+      # Workaround for pi#10956 (idle cache warming stops after context refreshes); patches the
+      # shared AgentSession prototype, so in-process subagents need no childExtensions entry.
+      ".pi/agent/extensions/cache-warming-identity".source =
+        config.lib.file.mkOutOfStoreSymlink "${thisFlakePath}/dotfiles/pi/extensions/cache-warming-identity";
     };
 
     home.sessionVariables = {
