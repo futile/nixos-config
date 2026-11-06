@@ -2,7 +2,7 @@
   "defaultModel": "claude-opus-5-5",
   "defaultThinkingLevel": "high",
   "defaultProvider": "anthropic",
-  "lastChangelogVersion": "1.4.0",
+  "lastChangelogVersion": "1.5.0",
   "theme": "light/dark",
   "packages": [
     "npm:pi-mcp-adapter",
@@ -41,5 +41,9 @@
   "warnings": {
     "anthropicExtraUsage": false
   },
-  "cacheWarming": "idle"
+  "cacheWarming": "idle",
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-mcp-adapter\",\"scope\":\"user\"}": "7.0.1",
+    "{\"source\":\"git:github.com/fdietze/pi-claude-auth@main\",\"scope\":\"user\"}": "0.4.0"
+  }
 }

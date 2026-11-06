@@ -73,9 +73,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/vfimbrryi2bciprgbfahs54bkkipfg0m-context-efficiency-metrics-0.2.0"
+        "/nix/store/xc76ixs45mbg7a13hl7cm7dp2ihkv9h0-context-efficiency-metrics-0.2.0"
       ],
-      "url": "github:fdietze/context-efficiency-metrics/7e3e6a60894997ec9f54a1b9b64c906cf39230f0?narHash=sha256-HmUyU5IGQkd5b2Q%2BtqVI%2B57eVIIYR8mC1B%2BHh%2BMVyPQ%3D"
+      "url": "github:fdietze/context-efficiency-metrics/59d1a458bbcd4d395b5133bfce41ae6117dd7995?narHash=sha256-w2mKMh/8sFEpzk1CmSzQ4H4oH/rz3uOhI4rlyvQ4J54%3D"
     },
     "gh": {
       "active": true,
@@ -150,9 +150,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/yizqci8k3d9dwmv3k02hwshl2mvdl5bi-pi-1.4.0"
+        "/nix/store/3hvs5jdghcb70i8sf8q19sxp5d5fs4sc-pi-1.5.0"
       ],
-      "url": "github:numtide/llm-agents.nix/b14f9d18b6d127221bd9f63817a40e1cca2b344b?narHash=sha256-kl4L50m8mMMyQLjH2d46ljtdzR%2B9vlgpoDmOrpNV/SU%3D"
+      "url": "github:numtide/llm-agents.nix/499fb79f92064e92cdb968d12ffeb92d36243b50?narHash=sha256-DDsPI44qOjlRdnWbaVlcU5iwUPfadigR4oUrVWq2G0I%3D"
     },
     "yarn": {
       "active": true,

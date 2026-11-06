@@ -246,6 +246,7 @@ in
           wordcraft
           soundcraft
           deckcraft
+          pdfcraft
         ])
       ++
         # packages from master
