@@ -51,9 +51,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/ayk84nr7kdln5yrg3raxbbfyvamglm01-claude-code-2.1.296"
+        "/nix/store/42v08djlyij0ajvbbd994ji5l3lcagm7-claude-code-2.1.322"
       ],
-      "url": "github:numtide/llm-agents.nix/493c34b1bed086861b0e968a40d00bd06522f003?narHash=sha256-lvEyxEmXv/8gwiWE2%2BrxTuL59EFq5wwXxX%2BrtbxjwLo%3D"
+      "url": "github:numtide/llm-agents.nix/3c4f3e7ccf54c7279659536160f9c58de38073c1?narHash=sha256-ldRd1UWymZ%2BB1ngo5vNM2WYUbUYE0p8yTY6XIZJoc7A%3D"
     },
     "codex": {
       "active": true,
@@ -150,9 +150,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/3hvs5jdghcb70i8sf8q19sxp5d5fs4sc-pi-1.5.0"
+        "/nix/store/ywgcacfckm5safp8bm5kz7pk3h25l45x-pi-1.5.2"
       ],
-      "url": "github:numtide/llm-agents.nix/499fb79f92064e92cdb968d12ffeb92d36243b50?narHash=sha256-DDsPI44qOjlRdnWbaVlcU5iwUPfadigR4oUrVWq2G0I%3D"
+      "url": "github:numtide/llm-agents.nix/3c4f3e7ccf54c7279659536160f9c58de38073c1?narHash=sha256-ldRd1UWymZ%2BB1ngo5vNM2WYUbUYE0p8yTY6XIZJoc7A%3D"
     },
     "yarn": {
       "active": true,
