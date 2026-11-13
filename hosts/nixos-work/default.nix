@@ -228,14 +228,8 @@ in
     };
 
     desktopManager = {
-      gnome = {
-        enable = true;
-        extraGSettingsOverridePackages = [ pkgs.mutter ];
-        extraGSettingsOverrides = ''
-          [org.gnome.mutter]
-          experimental-features = ['scale-monitor-framebuffer']
-        '';
-      };
+      # mutter 51 dropped org.gnome.mutter.experimental-features; fractional scaling is default.
+      gnome.enable = true;
     };
 
     # Enable touchpad support (enabled default in most desktopManager).
