@@ -539,8 +539,8 @@ test("restored ordinary latches stay quiet while urgent and critical remain pend
   const cases = [
     {
       name: "advisory",
-      percent: 16,
-      tokens: 160_000,
+      percent: 21,
+      tokens: 210_000,
       contextWindow: 1_000_000,
     },
     { name: "firm", percent: 31, tokens: 310_000, contextWindow: 1_000_000 },
@@ -785,7 +785,7 @@ test("model, compaction, and tree resets anchor the next interaction baseline", 
     await pi.emit(eventName, { type: eventName }, session.ctx);
     session.setUsage(60_000);
     await pi.emit("agent_start", { type: "agent_start" }, session.ctx);
-    session.setUsage(190_000);
+    session.setUsage(240_000);
     await pi.emit("turn_end", turn, session.ctx);
     await pi.emit("turn_end", turn, session.ctx);
 

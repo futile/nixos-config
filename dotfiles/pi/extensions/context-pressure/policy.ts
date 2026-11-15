@@ -8,7 +8,7 @@ export const COLLAPSE_COOLDOWN_TOKENS = 5_000;
 export const RECENT_YIELD_LIMIT = 3;
 export const HIGH_RESIDUAL_PERCENT = 60;
 export const HIGH_RESIDUAL_TOKENS = 300_000;
-export const ADVISORY_TOKENS = 150_000;
+export const ADVISORY_TOKENS = 200_000;
 export const FIRM_TOKENS = 300_000;
 export const URGENT_TOKENS = 400_000;
 /** Window-share gates are measured on at most this window, so large windows are judged in tokens. */

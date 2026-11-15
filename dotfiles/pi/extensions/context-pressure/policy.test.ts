@@ -518,15 +518,15 @@ test("a positive collapse waits for a fresh reading, and reset retains yields", 
   assert.equal(resetPressure(fresh).yields.length, 1);
 });
 
-test("large windows use token tiers: advisory 150k, firm 300k, urgent 400k", () => {
+test("large windows use token tiers: advisory 200k, firm 300k, urgent 400k", () => {
   const big = (tokens: number) => usage(tokens, undefined, 1_000_000);
-  let { state } = ready(140_000, undefined, 1_000_000);
+  let { state } = ready(190_000, undefined, 1_000_000);
   const steps: [number, string | undefined][] = [
-    [140_000, undefined],
-    [150_000, "advisory"],
-    [170_000, undefined], // +20k does not rearm advisory
-    [189_000, undefined],
-    [190_000, "advisory"], // +40k rearms
+    [190_000, undefined],
+    [200_000, "advisory"],
+    [220_000, undefined], // +20k does not rearm advisory
+    [239_000, undefined],
+    [240_000, "advisory"], // +40k rearms
     [299_000, "advisory"],
     [300_000, "firm"],
     [315_000, undefined], // firm suppresses advisory
