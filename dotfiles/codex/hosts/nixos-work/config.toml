@@ -57,6 +57,7 @@ tool_namespace = "agents"
 [sandbox_workspace_write]
 writable_roots = [
   "/home/felix/.cache/sccache",
+  "/home/felix/.cache/kache", # store and daemon.sock (RUSTC_WRAPPER is kache)
   "/home/felix/.cache/codebase-memory-mcp",
   "/home/felix/.cache/nix",
   "/home/felix/.codex/context-mode",

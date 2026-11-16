@@ -352,6 +352,19 @@ in
     ];
   };
 
+  # kache trial: host config merges key by key with a project's .kache.toml, unlike
+  # ~/.config/kache/config.toml, which a project file replaces whole.
+  environment.etc."kache/config.toml".text = ''
+    [cache]
+    local_max_size = "60GiB"
+    # Absolute path: also works where PATH lacks sccache.
+    fallback = "${pkgs.sccache}/bin/sccache"
+    # Trial: kache deletes nothing inside target directories. Revisit when the trial ends.
+    auto_clean_orphaned_targets = false
+    auto_clean_unused_units_days = 0
+    auto_recover_targets = false
+  '';
+
   # Since we run docker on an zfs partition
   virtualisation.docker.storageDriver = "zfs";
 

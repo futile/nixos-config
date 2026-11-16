@@ -31,6 +31,12 @@ let
     cpus:
     "/run/current-system/sw/bin/systemctl --user set-property --runtime background-build.slice AllowedCPUs=${cpus}";
   restrictBuildCpus = setBuildCpus buildCpusRestricted;
+
+  # Ships paired `kache` and `kache-engine`; take both from this one package.
+  kache = pkgs.nixpkgs-unstable.kache;
+  # kache trial; it hands uncached invocations to sccache ([cache] fallback in default.nix).
+  # To revert, set this back to "sccache".
+  rustcWrapper = "${kache}/bin/kache";
 in
 {
   imports =
@@ -168,7 +174,7 @@ in
   home = {
     packages =
       # bound packages
-      [ ]
+      [ kache ]
       ++
         # packages from stable
         (with pkgs; [
@@ -267,7 +273,7 @@ in
 
       # can also put this into ~/.cargo/config.toml, but I don't have this on all systems atm.
       # ref: https://github.com/mozilla/sccache?tab=readme-ov-file#usage
-      RUSTC_WRAPPER = "sccache";
+      RUSTC_WRAPPER = rustcWrapper;
       SCCACHE_CACHE_SIZE = "50G";
     };
 
@@ -323,6 +329,23 @@ in
         "SCCACHE_LOG=sccache=debug"
         "SCCACHE_LOG_MILLIS=1"
       ];
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+
+    Install.WantedBy = [ "default.target" ];
+  };
+
+  # Started by the session, not by the first build (which would put the daemon in cargo's scope).
+  # The compilers it runs are spawned by the kache client and stay in cargo's scope.
+  systemd.user.services.kache = {
+    Unit.Description = "kache compiler cache daemon";
+
+    Service = {
+      Type = "simple";
+      Slice = "background-build.slice";
+      ExecStart = "${kache}/bin/kache daemon run";
+      Environment = [ "KACHE_LOG=kache=info" ];
       Restart = "on-failure";
       RestartSec = "5s";
     };
