@@ -352,17 +352,19 @@ in
     ];
   };
 
-  # kache trial: host config merges key by key with a project's .kache.toml, unlike
+  # kache host config: merges key by key with a project's .kache.toml, unlike
   # ~/.config/kache/config.toml, which a project file replaces whole.
+  # Cleanup uses kache's defaults: orphaned targets go a day after their last build;
+  # the 30-day unused-unit cleanup keeps everything because /home is noatime.
+  # Primary checkouts' target/ still needs an occasional `cargo clean`.
   environment.etc."kache/config.toml".text = ''
     [cache]
-    local_max_size = "60GiB"
+    local_max_size = "120GiB"
+    # Hermetic targets symlink OUT_DIR into ~/.cache/kache/out-dirs/v2/: `cargo clean`
+    # before building one without kache (KACHE_DISABLED=1 or RUSTC_WRAPPER=sccache).
+    build_script_hermetic = true
     # Absolute path: also works where PATH lacks sccache.
     fallback = "${pkgs.sccache}/bin/sccache"
-    # Trial: kache deletes nothing inside target directories. Revisit when the trial ends.
-    auto_clean_orphaned_targets = false
-    auto_clean_unused_units_days = 0
-    auto_recover_targets = false
   '';
 
   # Since we run docker on an zfs partition

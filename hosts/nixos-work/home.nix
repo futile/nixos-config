@@ -34,7 +34,7 @@ let
 
   # Ships paired `kache` and `kache-engine`; take both from this one package.
   kache = pkgs.nixpkgs-unstable.kache;
-  # kache trial; it hands uncached invocations to sccache ([cache] fallback in default.nix).
+  # kache hands uncached invocations to sccache ([cache] fallback in default.nix).
   # To revert, set this back to "sccache".
   rustcWrapper = "${kache}/bin/kache";
 in
