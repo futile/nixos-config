@@ -36,7 +36,9 @@ let
   kache = pkgs.nixpkgs-unstable.kache;
   # kache hands uncached invocations to sccache ([cache] fallback in default.nix).
   # To revert, set this back to "sccache".
-  rustcWrapper = "${kache}/bin/kache";
+  # Profile path, not the store path: session variables reach running sessions only at the
+  # next login, so a store path would pin every new shell to the previous kache release.
+  rustcWrapper = "${config.home.profileDirectory}/bin/kache";
 in
 {
   imports =
