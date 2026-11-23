@@ -1,5 +1,16 @@
 {
   "elements": {
+    "LumineCapture": {
+      "active": true,
+      "attrPath": "packages.x86_64-linux.default",
+      "originalUrl": "github:Netflate/LumineCapture",
+      "outputs": null,
+      "priority": 5,
+      "storePaths": [
+        "/nix/store/vbpw39pvfk1mxhxvf1bib6ywf2avv2r7-lumine-capture-0.4.0"
+      ],
+      "url": "github:Netflate/LumineCapture/d6e5e7ea8190ff3852a2540d91201698b3c0d4e0?narHash=sha256-RwmcxOhBAaglHPQHEI8w86Vzdfp048W8FwXzbTNDj88%3D"
+    },
     "OpenSpec": {
       "active": true,
       "attrPath": "packages.x86_64-linux.default",
