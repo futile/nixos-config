@@ -350,16 +350,16 @@
     "pi-infinite-context": {
       "flake": false,
       "locked": {
-        "lastModified": 1792596421,
-        "narHash": "sha256-4zh3Cq9yk8WabvHdiKb1KXyJuBUHPUhGDQqbzMWn+G0=",
+        "lastModified": 1794956844,
+        "narHash": "sha256-jJ3L1SGnxj/bhw3rfUS/9O6ettUzSOy2cVOKp5W8yqE=",
         "ref": "refs/heads/main",
-        "rev": "b3a581584d12bf4518ff6709adf8573c468dfc2a",
-        "revCount": 55,
+        "rev": "9ece14963f693fd6be4f32536aa2436e42d75810",
+        "revCount": 92,
         "type": "git",
         "url": "https://github.com/fdietze/pi-infinite-context"
       },
       "original": {
-        "rev": "b3a581584d12bf4518ff6709adf8573c468dfc2a",
+        "rev": "9ece14963f693fd6be4f32536aa2436e42d75810",
         "type": "git",
         "url": "https://github.com/fdietze/pi-infinite-context"
       }

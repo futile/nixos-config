@@ -77,7 +77,7 @@
     };
 
     pi-infinite-context = {
-      url = "git+https://github.com/fdietze/pi-infinite-context?rev=b3a581584d12bf4518ff6709adf8573c468dfc2a";
+      url = "git+https://github.com/fdietze/pi-infinite-context?rev=9ece14963f693fd6be4f32536aa2436e42d75810";
       flake = false;
     };
 

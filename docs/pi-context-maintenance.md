@@ -6,7 +6,7 @@ advisory `min(60%, 200k)`, firm `min(75%, 300k)`, urgent `min(80%, 400k)`,
 post-collapse residual `min(60%, 300k)`. Advisory rearms after 40k growth,
 other tiers after 20k. Percentage-point gates (growth, rearm drop, low fold
 yield) are measured on at most a 200k reference window. Windows
-up to 200k behave as before. Upstream infinite-context (pinned at `b3a5815`)
+up to 200k behave as before. Upstream infinite-context (pinned at `9ece149`)
 no longer has `context_summary`; revising a summary is a singleton
 `context_fold`. Its own 150k nudges are disabled through
 `~/.pi/agent/infinite-context/settings.json` (`nudgeAtPercent: 100`) instead of
