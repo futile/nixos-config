@@ -1,5 +1,25 @@
 # Pi standalone upstream migration
 
+## Current: Pi 1.6 pin refresh (2026-11-27)
+
+Pinned extensions were refreshed after Pi 1.6.1 (bead `nixos-h52`):
+
+- `pi-statusline` is pinned to `futile/pi-statusline@cafd1e2` (caches the
+  per-frame `getContextUsage()`/session totals, earendil-works/pi#9807). Upstream
+  `martin-tahli` has 9 newer commits that are not merged yet.
+- `pi-infinite-context` is pinned to `9ece149`; the restart patch was rebased.
+  The nudge disabling below still applies.
+- `pi-actor-subagents` is pinned to `7ace3f2`; all three patches were rebased.
+  Upstream replaced the understanding+questions handshake with a backbrief,
+  and `dotfiles/codex/AGENTS.md` now describes it.
+- `pi-codex-image-gen` is 0.3.3, which ships English UI text; the local
+  translation patch is gone.
+- Child-extension pins in `home-modules/pi.nix` are `pi-mcp-adapter@7.0.1` and
+  `@juicesharp/rpiv-web-tools@2.16.0`.
+
+The Nix-built extensions take effect after `just switch` and a Pi restart. Older
+pin sections below are historical.
+
 ## Current: infinite-context `b3a5815` (2026-10-21)
 
 `pi-infinite-context` is pinned to upstream `main` at `b3a5815`. Upstream
