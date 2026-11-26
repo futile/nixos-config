@@ -25,18 +25,15 @@ let
     # bash-async jobs signal: swarm-line total, kill report, terminal progress while jobs run.
     patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-actor-subagents-background-jobs.patch}
   '';
-  # npm build output; the patch translates its Korean UI strings to English.
-  patchedCodexImageGen = pkgs.runCommand "pi-codex-image-gen" { } ''
+  # npm build output (English UI since 0.3.3).
+  codexImageGen = pkgs.runCommand "pi-codex-image-gen" { } ''
     mkdir -p "$out"
     tar -xzf ${
       pkgs.fetchurl {
-        url = "https://registry.npmjs.org/@buyong/pi-codex-image-gen/-/pi-codex-image-gen-0.3.1.tgz";
-        hash = "sha256-UgTgLUGSloJKAtxPMBgxY3X51KjjTji/+Cw3O26MpcY=";
+        url = "https://registry.npmjs.org/@buyong/pi-codex-image-gen/-/pi-codex-image-gen-0.3.3.tgz";
+        hash = "sha256-aoO7CKBqe2vxfVzfRhRzCmN8ewQSc5Jc8kRy5DG5qP4=";
       }
     } -C "$out" --strip-components=1
-    chmod -R u+w "$out"
-
-    patch -d "$out" -p1 --fuzz=0 --no-backup-if-mismatch < ${../patches/pi-codex-image-gen-english.patch}
   '';
 in
 {
@@ -88,15 +85,15 @@ in
         nudgeAtPercent = 100;
       };
       # Loaded as a local package from settings.json (its manifest also declares skills).
-      ".pi/agent/packages/pi-codex-image-gen".source = patchedCodexImageGen;
+      ".pi/agent/packages/pi-codex-image-gen".source = codexImageGen;
       ".pi/agent/extensions/actor-subagents".source =
         "${patchedActorSubagents}/extensions/actor-subagents";
       ".pi/agent/actor-subagents/settings.json".text = builtins.toJSON {
         maxAgents = 16;
         maxSpawnDepth = 3;
         childExtensions = [
-          "npm:pi-mcp-adapter@5.0.0"
-          "npm:@juicesharp/rpiv-web-tools@2.12.0"
+          "npm:pi-mcp-adapter@7.0.1"
+          "npm:@juicesharp/rpiv-web-tools@2.16.0"
           "git:github.com/DietrichGebert/ponytail"
           "${config.home.homeDirectory}/.pi/agent/extensions/infinite-context"
           "${config.home.homeDirectory}/.pi/agent/extensions/context-pressure"
