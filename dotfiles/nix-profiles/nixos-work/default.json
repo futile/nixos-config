@@ -161,9 +161,9 @@
       "outputs": null,
       "priority": 5,
       "storePaths": [
-        "/nix/store/ywgcacfckm5safp8bm5kz7pk3h25l45x-pi-1.5.2"
+        "/nix/store/gqh4q29vla72cxd3a0h075sh5hnv98sm-pi-1.6.1"
       ],
-      "url": "github:numtide/llm-agents.nix/3c4f3e7ccf54c7279659536160f9c58de38073c1?narHash=sha256-ldRd1UWymZ%2BB1ngo5vNM2WYUbUYE0p8yTY6XIZJoc7A%3D"
+      "url": "github:numtide/llm-agents.nix/9e137fb04294426cdd3a8f97d5a6835c9124e13f?narHash=sha256-OvSz3gO7ualG%2BRziLMyiKecxfkqVlt43YUzAbh/%2BUwU%3D"
     },
     "yarn": {
       "active": true,
