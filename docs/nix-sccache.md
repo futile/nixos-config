@@ -49,6 +49,9 @@ about 1-3 s after the last compile ends. Refills show up as
 `refilled N leaked tokens` in `journalctl --user -u sccache-token-guard.service`.
 Tests: `python3 tests/test_sccache_token_guard.py`.
 
+Fixed upstream in mozilla/sccache#3047 (merged 2026-11-26, after v0.20.1);
+remove the guard once the nixpkgs sccache includes it (bead `nixos-5km`).
+
 ## Current Cache Location
 
 The local Nix build cache directory is:
