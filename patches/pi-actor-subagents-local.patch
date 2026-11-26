@@ -1,5 +1,5 @@
 diff --git a/AGENTS.md b/AGENTS.md
-index 1364b20..d4c60cb 100644
+index bdbbed4..ca4800c 100644
 --- a/AGENTS.md
 +++ b/AGENTS.md
 @@ -38,7 +38,7 @@ When the main session is file-backed, `persistence.ts` stores `roster.json` and
@@ -12,7 +12,7 @@ index 1364b20..d4c60cb 100644
  - Custom message type and details shape: `agent-message.ts` (scheduler control notices and routed errors; error parts carry optional `actionable: true`, preserved through parsing and batching for restore)
  - Reserved agent names: `main`, `scheduler`, `user`, `restore` (`engine.ts`)
 diff --git a/README.md b/README.md
-index e22ec1f..d37ed0d 100644
+index bb65182..0c6e9f4 100644
 --- a/README.md
 +++ b/README.md
 @@ -25,6 +25,7 @@ Mouse controls use Pi's fullscreen mode. `/subagents` and the keyboard controls
@@ -268,7 +268,7 @@ index 0000000..bb8860a
 +	}
 +}
 diff --git a/extensions/actor-subagents/agent-record.ts b/extensions/actor-subagents/agent-record.ts
-index 2728cbd..010bc70 100644
+index 7f82d28..d7630ee 100644
 --- a/extensions/actor-subagents/agent-record.ts
 +++ b/extensions/actor-subagents/agent-record.ts
 @@ -96,6 +96,8 @@ export interface AgentRecord {
@@ -290,10 +290,10 @@ index 2728cbd..010bc70 100644
  	stopReason?: StopReason;
  	/** Why the agent entered the error state; set with the `error` event, cleared with stopReason. */
 diff --git a/extensions/actor-subagents/agent-system-prompt.ts b/extensions/actor-subagents/agent-system-prompt.ts
-index cc8a17f..e4839f7 100644
+index c505c45..4ebdfd9 100644
 --- a/extensions/actor-subagents/agent-system-prompt.ts
 +++ b/extensions/actor-subagents/agent-system-prompt.ts
-@@ -16,10 +16,11 @@ export function agentSystemPrompt(
+@@ -21,10 +21,11 @@ export function agentSystemPrompt(
      `You are agent "${name}" in a multi-agent system.`,
      `You were spawned by "${spawnedBy}".`,
      "You can talk to other agents with these tools:",
@@ -303,20 +303,20 @@ index cc8a17f..e4839f7 100644
      "- list_subagents(): see who exists.",
      "- pause_subagents({names?}) / resume_subagents({names?}) / kill_subagents({names}): control the agents in your subtree (those you spawned, and theirs); each acts on the named agents' whole subtrees. Omitted, empty or whitespace-only names in pause/resume mean your direct children.",
 +    "- set_fast({enabled, agent?}): change your Fast state or that of one directly owned child.",
-     "- set_status({status, etaMinutes?}): set your short status line (shown to others in list_subagents); empty string clears.",
+     "- set_status({status, etaMinutes?}): before a step you expect to take over a minute, set what you are doing. In the last tool batch before you end a turn, set your resting state ('waiting for critic', 'blocked: needs X', 'done'), alongside your final send_message if you send one.",
      "Peer messages and scheduler notices are prefixed with [message from <sender>]; human panel input is a real user turn.",
      "",
-@@ -48,7 +49,7 @@ export function agentSystemPrompt(
+@@ -54,7 +55,7 @@ export function agentSystemPrompt(
      "Replies can be batched. Pause/resume/kill notices are best-effort silent appends, not calls to act.",
      "Only eligible live direct parents are told about explicit control targets; a parent acting itself is not notified.",
      "A new terminal child error routes one scheduler message to its live direct parent; paused/stopping parents buffer it, never bypassing pause.",
 -    "Event-driven — after spawning or sending, END YOUR TURN. Do NOT poll or busy-wait.",
 +    "Event-driven — when no independent work remains and you need another agent's reply, END YOUR TURN. Continue independent work while replies are outstanding. Do NOT poll or busy-wait.",
      "A handoff/activity observation is not receipt, reading or completion; 'no reaction' means no activity observed in the brief window.",
-     "Track outstanding replies without assuming one new turn per reply. Inspect list_subagents/subagent_history",
-     "only if you suspect a problem, not as a waiting mechanism.",
+     "Track outstanding replies without assuming one new turn per reply. Use list_subagents/subagent_history",
+     "to find missing context or when you suspect a problem, not as a waiting mechanism.",
 diff --git a/extensions/actor-subagents/agent-tools.ts b/extensions/actor-subagents/agent-tools.ts
-index 0ace9c6..65f288c 100644
+index 0b1a81d..d0f7956 100644
 --- a/extensions/actor-subagents/agent-tools.ts
 +++ b/extensions/actor-subagents/agent-tools.ts
 @@ -20,6 +20,7 @@ import { Text } from "@earendil-works/pi-tui";
@@ -340,9 +340,9 @@ index 0ace9c6..65f288c 100644
          "File-backed sessions attempt to save membership and transcripts; roster write failures are not reported. Reopening the same main session attempts paused restoration; missing files, unavailable models or reopen failures skip agents. Resume restored agents explicitly. Buffered messages, pending notices, custom status and ETA are not persisted. " +
          "The result reports handoff and briefly observed activity, not receipt or task completion. 'idle (no reaction)' means no activity was observed during that window; main is not watched. " +
 -        "After spawning, END YOUR TURN. Replies start an idle recipient or steer a busy one after current tools, before the next model request; paused or still-stopping recipients buffer messages. Do NOT poll or wait in a loop; inspect only if you suspect a problem. " +
--        "The child is instructed to reply with its understanding and questions, then wait for your send_message go-ahead; this is a protocol, not guaranteed compliance." +
+-        "For each task from you, the child is instructed to investigate briefly without changing anything, then backbrief you (goal and done-criteria, numbered assumptions, plan, main risk, open questions) and wait for your send_message go-ahead; correct wrong assumptions by number. This is a protocol, not guaranteed compliance." +
 +        "After spawning, continue independent work. When no independent work remains and you need the reply, END YOUR TURN. Replies start an idle recipient or steer a busy one after current tools, before the next model request; paused or still-stopping recipients buffer messages. Do NOT poll or wait in a loop; inspect only if you suspect a problem. " +
-+        "The child is instructed to reply with its understanding and questions, then wait for your send_message go-ahead; this is a protocol, not guaranteed compliance. " +
++        "For each task from you, the child is instructed to investigate briefly without changing anything, then backbrief you (goal and done-criteria, numbered assumptions, plan, main risk, open questions) and wait for your send_message go-ahead; correct wrong assumptions by number. This is a protocol, not guaranteed compliance. " +
 +        "Follow the active AGENTS.md model-routing policy when choosing model and thinking level; inheritance is only the fallback when no policy selects another route." +
          // Subagents escalate user questions through their spawner rather than opening a user dialog.
          (selfName === "main"
@@ -389,7 +389,7 @@ index 0ace9c6..65f288c 100644
        parameters: Type.Object({
          // Array-only, not a Union: weak models drop `to` entirely when the schema is
          // anyOf(string, array). A flat array removes the choice and is type-honest.
-@@ -451,6 +462,37 @@ export function makeAgentTools(
+@@ -438,6 +449,37 @@ export function makeAgentTools(
          return { content: [{ type: "text", text }], details: {} };
        },
      }),
@@ -686,26 +686,18 @@ index 395595d..f6e90eb 100644
  	});
  	return ["agents:", ...rows].join("\n");
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 4be7f2b..919bea8 100644
+index 3eff62c..874f5e6 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
-@@ -17,13 +17,14 @@ import {
-   SessionManager,
-   SettingsManager,
- } from "@earendil-works/pi-coding-agent";
--import { truncateToWidth } from "@earendil-works/pi-tui";
-+import { sliceByColumn, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
- import {
-   AGENT_MESSAGE_CUSTOM_TYPE,
-   toCustomAgentMessage,
+@@ -26,6 +26,7 @@ import {
    type RoutedAgentMessage,
  } from "./agent-message.ts";
  import { renderAgentMessage } from "./agent-message-renderer.ts";
 +import { ActivityPublisher, AGENT_ACTIVITY_REQUEST_EVENT, AGENT_ACTIVITY_UPDATE_EVENT, hasActiveBackgroundAgent, installActivityNotifier, notifyActivity } from "./activity.ts";
  import { orderAgents } from "./agent-order.ts";
- import { agentSystemPrompt } from "./agent-system-prompt.ts";
+ import { childPromptOptions } from "./child-prompt.ts";
  import { makeAgentTools } from "./agent-tools.ts";
-@@ -31,6 +32,7 @@ import type { AgentHandle } from "./agent-record.ts";
+@@ -33,6 +34,7 @@ import type { AgentHandle } from "./agent-record.ts";
  import type { EngineResumeResult } from "./control-result.ts";
  import { authorityOf } from "./authorize.ts";
  import { Engine } from "./engine.ts";
@@ -713,7 +705,7 @@ index 4be7f2b..919bea8 100644
  import {
    formatControlResult,
    formatResumeResult,
-@@ -170,7 +172,10 @@ const RESUME_NUDGE = (now: Date, by: string) => {
+@@ -173,7 +175,10 @@ const RESUME_NUDGE = (now: Date, by: string) => {
  //      append/busy). A v26 instance would treat a string flag as foreign and lack these methods.
  // v28: terminal errors route actionable scheduler messages instead of silent notices; v27
  //      would retain the old announce/route methods after /reload and never wake a parent.
@@ -725,7 +717,7 @@ index 4be7f2b..919bea8 100644
  
  function getEngine(): Engine {
    const g = globalThis as Record<string, unknown>;
-@@ -284,6 +289,9 @@ function disposeProcessHooks(dispose: () => void): void {
+@@ -300,6 +305,9 @@ function disposeProcessHooks(dispose: () => void): void {
  
  export default function subagents(pi: ExtensionAPI) {
    const engine = getEngine();
@@ -735,7 +727,7 @@ index 4be7f2b..919bea8 100644
  
    // The toolset acting as `selfName`. Deps are collected per call, so this stays independent
    // of the order in which spawnAgent/updateStatus below are defined.
-@@ -325,12 +333,12 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -341,12 +349,12 @@ export default function subagents(pi: ExtensionAPI) {
    // ModelRuntime. ModelRuntime.create() with no args reads getAgentDir()/auth.json
    // + models.json — the SAME credentials and models the foreground uses. subagents()
    // is synchronous, so build asynchronously and expose the runtime via a promise;
@@ -752,16 +744,7 @@ index 4be7f2b..919bea8 100644
      return runtime;
    });
  
-@@ -430,7 +438,7 @@ export default function subagents(pi: ExtensionAPI) {
-           const rosterLines = formatRoster(
-             rosterEntries(engine, background),
-             width,
--            { styleStatus: styler },
-+            { display: { visibleWidth, sliceByColumn }, styleStatus: styler },
-           ).map((line) => truncateToWidth(line, width));
-           const running = background.filter(
-             (o) => engine.status(o.agent).kind === "working",
-@@ -457,9 +465,36 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -482,9 +490,36 @@ export default function subagents(pi: ExtensionAPI) {
      }
    };
  
@@ -801,7 +784,7 @@ index 4be7f2b..919bea8 100644
  
    // Policy lives in resolve-model.ts (pure); this only binds it to the live registry.
    const resolveModel = (ref: string | undefined): ResolvedModel | undefined =>
-@@ -482,6 +517,7 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -507,6 +542,7 @@ export default function subagents(pi: ExtensionAPI) {
        spawnedBy: string;
        model: unknown;
        thinkingLevel?: ThinkingLevel;
@@ -809,7 +792,7 @@ index 4be7f2b..919bea8 100644
      },
      existingFile?: string,
    ): Promise<{ session: SessionLike; sessionFile?: string }> => {
-@@ -527,20 +563,18 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -551,20 +587,18 @@ export default function subagents(pi: ExtensionAPI) {
      let sm: SessionManager;
      if (existingFile) {
        sm = SessionManager.open(existingFile);
@@ -835,7 +818,7 @@ index 4be7f2b..919bea8 100644
      }
  
      // Leave the built-in tool allowlist unset so the agent inherits the full default
-@@ -564,14 +598,38 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -588,14 +622,38 @@ export default function subagents(pi: ExtensionAPI) {
      // The statuses are owned by this session (read via the view, like context usage), so a late
      // write from a killed child can never reach a re-spawned agent of the same name.
      let extensionStatuses: ExtensionStatuses = {};
@@ -881,7 +864,7 @@ index 4be7f2b..919bea8 100644
        sendAgentMessage: (message, options) =>
          session.sendCustomMessage(toCustomAgentMessage(message), {
            triggerTurn: true,
-@@ -628,7 +686,8 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -652,7 +710,8 @@ export default function subagents(pi: ExtensionAPI) {
      engine,
      resolveModel,
      createSession,
@@ -891,7 +874,7 @@ index 4be7f2b..919bea8 100644
      listAvailableModels: listModels,
    });
  
-@@ -707,8 +766,10 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -731,8 +790,10 @@ export default function subagents(pi: ExtensionAPI) {
            pausedMidTurn:
              deriveStatus(session.messages as RawMessage[]) === "pausedMidTurn",
          });
@@ -904,7 +887,7 @@ index 4be7f2b..919bea8 100644
        }
      }
      // Present the restored swarm as paused: pausing main's direct children holds every restored
-@@ -805,10 +866,11 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -829,10 +890,11 @@ export default function subagents(pi: ExtensionAPI) {
        (s) => `${s.model.provider}/${s.model.id}`,
      );
      // Locate this main session's subagents dir (persistence + restore are keyed by it).
@@ -918,13 +901,13 @@ index 4be7f2b..919bea8 100644
      } catch {
        subDir = undefined;
      }
-@@ -834,30 +896,44 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -858,30 +920,44 @@ export default function subagents(pi: ExtensionAPI) {
          createdAt: Date.now(),
          turns: 0,
          lastActivity: Date.now(),
 +        sessionId: mainSessionId,
          view: {
-           getMessages: () => [], // main transcript = the main chat (not mirrored)
+           getMessages: mainMessages, // globalThis-backed, survives /reload
            getContextUsage: () => mainState().usage, // globalThis-backed, survives /reload
            subscribe: () => () => {},
          },
@@ -969,11 +952,11 @@ index 4be7f2b..919bea8 100644
  
    // Register the foreground tools for 'main'. set_status is background-only: main has
 diff --git a/extensions/actor-subagents/panel-logic.test.ts b/extensions/actor-subagents/panel-logic.test.ts
-index 22c9df3..01a2cb0 100644
+index eed5ead..070cd6c 100644
 --- a/extensions/actor-subagents/panel-logic.test.ts
 +++ b/extensions/actor-subagents/panel-logic.test.ts
-@@ -136,15 +136,12 @@ test("formatRoster: aligns the status column across rows (shared name-column wid
- 	assert.equal(rows[0].indexOf("idle"), rows[1].indexOf("thinking")); // same x → aligned
+@@ -151,15 +151,12 @@ test("formatRoster: the status column has a floor and only grows across renders,
+ 	assert.equal(statusWidth.width, 18); // SYS_STATUS_CAP: "mcp_playwright_click" is cut
  });
  
 -test("formatRoster: name middle-ellipsis keeps the distinguishing tail (shared-prefix names stay distinct)", () => {
@@ -993,8 +976,8 @@ index 22c9df3..01a2cb0 100644
 +	assert.doesNotMatch(rows.join("\n"), /…/);
  });
  
- test("formatRoster: reading order is name, system status, model, ETA, context, custom status, targets, extensions", () => {
-@@ -374,11 +371,11 @@ test("formatRoster: indent keeps the columns aligned", () => {
+ test("formatRoster: reading order is name, system status, extensions, model, ETA, context, custom status, targets", () => {
+@@ -402,11 +399,11 @@ test("formatRoster: indent keeps the columns aligned", () => {
  	assert.equal(rows[0].indexOf("x/y"), rows[1].indexOf("x/y"));
  });
  
@@ -1009,10 +992,10 @@ index 22c9df3..01a2cb0 100644
  
  const errored = { kind: "idle", outcome: "error" } as const;
 diff --git a/extensions/actor-subagents/panel-logic.ts b/extensions/actor-subagents/panel-logic.ts
-index 2c68e13..b8c920a 100644
+index 51ee5c3..cd458f3 100644
 --- a/extensions/actor-subagents/panel-logic.ts
 +++ b/extensions/actor-subagents/panel-logic.ts
-@@ -7,6 +7,7 @@ import {
+@@ -8,6 +8,7 @@ import {
  import { type AgentStatus, formatStatus, formatStatusDetail } from "./agent-status.ts";
  import { formatEtaSuffix } from "./eta.ts";
  import { EXTENSION_STATUS_MAX } from "./extension-status.ts";
@@ -1020,7 +1003,7 @@ index 2c68e13..b8c920a 100644
  import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
  
  export interface ContextUsageLike {
-@@ -72,6 +73,8 @@ export interface RosterEntry {
+@@ -73,6 +74,8 @@ export interface RosterEntry {
  	depth: number;
  	model: string;
  	thinkingLevel?: ThinkingLevel;
@@ -1029,82 +1012,24 @@ index 2c68e13..b8c920a 100644
  	context: string;
  	/** Structured system status (agent-status.ts); the row renders label + tone from it. */
  	status: AgentStatus;
-@@ -171,33 +174,44 @@ export function formatModel(model: string | undefined, thinkingLevel: ThinkingLe
- // Extensions comes last although it outranks targets: it is the only column with foreign text,
- // whose glyphs (e.g. emoji) may be wider than their string length, so at the end of the row a
- // misjudged width cannot shift any other column.
+@@ -171,15 +174,13 @@ export function formatModel(model: string | undefined, thinkingLevel: ThinkingLe
+ // at all. The rest collapse — whole column dropped, all rows — when the terminal is too narrow,
+ // least informative first:
+ //   targets → extensions → custom-status → context → eta → model
 -// The name cell carries the spawn-tree indent (one space per depth level), added on top of the
 -// name's own cap so nesting never costs name characters.
 +// The name cell carries the spawn-tree indent (one space per depth level).
  // Alignment requires a roster-wide pass (column widths = max content across agents), so this
--// replaces any per-row formatting. Layout math is plain-text (ASCII content + single-width
--// glyphs); status styling excludes the column padding and uses the unstyled text's width.
--// Callers still wrap each line in the ANSI-aware truncateToWidth as a final overflow guard.
-+// replaces any per-row formatting. Layout uses terminal display columns so astral/emoji glyphs do
-+// not cause premature collapse; status styling excludes the column padding and uses the unstyled
-+// text's width. Callers still wrap each line in the ANSI-aware truncateToWidth as a final
-+// overflow guard.
-+
-+export interface RosterDisplayWidth {
-+	visibleWidth(text: string): number;
-+	sliceByColumn(text: string, startColumn: number, length: number, strict?: boolean): string;
-+}
+ // replaces any per-row formatting. Layout math uses terminal cell widths (visibleWidth), because
+ // extension and custom statuses are foreign text whose glyphs (e.g. the emoji "⏳") are wider
+ // than their string length; status styling excludes the column padding.
+ // Callers still wrap each line in the ANSI-aware truncateToWidth as a final overflow guard.
  
 -const NAME_CAP = 24; // names beyond this are middle-elided (keeps the distinguishing tail)
-+const plainDisplay: RosterDisplayWidth = {
-+	visibleWidth: (text) => text.length,
-+	sliceByColumn: (text, start, length) => text.slice(start, start + length),
-+};
  export const CUSTOM_STATUS_MAX = 32; // hard cap on the agent-set status (also stated in the set_status prompt)
  const SYS_STATUS_CAP = 18; // short labels only (formatStatus); a long tool name is cut
- 
--/** Truncate to width with a trailing ellipsis (plain-text width). */
--function fitEnd(s: string, w: number): string {
-+/** Truncate to terminal display width with a trailing ellipsis. */
-+function fitEnd(s: string, w: number, display: RosterDisplayWidth = plainDisplay): string {
- 	if (w <= 0) return "";
--	if (s.length <= w) return s;
--	return w === 1 ? "…" : `${s.slice(0, w - 1)}…`;
-+	if (display.visibleWidth(s) <= w) return s;
-+	return w === 1 ? "…" : `${display.sliceByColumn(s, 0, w - 1, true)}…`;
- }
- 
--/** Truncate to width keeping head + tail (middle ellipsis) — for names, whose tail distinguishes. */
--function fitMiddle(s: string, w: number): string {
-+/** Truncate to display width keeping head + tail — for names, whose tail distinguishes. */
-+function fitMiddle(s: string, w: number, display: RosterDisplayWidth): string {
- 	if (w <= 0) return "";
--	if (s.length <= w) return s;
-+	const total = display.visibleWidth(s);
-+	if (total <= w) return s;
- 	if (w === 1) return "…";
- 	const keep = w - 1;
--	const head = Math.ceil(keep / 2);
--	const tail = keep - head;
--	return `${s.slice(0, head)}…${tail > 0 ? s.slice(s.length - tail) : ""}`;
-+	const headWidth = Math.ceil(keep / 2);
-+	const tailWidth = keep - headWidth;
-+	const head = display.sliceByColumn(s, 0, headWidth, true);
-+	const tail = tailWidth > 0 ? display.sliceByColumn(s, total - tailWidth, tailWidth, true) : "";
-+	return `${head}…${tail}`;
- }
- 
- interface ColSpec {
-@@ -221,11 +235,13 @@ export function formatRoster(
- 	width: number,
- 	opts: {
- 		selectedIndex?: number;
-+		display?: RosterDisplayWidth;
- 		styleStatus?: (label: string, tone: StatusTone) => string;
- 		/** Applied to the selected row as a whole (e.g. a background highlight). */
- 		styleSelected?: (line: string) => string;
- 	} = {},
- ): string[] {
-+	const display = opts.display ?? plainDisplay;
- 	const styleStatus = opts.styleStatus ?? ((l) => l);
- 
- 	const cols: ColSpec[] = [
-@@ -233,11 +249,15 @@ export function formatRoster(
+ // Floor of the status column: the longest fixed label of formatStatus ("truncated"), so switching
+@@ -271,13 +272,17 @@ export function formatRoster(
  			key: "name",
  			collapseRank: 0,
  			fit: "middle",
@@ -1113,6 +1038,8 @@ index 2c68e13..b8c920a 100644
 +			cellOf: (e) => `${" ".repeat(e.depth)}${e.name}`,
  		},
  		{ key: "status", collapseRank: 0, fit: "end", cap: SYS_STATUS_CAP, cellOf: (e) => formatStatus(e.status) },
+ 		// Capped like one entry: several verbose statuses get an ellipsis instead of collapsing the column for every agent.
+ 		{ key: "extensions", collapseRank: 2, fit: "end", cap: EXTENSION_STATUS_MAX, cellOf: (e) => e.extensions ?? "" },
 -		{ key: "model", collapseRank: 6, fit: "end", cellOf: (e) => formatModel(e.model, e.thinkingLevel) },
 +		{
 +			key: "model",
@@ -1123,52 +1050,6 @@ index 2c68e13..b8c920a 100644
  		{ key: "eta", collapseRank: 5, fit: "end", cellOf: (e) => (e.etaTs != null ? formatEtaSuffix(e.etaTs) : "") },
  		{ key: "context", collapseRank: 4, fit: "end", cellOf: (e) => e.context },
  		{ key: "custom", collapseRank: 3, fit: "end", cap: CUSTOM_STATUS_MAX, cellOf: (e) => e.customStatus ?? "" },
-@@ -250,7 +270,7 @@ export function formatRoster(
- 	const widthOf = new Map<string, number>();
- 	for (const c of cols) {
- 		let w = 0;
--		for (const e of entries) w = Math.max(w, c.cellOf(e).length);
-+		for (const e of entries) w = Math.max(w, display.visibleWidth(c.cellOf(e)));
- 		widthOf.set(c.key, c.cap != null ? Math.min(w, c.cap) : w);
- 	}
- 
-@@ -275,12 +295,11 @@ export function formatRoster(
- 		const selected = opts.selectedIndex === i;
- 		const cells = visible.map((c) => {
- 			const w = widthOf.get(c.key) ?? 0;
--			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w);
-+			const fitted = (c.fit === "middle" ? fitMiddle : fitEnd)(c.cellOf(e), w, display);
-+			const pad = " ".repeat(Math.max(0, w - display.visibleWidth(fitted)));
- 			// Separation of Concerns: highlight the status label, not the table's alignment padding.
- 			// The selected row is left plain: a background reset inside it would cut its highlight.
--			return c.key === "status" && !selected
--				? styleStatus(fitted, statusTone(e.status)) + " ".repeat(w - fitted.length)
--				: fitted.padEnd(w);
-+			return c.key === "status" && !selected ? styleStatus(fitted, statusTone(e.status)) + pad : fitted + pad;
- 		});
- 		const line = cells.join(" ").replace(/ +$/, "");
- 		return selected && opts.styleSelected ? opts.styleSelected(line) : line;
-diff --git a/extensions/actor-subagents/panel.ts b/extensions/actor-subagents/panel.ts
-index 966aad4..ccd5979 100644
---- a/extensions/actor-subagents/panel.ts
-+++ b/extensions/actor-subagents/panel.ts
-@@ -11,7 +11,7 @@
-  * TranscriptDocument so pi's own line caches apply, and scrolled by pi's ScrollView so wheel,
-  * page and half-page movement behave exactly like the main chat.
-  */
--import { Editor, type EditorTheme, Key, matchesKey, ScrollView, truncateToWidth, visibleWidth, type TuiMouseEvent } from "@earendil-works/pi-tui";
-+import { Editor, type EditorTheme, Key, matchesKey, ScrollView, sliceByColumn, truncateToWidth, visibleWidth, type TuiMouseEvent } from "@earendil-works/pi-tui";
- import { nextInCycle } from "./next-in-cycle.ts";
- import { THINKING_LEVELS } from "./thinking-level.ts";
- import {
-@@ -398,6 +398,7 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
- 				rosterEntries(deps.engine, ordered()),
- 				width,
- 				{
-+					display: { visibleWidth, sliceByColumn },
- 					styleStatus: styler,
- 					selectedIndex: selectedIndex(),
- 					// Selection is a full-row highlight instead of a cursor glyph, so the roster starts
 diff --git a/extensions/actor-subagents/roster-entries.ts b/extensions/actor-subagents/roster-entries.ts
 index 3fff22e..1bb2760 100644
 --- a/extensions/actor-subagents/roster-entries.ts
@@ -1190,7 +1071,7 @@ index 3fff22e..1bb2760 100644
  		status: engine.status(a),
  		customStatus: a.customStatus,
 diff --git a/extensions/actor-subagents/spawner.test.ts b/extensions/actor-subagents/spawner.test.ts
-index c148bb5..c421461 100644
+index c145487..9276597 100644
 --- a/extensions/actor-subagents/spawner.test.ts
 +++ b/extensions/actor-subagents/spawner.test.ts
 @@ -5,6 +5,7 @@ import { Engine } from "./engine.ts";
@@ -1201,9 +1082,9 @@ index c148bb5..c421461 100644
  	delivered: RoutedAgentMessage[] = [];
  	userMessages: string[] = [];
  	aborted = 0;
-@@ -809,3 +810,36 @@ test("recovered retries, handled tool failures, aborts and truncation do not rou
- 		assert.equal(engine.events.filter((e) => e.type === "error").length, 0);
- 	}
+@@ -867,3 +868,36 @@ test("the agent's status is cleared when it starts a turn after ending one, and
+ 	session.emit("turn_start");
+ 	assert.equal(status(), undefined);
  });
 +
 +test("spawn inherits its owner's desired Fast state and honors explicit overrides", async () => {
@@ -1239,7 +1120,7 @@ index c148bb5..c421461 100644
 +	assert.equal(engine.has("unavailable"), false);
 +});
 diff --git a/extensions/actor-subagents/spawner.ts b/extensions/actor-subagents/spawner.ts
-index 10db6d6..b1ca870 100644
+index 57dfff7..38fcfdf 100644
 --- a/extensions/actor-subagents/spawner.ts
 +++ b/extensions/actor-subagents/spawner.ts
 @@ -8,6 +8,7 @@ import type { RoutedAgentMessage } from "./agent-message.ts";
@@ -1250,7 +1131,7 @@ index 10db6d6..b1ca870 100644
  import { formatReceiverStatus } from "./feed.ts";
  import { unknownModelMessage } from "./resolve-model.ts";
  import { formatModelThinking, type ThinkingLevel } from "./thinking-level.ts";
-@@ -29,6 +30,8 @@ function lastAssistantOutcome(
+@@ -39,6 +40,8 @@ function isFinalAnswer(message: unknown): boolean {
  
  /** Minimal slice of an AgentSession that the orchestration needs. */
  export interface SessionLike {
@@ -1259,7 +1140,7 @@ index 10db6d6..b1ca870 100644
  	/** Deliver peer traffic without representing it as a human-authored user message. */
  	sendAgentMessage(
  		message: RoutedAgentMessage,
-@@ -77,6 +80,8 @@ export interface SpawnSpec {
+@@ -87,6 +90,8 @@ export interface SpawnSpec {
  	model?: string;
  	/** Optional override; omitted means inherit the spawning agent's effective level. */
  	thinkingLevel?: ThinkingLevel;
@@ -1268,7 +1149,7 @@ index 10db6d6..b1ca870 100644
  	/** Optional first message: delivered atomically to the new agent right after spawn. */
  	message?: string;
  }
-@@ -99,7 +104,10 @@ export interface SpawnerDeps {
+@@ -109,7 +114,10 @@ export interface SpawnerDeps {
  		spawnedBy: string;
  		model: unknown;
  		thinkingLevel?: ThinkingLevel;
@@ -1279,7 +1160,7 @@ index 10db6d6..b1ca870 100644
  	/** Called after every relevant activity (e.g. refresh the status footer). */
  	onActivity?: () => void;
  }
-@@ -160,7 +168,7 @@ function createSessionCloser(session: SessionLike, detach: () => void = () => {}
+@@ -170,7 +178,7 @@ function createSessionCloser(session: SessionLike, detach: () => void = () => {}
  }
  
  export function createSpawner(deps: SpawnerDeps): Spawner {
@@ -1288,7 +1169,7 @@ index 10db6d6..b1ca870 100644
  
  	// Subscribe to a background session's lifecycle to refuse a paused agent's turns and
  	// track the turn phase.
-@@ -222,6 +230,14 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -247,6 +255,14 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  				engine.setStopReason(name, stopReason, outcome?.errorMessage);
  				engine.flushNotices(name);
  			}
@@ -1303,7 +1184,7 @@ index 10db6d6..b1ca870 100644
  			onActivity?.();
  		});
  	};
-@@ -265,12 +281,29 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -290,12 +306,29 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  			// to fully stop. The child-only in-memory steeringMode "all" makes several queued
  			// messages arrive at that boundary. Idle targets start a turn immediately.
  			deliver: async (message) => {
@@ -1335,7 +1216,7 @@ index 10db6d6..b1ca870 100644
  			append: (message) => {
  				void Promise.resolve(session.appendAgentMessage(message)).catch(() => {
  					/* see Engine.flushNotices: a lost notice is state the pull tools still show */
-@@ -328,6 +361,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -353,6 +386,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  			turns: 0,
  			lastActivity: Date.now(),
  			pausedMidTurn: spec.pausedMidTurn,
@@ -1343,7 +1224,7 @@ index 10db6d6..b1ca870 100644
  		});
  	};
  
-@@ -336,21 +370,32 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -361,21 +395,32 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		const inheritRef = spec.model ?? spawner?.model;
  		// The Map Is Not the Territory: inherit the observed effective level, not prior intent.
  		const thinkingLevel = spec.thinkingLevel ?? spawner?.thinkingLevel;
@@ -1377,7 +1258,7 @@ index 10db6d6..b1ca870 100644
  		let sessionFile: string | undefined;
  		try {
  			({ session, sessionFile } = await createSession({
-@@ -359,12 +404,35 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -384,12 +429,35 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  				spawnedBy: spawnerName,
  				model: resolved.model,
  				thinkingLevel,
@@ -1413,7 +1294,7 @@ index 10db6d6..b1ca870 100644
  		// A kill can win while session creation awaits. Close the orphan rather than attaching
  		// it to a later reservation with the same name (Second-Order Thinking: avoid hidden work).
  		if (engine.get(spec.name) !== reservation) {
-@@ -389,7 +457,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -414,7 +482,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  			// Persisted to roster.json so a restart can rebuild this agent.
  			systemPrompt: spec.systemPrompt,
  			sessionFile,
@@ -1423,7 +1304,7 @@ index 10db6d6..b1ca870 100644
  
  		// 4) Deliver the optional first message atomically (no race; the agent is registered).
  		let sent = "";
-@@ -406,7 +476,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -431,7 +501,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  			else sent = ` (initial message NOT delivered: ${outcome.reason})`;
  		}
  		const model = formatModelThinking(`${resolved.provider}/${resolved.id}`, session.thinkingLevel);

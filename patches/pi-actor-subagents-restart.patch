@@ -1,5 +1,5 @@
 diff --git a/extensions/actor-subagents/agent-record.ts b/extensions/actor-subagents/agent-record.ts
-index 010bc70..d7dade0 100644
+index d7630ee..1f8aa16 100644
 --- a/extensions/actor-subagents/agent-record.ts
 +++ b/extensions/actor-subagents/agent-record.ts
 @@ -112,6 +112,8 @@ export interface AgentRecord {
@@ -12,7 +12,7 @@ index 010bc70..d7dade0 100644
  	stopReason?: StopReason;
  	/** Why the agent entered the error state; set with the `error` event, cleared with stopReason. */
 diff --git a/extensions/actor-subagents/agent-tools.test.ts b/extensions/actor-subagents/agent-tools.test.ts
-index aa12d66..4708067 100644
+index 7d29a5e..797e5cf 100644
 --- a/extensions/actor-subagents/agent-tools.test.ts
 +++ b/extensions/actor-subagents/agent-tools.test.ts
 @@ -2,7 +2,7 @@ import { test } from "node:test";
@@ -41,9 +41,9 @@ index aa12d66..4708067 100644
  	});
  	const tool = tools.find((t) => t.name === name);
  	assert.ok(tool, `${name} tool must exist`);
-@@ -119,3 +120,39 @@ test("descriptions distinguish handoff, observation, persistence attempts and si
- 	assert.match(description("pause_subagents"), /Effects already in flight may still settle/);
- 	assert.match(description("subagent_history"), /Paging cannot retrieve clipped remainders/);
+@@ -140,3 +141,39 @@ test("subagent_history reads main's transcript like any other agent's", async ()
+ 	);
+ 	assert.match(textOf(result) ?? "", /build the parser, keep it streaming/);
  });
 +
 +test("multicast admission remains owned between target routes", async () => {
@@ -82,7 +82,7 @@ index aa12d66..4708067 100644
 +	}
 +});
 diff --git a/extensions/actor-subagents/agent-tools.ts b/extensions/actor-subagents/agent-tools.ts
-index 65f288c..6f614c5 100644
+index d0f7956..fb9f465 100644
 --- a/extensions/actor-subagents/agent-tools.ts
 +++ b/extensions/actor-subagents/agent-tools.ts
 @@ -170,19 +170,22 @@ export function makeAgentTools(
@@ -627,7 +627,7 @@ index 92469f8..1f4a64f 100644
  		this.countEdge("main", to);
  		this.emit({ type: "route", from: "main", to, preview: previewOf(text), buffered: false, ts: Date.now() });
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 919bea8..482bd6e 100644
+index 874f5e6..de44945 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
 @@ -4,6 +4,7 @@
@@ -638,7 +638,7 @@ index 919bea8..482bd6e 100644
  import * as fs from "node:fs";
  import * as path from "node:path";
  import {
-@@ -32,6 +33,7 @@ import type { AgentHandle } from "./agent-record.ts";
+@@ -34,6 +35,7 @@ import type { AgentHandle } from "./agent-record.ts";
  import type { EngineResumeResult } from "./control-result.ts";
  import { authorityOf } from "./authorize.ts";
  import { Engine } from "./engine.ts";
@@ -646,7 +646,7 @@ index 919bea8..482bd6e 100644
  import { readFastState, setFastDesired } from "./fast-control.ts";
  import {
    formatControlResult,
-@@ -174,7 +176,8 @@ const RESUME_NUDGE = (now: Date, by: string) => {
+@@ -177,7 +179,8 @@ const RESUME_NUDGE = (now: Date, by: string) => {
  //      would retain the old announce/route methods after /reload and never wake a parent.
  // v29: the live session UUID and compaction flags join AgentRecord; old singleton records
  //      cannot supply Fast ownership or accurate activity after a same-process reload.
@@ -656,7 +656,7 @@ index 919bea8..482bd6e 100644
  const AGENT_NAME_LOOKUP_KEY = Symbol.for("futile.pi.subagents.agent-name-lookup.v1");
  
  function getEngine(): Engine {
-@@ -190,13 +193,15 @@ function getEngine(): Engine {
+@@ -193,13 +196,15 @@ function getEngine(): Engine {
      // stays on disk in roster.json, so the next pi start restores the swarm.
      // Fire-and-forget: nothing here can await, and a faulty old runtime must not block the new
      // engine — shutdownAll already isolates per-child failures.
@@ -674,7 +674,7 @@ index 919bea8..482bd6e 100644
    }
    return g[ENGINE_KEY] as Engine;
  }
-@@ -289,6 +294,7 @@ function disposeProcessHooks(dispose: () => void): void {
+@@ -305,6 +310,7 @@ function disposeProcessHooks(dispose: () => void): void {
  
  export default function subagents(pi: ExtensionAPI) {
    const engine = getEngine();
@@ -682,7 +682,7 @@ index 919bea8..482bd6e 100644
    // Context-pressure resolves retained child session IDs through this live, reload-safe bridge.
    (globalThis as Record<symbol, unknown>)[AGENT_NAME_LOOKUP_KEY] = (sessionId: string) =>
      engine.list().find((agent) => agent.sessionId === sessionId)?.name;
-@@ -318,15 +324,33 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -334,15 +340,33 @@ export default function subagents(pi: ExtensionAPI) {
    // them mid-loop (polls forever). "steer" injects them before main's next LLM call so it
    // sees the replies. triggerTurn preserves immediate delivery while main is idle.
    // silent: triggerTurn false appends without a turn, which the engine only does while main is
@@ -725,7 +725,7 @@ index 919bea8..482bd6e 100644
  
    // Process-global model services built once (same creds as the foreground).
    // pi 0.80.10 SDK: AuthStorage was removed and ModelRegistry now wraps an async
-@@ -782,11 +806,14 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -806,11 +830,14 @@ export default function subagents(pi: ExtensionAPI) {
    // the interrupted ones among those are re-triggered in the name of `by`'s authority agent
    // ('main' for the human), so their reply goes to an agent that can read it.
    const resumeAgents = async (by: string, names?: string[]): Promise<EngineResumeResult> => {
@@ -745,7 +745,7 @@ index 919bea8..482bd6e 100644
    };
  
    // Swarm control commands take an optional agent-name list; empty means all of main's children.
-@@ -907,7 +934,8 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -931,7 +958,8 @@ export default function subagents(pi: ExtensionAPI) {
        const main = engine.get("main");
        if (main) main.sessionId = mainSessionId;
      }
@@ -755,7 +755,7 @@ index 919bea8..482bd6e 100644
      // A live ctx is captured again only now: notices queued while it was stale (after a reload)
      // would otherwise wait for main's next run to settle.
      engine.flushNotices("main");
-@@ -927,6 +955,7 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -951,6 +979,7 @@ export default function subagents(pi: ExtensionAPI) {
      const previousSubDir = subDir;
      subDir = undefined;
      await engine.shutdownAll();
@@ -763,7 +763,7 @@ index 919bea8..482bd6e 100644
      // Publish the inactive snapshot before detaching this runtime's publisher.
      updateActivitySource(true);
      updateStatus();
-@@ -1033,11 +1062,14 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -1058,11 +1087,14 @@ export default function subagents(pi: ExtensionAPI) {
    pi.registerCommand("subagents-kill", {
      description: "Terminate agents by name, each with its subtree (empty = all except 'main').",
      handler: async (args, ctx) => {
@@ -1215,15 +1215,15 @@ index dc775b5..07f2ed6 100644
  }
  
 diff --git a/extensions/actor-subagents/spawner.ts b/extensions/actor-subagents/spawner.ts
-index b1ca870..b675390 100644
+index 38fcfdf..f041f5b 100644
 --- a/extensions/actor-subagents/spawner.ts
 +++ b/extensions/actor-subagents/spawner.ts
-@@ -185,10 +185,15 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -205,10 +205,15 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		name: string,
  		session: SessionLike,
  		streamingRef: { msg: unknown },
--		run: { abortRequested: boolean },
-+		run: { abortRequested: boolean; active: boolean },
+-		run: { abortRequested: boolean; idle: boolean },
++		run: { abortRequested: boolean; idle: boolean; active: boolean },
  	): (() => void) => {
  		return session.subscribe((ev) => {
 -			if (ev.type === "agent_start") run.abortRequested = false;
@@ -1235,27 +1235,27 @@ index b1ca870..b675390 100644
 +			}
  			// The engine refuses a stopped agent's turn itself, through the agent's `handle.abort` (which marks
  			// `run.abortRequested`), so every abort it starts is tracked (engine.ts startAbort).
- 			if (ev.type === "turn_start") engine.recordTurnStart(name);
-@@ -223,6 +228,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
- 				engine.endTurn(name);
+ 			if (ev.type === "turn_start" && !engine.recordTurnStart(name) && run.idle) {
+@@ -248,6 +253,9 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  			}
  			if (ev.type === "agent_settled") {
+ 				run.idle = true;
 +				run.active = false;
 +				const rec = engine.get(name);
 +				if (rec) rec.logicalRun = false;
  				// The SDK emits agent_end for every retry attempt. Only agent_settled closes the
  				// logical run, so deriving its outcome here produces one parent notice.
  				const outcome = lastAssistantOutcome(session.messages);
-@@ -250,7 +258,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -275,7 +283,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		session: SessionLike,
  		systemPrompt: string,
  	): { handle: AgentHandle; view: AgentView; close: () => Promise<void>; reconfigure: NonNullable<AgentRecord["reconfigure"]> } => {
--		const run = { abortRequested: false };
-+		const run = { abortRequested: false, active: false };
+-		const run = { abortRequested: false, idle: true };
++		const run = { abortRequested: false, idle: true, active: false };
  		// Turns handed to the session whose promise has not settled yet. Pi resolves a prompted
  		// delivery only after its run settles, and a user message runs a preflight before its run
  		// is marked active, so this covers the gap from hand-off to isStreaming. It cannot stick: it
-@@ -285,21 +293,31 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -310,21 +318,31 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  				// event-loop gap before a delivered turn starts. A delivery failure clears only this
  				// speculative phase; compaction remains active until its own end event.
  				engine.beginTurn(name);
@@ -1289,7 +1289,7 @@ index b1ca870..b675390 100644
  					onActivity?.(); // the engine reports the failure itself (Engine.deliverUser)
  					throw error;
  				}
-@@ -365,7 +383,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -390,7 +408,7 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		});
  	};
  
@@ -1298,7 +1298,7 @@ index b1ca870..b675390 100644
  		const spawner = engine.get(spawnerName);
  		const inheritRef = spec.model ?? spawner?.model;
  		// The Map Is Not the Territory: inherit the observed effective level, not prior intent.
-@@ -481,5 +499,10 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
+@@ -506,5 +524,10 @@ export function createSpawner(deps: SpawnerDeps): Spawner {
  		return { ok: true, msg: `spawned '${spec.name}' (model ${model}${fast})${sent}` };
  	};
  

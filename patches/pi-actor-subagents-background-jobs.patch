@@ -127,7 +127,7 @@ index bb8860a..66cd3e4 100644
  			if (!shouldForce && key === this.lastPublished) return;
  			try {
 diff --git a/extensions/actor-subagents/agent-record.ts b/extensions/actor-subagents/agent-record.ts
-index d7dade0..4fa7633 100644
+index 1f8aa16..b6abeef 100644
 --- a/extensions/actor-subagents/agent-record.ts
 +++ b/extensions/actor-subagents/agent-record.ts
 @@ -5,6 +5,7 @@
@@ -148,7 +148,7 @@ index d7dade0..4fa7633 100644
  	currentTool?: string;
  	/** Context compaction remains active even while model streaming is idle. */
 diff --git a/extensions/actor-subagents/agent-tools.ts b/extensions/actor-subagents/agent-tools.ts
-index 6f614c5..59c0779 100644
+index fb9f465..a3ef8f4 100644
 --- a/extensions/actor-subagents/agent-tools.ts
 +++ b/extensions/actor-subagents/agent-tools.ts
 @@ -37,6 +37,7 @@ import type { Spawner } from "./spawner.ts";
@@ -338,18 +338,18 @@ index 0000000..6d17546
 +	return parts.length ? [`stopped background jobs of ${parts.join("; ")}`] : [];
 +}
 diff --git a/extensions/actor-subagents/index.ts b/extensions/actor-subagents/index.ts
-index 482bd6e..415e2db 100644
+index de44945..497fce6 100644
 --- a/extensions/actor-subagents/index.ts
 +++ b/extensions/actor-subagents/index.ts
-@@ -25,6 +25,7 @@ import {
+@@ -27,6 +27,7 @@ import {
    type RoutedAgentMessage,
  } from "./agent-message.ts";
  import { renderAgentMessage } from "./agent-message-renderer.ts";
 +import { killedJobsDetails, watchBackgroundJobs, type BackgroundJob } from "./background-jobs.ts";
  import { ActivityPublisher, AGENT_ACTIVITY_REQUEST_EVENT, AGENT_ACTIVITY_UPDATE_EVENT, hasActiveBackgroundAgent, installActivityNotifier, notifyActivity } from "./activity.ts";
  import { orderAgents } from "./agent-order.ts";
- import { agentSystemPrompt } from "./agent-system-prompt.ts";
-@@ -298,6 +299,13 @@ export default function subagents(pi: ExtensionAPI) {
+ import { childPromptOptions } from "./child-prompt.ts";
+@@ -314,6 +315,13 @@ export default function subagents(pi: ExtensionAPI) {
    // Context-pressure resolves retained child session IDs through this live, reload-safe bridge.
    (globalThis as Record<symbol, unknown>)[AGENT_NAME_LOOKUP_KEY] = (sessionId: string) =>
      engine.list().find((agent) => agent.sessionId === sessionId)?.name;
@@ -363,7 +363,7 @@ index 482bd6e..415e2db 100644
  
    // The toolset acting as `selfName`. Deps are collected per call, so this stays independent
    // of the order in which spawnAgent/updateStatus below are defined.
-@@ -467,7 +475,8 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -492,7 +500,8 @@ export default function subagents(pi: ExtensionAPI) {
            const running = background.filter(
              (o) => engine.status(o.agent).kind === "working",
            ).length;
@@ -373,7 +373,7 @@ index 482bd6e..415e2db 100644
            const pauseLine = theme.bg("selectedBg", truncateToWidth(stateLine, width));
            // Same header the /subagents panel shows, so the swarm's size and activity stay visible at
            // a glance — not only inside the panel.
-@@ -493,6 +502,7 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -518,6 +527,7 @@ export default function subagents(pi: ExtensionAPI) {
    // is independent from terminal OSC policy, which is refreshed while work remains active.
    const activityPublisher = new ActivityPublisher({
      readActive: () => hasActiveBackgroundAgent(engine.list()),
@@ -381,15 +381,15 @@ index 482bd6e..415e2db 100644
      readTerminalProgressEnabled: async () => {
        if (!settingsMgr) settingsMgr = SettingsManager.create(cwd, realAgentDir);
        await settingsMgr.reload();
-@@ -572,6 +582,7 @@ export default function subagents(pi: ExtensionAPI) {
+@@ -597,6 +607,7 @@ export default function subagents(pi: ExtensionAPI) {
        additionalExtensionPaths: settings.childExtensions,
        extensionFactories: [
          { name: "subagent-timestamps", factory: registerToolTimestamps },
 +        { name: "subagent-background-jobs", factory: (child) => watchBackgroundJobs(child, applyBackgroundJobs) },
        ],
-       systemPromptOverride: () =>
-         agentSystemPrompt(spec.name, spec.systemPrompt, spec.spawnedBy),
-@@ -1065,13 +1076,15 @@ export default function subagents(pi: ExtensionAPI) {
+       ...childPromptOptions(spec.name, spec.systemPrompt, spec.spawnedBy),
+     });
+@@ -1090,13 +1101,15 @@ export default function subagents(pi: ExtensionAPI) {
        const done = engine.trackActorWork();
        try {
          const names = parseNames(args);
@@ -408,10 +408,10 @@ index 482bd6e..415e2db 100644
 +  watchBackgroundJobs(pi, applyBackgroundJobs);
  }
 diff --git a/extensions/actor-subagents/panel-logic.test.ts b/extensions/actor-subagents/panel-logic.test.ts
-index 01a2cb0..01c4261 100644
+index 070cd6c..ae3f7e0 100644
 --- a/extensions/actor-subagents/panel-logic.test.ts
 +++ b/extensions/actor-subagents/panel-logic.test.ts
-@@ -403,3 +403,9 @@ test("agentDetailLines: a long reason is cut at the line cap with an ellipsis",
+@@ -431,3 +431,9 @@ test("agentDetailLines: a long reason is cut at the line cap with an ellipsis",
  	assert.ok(lines.every((l) => l.length <= 10));
  	assert.ok(lines.at(-1)?.endsWith("…"));
  });
@@ -422,10 +422,10 @@ index 01a2cb0..01c4261 100644
 +	assert.equal(swarmStateLine(0, 0), " ▶ live · idle ");
 +});
 diff --git a/extensions/actor-subagents/panel-logic.ts b/extensions/actor-subagents/panel-logic.ts
-index b8c920a..b5380e4 100644
+index cd458f3..c7a5ee3 100644
 --- a/extensions/actor-subagents/panel-logic.ts
 +++ b/extensions/actor-subagents/panel-logic.ts
-@@ -5,6 +5,7 @@ import {
+@@ -6,6 +6,7 @@ import {
  	parseRoutedAgentMessage,
  } from "./agent-message.ts";
  import { type AgentStatus, formatStatus, formatStatusDetail } from "./agent-status.ts";
@@ -433,7 +433,7 @@ index b8c920a..b5380e4 100644
  import { formatEtaSuffix } from "./eta.ts";
  import { EXTENSION_STATUS_MAX } from "./extension-status.ts";
  import { FAST_ROSTER_MARKER } from "./fast-control.ts";
-@@ -122,9 +123,10 @@ export function agentDetailLines(status: AgentStatus, errorReason: string | unde
+@@ -123,9 +124,10 @@ export function agentDetailLines(status: AgentStatus, errorReason: string | unde
   * Scheduler state line, shown below the roster (panel) and footer: how many agents work and how
   * many are paused. The per-agent phase (thinking/<tool name>/paused) lives in the rows.
   */
@@ -447,10 +447,10 @@ index b8c920a..b5380e4 100644
  
  /**
 diff --git a/extensions/actor-subagents/panel.ts b/extensions/actor-subagents/panel.ts
-index ccd5979..4667dc1 100644
+index f38f566..53d9296 100644
 --- a/extensions/actor-subagents/panel.ts
 +++ b/extensions/actor-subagents/panel.ts
-@@ -409,7 +409,8 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
+@@ -412,7 +412,8 @@ export function createSubagentsPanel(deps: PanelDeps, tui: TuiLike, theme: Theme
  				lines.push(truncateToWidth(line, width));
  			}
  			// Swarm activity below the list — one source of truth in panel-logic.
